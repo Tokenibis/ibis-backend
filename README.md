@@ -12,31 +12,31 @@ This is the application backend for the Token Ibis application. It is implemente
 
 Please ensure that your environment is set up to run python 3
 
-`$ cd backend`
+`$ cd ibis-backend`
 
 `$ pipenv shell`
 
-`(backend)$ pipenv install django`
+`(ibis-backend)$ pipenv install django`
 
-`(backend)$ pipenv install django djangorestframework`
+`(ibis-backend)$ pipenv install django djangorestframework`
 
-`(backend)$ pipenv install django django-rest-swagger`
+`(ibis-backend)$ pipenv install django django-rest-swagger`
 
-`(backend)$ cd api`
+`(ibis-backend)$ cd api`
 
-`(backend)$ python manage.py migrate`
+`(ibis-backend)$ python manage.py migrate`
 
-`(backend)$ python manage.py createsuperuser`
+`(ibis-backend)$ python manage.py createsuperuser`
 
-`(backend)$ python manage.py test`
+`(ibis-backend)$ python manage.py test`
 
 ## Run
 
-`$ cd backend`
+`$ cd ibis-backend`
 
 `$ pipenv shell`
 
-`(backend)$ python manage runserver`
+`(ibis-backend)$ python manage runserver`
 
 ## Explore
 
