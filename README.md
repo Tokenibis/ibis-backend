@@ -20,6 +20,8 @@ Please ensure that your environment is set up to run python 3
 
 `(backend)$ pipenv install django djangorestframework`
 
+`(backend)$ pipenv install django django-rest-swagger`
+
 `(backend)$ cd api`
 
 `(backend)$ python manage.py migrate`
@@ -35,3 +37,7 @@ Please ensure that your environment is set up to run python 3
 `$ pipenv shell`
 
 `(backend)$ python manage runserver`
+
+## Explore
+
+To explore the contents of the api, navigate to the 'api/' path (e.g. localhost:8000/api)
