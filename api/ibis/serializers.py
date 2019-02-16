@@ -1,12 +1,5 @@
 from rest_framework import serializers
-from .models import Account, Transaction
-
-
-class AccountsSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Account
-        fields = ('nickname', 'create_time')
+from .models import Transaction
 
 
 class TransactionsSerializer(serializers.ModelSerializer):
@@ -16,7 +9,7 @@ class TransactionsSerializer(serializers.ModelSerializer):
 
     def get_sender_name(self, transaction):
         return transaction.sender.nickname
-    
+
     def get_receiver_name(self, transaction):
         return transaction.receiver.nickname
 

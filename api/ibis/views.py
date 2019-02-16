@@ -1,11 +1,12 @@
 from rest_framework import generics
-from .models import Account, Transaction
-from .serializers import AccountsSerializer, TransactionsSerializer
+from .models import Profile, Transaction
+from .serializers import TransactionsSerializer
+from profiles.serializers import ProfilesSerializer
 
 
-class ListAccountsView(generics.ListAPIView):
-    queryset = Account.objects.all()
-    serializer_class = AccountsSerializer
+class ListProfilesView(generics.ListAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfilesSerializer
 
 
 class ListTransactionsView(generics.ListAPIView):
