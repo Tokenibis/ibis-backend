@@ -1,5 +1,8 @@
+__pycache__/
+
 Pipfile
 Pipfile.lock
 
 api/db.sqlite3
-api/ibis/migrations*
+api/ibis/migrations
+api/profiles/migrations
