@@ -18,9 +18,9 @@ Please ensure that your environment is set up to run python 3
 
 `(ibis-backend)$ pipenv install django`
 
-`(ibis-backend)$ pipenv install django djangorestframework`
+`(ibis-backend)$ pipenv install django-rest-framework`
 
-`(ibis-backend)$ pipenv install django django-rest-swagger`
+`(ibis-backend)$ pipenv install django-rest-swagger`
 
 `(ibis-backend)$ cd api`
 
@@ -32,11 +32,11 @@ Please ensure that your environment is set up to run python 3
 
 ## Run
 
-`$ cd ibis-backend`
+`$ cd ibis-backend/api`
 
 `$ pipenv shell`
 
-`(ibis-backend)$ python manage runserver`
+`(ibis-backend)$ python manage.py runserver`
 
 ## Explore
 
