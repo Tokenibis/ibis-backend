@@ -12,7 +12,7 @@ class BaseViewTest(APITestCase):
     @staticmethod
     def create_profile(nickname=''):
         if nickname:
-            Profile.objects.create(nickname=nickname)
+            Profile.objects.create(username=nickname, nickname=nickname)
 
     @staticmethod
     def create_transaction(sender='', receiver='', amount=0, description=''):
