@@ -22,6 +22,10 @@ Please ensure that your environment is set up to run python 3
 
 `(ibis-backend)$ pipenv install django-rest-swagger`
 
+`(ibis-backend)$ pipenv install django-rest-auth[with_social]`
+
+`(ibis-backend)$ pipenv install django-cors-headers`
+
 `(ibis-backend)$ cd api`
 
 `(ibis-backend)$ python manage.py migrate`

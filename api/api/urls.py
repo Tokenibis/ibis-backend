@@ -20,5 +20,6 @@ from rest_framework_swagger.views import get_swagger_view
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', get_swagger_view(title='Ibis API'), name='api'),
+    path('auth/', include('profiles.urls')),
     re_path('api/(?P<version>(v1))/', include('ibis.urls')),
 ]

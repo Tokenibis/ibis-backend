@@ -1,5 +1,13 @@
 from rest_framework import serializers
+
 from .models import Transaction
+from profiles.models import Profile
+
+
+class ProfilesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ('id', 'username', 'is_active', 'last_login', 'date_joined')
 
 
 class TransactionsSerializer(serializers.ModelSerializer):
@@ -8,10 +16,10 @@ class TransactionsSerializer(serializers.ModelSerializer):
     receiver_name = serializers.SerializerMethodField()
 
     def get_sender_name(self, transaction):
-        return transaction.sender.nickname
+        return transaction.sender.username
 
     def get_receiver_name(self, transaction):
-        return transaction.receiver.nickname
+        return transaction.receiver.username
 
     class Meta:
         model = Transaction

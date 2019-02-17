@@ -1,7 +1,6 @@
 from rest_framework import generics
 from .models import Profile, Transaction
-from .serializers import TransactionsSerializer
-from profiles.serializers import ProfilesSerializer
+from .serializers import ProfilesSerializer, TransactionsSerializer
 
 
 class ListProfilesView(generics.ListAPIView):
