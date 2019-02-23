@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 
 import os
 
+# ------------------------------------------------------------ #
+# Standard Django Settings
+# ------------------------------------------------------------ #
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -131,17 +135,25 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# ------------------------------------------------------------ #
+# Additional Library/App/Middleware Settings
+# ------------------------------------------------------------ #
+
 AUTH_USER_MODEL = 'profiles.Profile'
 
-# # TODO: change to https when ready to launch from server
+# TODO: change to https when ready to launch from server
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
-
-SITE_ID = 1
 
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ORIGIN_WHITELIST = (
     'localhost:3000'
 )
+
+SITE_ID = 1
+
+# ------------------------------------------------------------ #
+# Custom Ibis Settings
+# ------------------------------------------------------------ #
 
 IBIS_APP_URL = 'http://localhost:3000'
