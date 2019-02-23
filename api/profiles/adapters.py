@@ -2,6 +2,8 @@
 Implementations Django Allauth adapters for Ibis profiles
 """
 
+from django.conf import settings
+
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 
 
@@ -16,5 +18,4 @@ class GoogleOAuth2AdapterCustom(GoogleOAuth2Adapter):
     """
 
     def get_callback_url(self, request, app):
-        # TODO: should place this in configuration file instead of hardcode
-        return 'http://localhost:3000/'
+        return settings.IBIS_APP_URL

@@ -143,3 +143,5 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = (
     'localhost:3000'
 )
+
+IBIS_APP_URL = 'http://localhost:3000'
