@@ -1,3 +1,10 @@
+"""
+Implementations of Django views for Ibis profiles
+
+Since we are not using the traditional Django MVC framework, all of
+these views need to be serialized by objects from .serializers.py
+"""
+
 from django.utils.translation import gettext as _
 
 from allauth.socialaccount.models import SocialLogin
@@ -14,10 +21,12 @@ from .adapters import GoogleOAuth2AdapterCustom
 
 
 class CallbackMixin:
+    """
+    Mixin which provides Oauth definitions for inheriting subclass
+    """
+
     adapter_class = GoogleOAuth2AdapterCustom
     client_class = OAuth2Client
-    # This is our serializer from above
-    # You can omit this if you handle CSRF protection in the frontend
     serializer_class = CallbackSerializer
 
     # Not the prettiest but single source of truth
@@ -30,32 +39,21 @@ class CallbackMixin:
         return url
 
 
-class CallbackCreate(CallbackMixin, SocialLoginView):
-    """
-    Logs the user in with the providers data.
-    Creates a new user account if it doesn't exist yet.
-    """
-
-
-class CallbackConnect(CallbackMixin, SocialConnectView):
-    """
-    Connects a provider's user account to the currently logged in user.
-    """
-
-    # You can override this method here if you don't want to
-    # receive a token. Omit it otherwise.
-    def get_response(self):
-        return Response({'detail': _('Connection completed.')})
-
-
 class Login(APIView):
+    """
+    View for returning Ibis-specific url to submit Google Oauth2 request
+
+    The user submits a blank post request to this view and receives,
+    view a serialized JSON object, a url that embedds an oauth
+    'client_id' to identify the app with google, a 'redirect_uri' to
+    redirect the user after login, and a 'state' to secure against
+    tampering through the entire process.
+    """
+
     adapter_class = GoogleOAuth2AdapterCustom
     permission_classes = (AllowAny, )
 
     def post(self, request, format=None):
-        """
-        Returns the URL to the login page of provider's authentication server.
-        """
         # You should have CSRF protection enabled, see
         # https://security.stackexchange.com/a/104390 (point 3).
         # Therefore this is a POST endpoint.
@@ -67,10 +65,32 @@ class Login(APIView):
         view.request = request
         view.adapter = adapter
         client = view.get_client(request, app)
-        # You can modify `action` if you have more steps in your auth flow
         action = AuthAction.AUTHENTICATE
         auth_params = provider.get_auth_params(request, action)
-        # You can omit this if you want to validate the state in the frontend
         client.state = SocialLogin.stash_state(request)
         url = client.get_redirect_url(adapter.authorize_url, auth_params)
         return Response({'url': url})
+
+
+class CallbackCreate(CallbackMixin, SocialLoginView):
+    """
+    View for creating/logging in a user into the Ibis app
+
+    After the user obtains logs into Google and obtains an oauth code,
+    they should be directed here. The post request to CallbackCreate
+    consumes the code and state, completes the authentication process
+    with Google, and returns a token to authenticate the user. A new
+    account is automatically created if the user is new.
+    """
+
+
+# NOTE: this functionality has not yet been tested
+class CallbackConnect(CallbackMixin, SocialConnectView):
+    """
+    Connects a provider's user account to the currently logged in user.
+    """
+
+    # You can override this method here if you don't want to
+    # receive a token. Omit it otherwise.
+    def get_response(self):
+        return Response({'detail': _('Connection completed.')})

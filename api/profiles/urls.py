@@ -1,8 +1,13 @@
+"""
+Implementations of Django routing for Ibis profiles
+"""
+
 from django.urls import include, path
 from rest_auth.registration.views import SocialAccountDisconnectView
 
 from . import views
 
+# url routes for Google authentication
 google_urlpatterns = [
     path('auth-server/', views.Login.as_view(), name='google_auth_server'),
     path(
@@ -17,6 +22,7 @@ google_urlpatterns = [
     ),
 ]
 
+# redirect to site-specific authentication
 urlpatterns = [
     path('social/google/', include(google_urlpatterns)),
     path(

@@ -1,3 +1,7 @@
+"""
+Updates for the Django admin panel for Ibis profiles
+"""
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 

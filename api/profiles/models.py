@@ -1,3 +1,7 @@
+"""
+Definitions for Django models for Ibis profiles
+"""
+
 from django.contrib.auth.models import AbstractUser, UserManager
 
 
