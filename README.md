@@ -6,7 +6,7 @@ This is the application backend for the Token Ibis application. It is implemente
 
 `$ sudo apt update && sudo apt upgrade`
 
-`$ sudo apt install pipenv`
+`$ pip3 env install pipenv`
 
 ## Setup
 
@@ -22,17 +22,27 @@ Please ensure that your environment is set up to run python 3
 
 `(ibis-backend)$ pipenv install django-rest-swagger`
 
+`(ibis-backend)$ pipenv install django-allauth`
+
 `(ibis-backend)$ pipenv install django-rest-auth[with_social]`
 
 `(ibis-backend)$ pipenv install django-cors-headers`
 
 `(ibis-backend)$ cd api`
 
-`(ibis-backend)$ python manage.py migrate`
+`(ibis-backend)$ python3 manage.py makemigrations profiles`
 
-`(ibis-backend)$ python manage.py createsuperuser`
+`(ibis-backend)$ python3 manage.py makemigrations ibis`
 
-`(ibis-backend)$ python manage.py test`
+`(ibis-backend)$ python3 manage.py migrate profiles`
+
+`(ibis-backend)$ python3 manage.py migrate ibis`
+
+`(ibis-backend)$ python3 manage.py migrate`
+
+`(ibis-backend)$ python3 manage.py createsuperuser`
+
+`(ibis-backend)$ python3 manage.py test`
 
 ## Run
 
