@@ -16,17 +16,7 @@ Please ensure that your environment is set up to run python 3
 
 `$ pipenv shell`
 
-`(ibis-backend)$ pipenv install django`
-
-`(ibis-backend)$ pipenv install django-rest-framework`
-
-`(ibis-backend)$ pipenv install django-rest-swagger`
-
-`(ibis-backend)$ pipenv install django-allauth`
-
-`(ibis-backend)$ pipenv install django-rest-auth[with_social]`
-
-`(ibis-backend)$ pipenv install django-cors-headers`
+`(ibis-backend)$ pipenv install -r requirements.txt`
 
 `(ibis-backend)$ cd api`
 

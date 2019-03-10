@@ -1,0 +1,8 @@
+django-allauth
+django-cors-headers
+django-filter
+django-model-utils
+django-rest-auth[with_social]
+django-rest-framework
+django-rest-swagger
+graphene_django
