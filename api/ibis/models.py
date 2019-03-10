@@ -1,7 +1,6 @@
 from django.db import models
-from model_utils import Choices
-from model_utils.models import TimeStampedModel
-from model_utils.models import StatusModel, SoftDeletableModel
+from model_utils.models import TimeStampedModel, SoftDeletableModel
+
 from users.models import User
 
 # TODO: best way to handle this? maybe in settings?
@@ -57,12 +56,10 @@ class Settings(models.Model):
         related_name='set_push',
     )
     email_notifications = models.ManyToManyField(
-        NotificationReason,
-        related_name='set_email'
-    )
+        NotificationReason, related_name='set_email')
 
 
-class Nonprofit(TimeStampedModel, SoftDeletableModel, StatusModel):
+class Nonprofit(TimeStampedModel, SoftDeletableModel):
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -70,8 +67,6 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel, StatusModel):
     )
     category = models.ManyToManyField(NonprofitCategory)
     description = models.TextField()
-
-    STATUS = Choices('pending', 'approved')
 
 
 class Follow(TimeStampedModel):
@@ -115,24 +110,18 @@ class Transaction(Post, StatusModel):
     amount = models.PositiveIntegerField()
     description = models.CharField(max_length=TX_MAX_LEN)
 
-    STATUS = Choices('requested', 'completed')
 
-
-class Article(Post, StatusModel):
+class Article(Post):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
     content = models.FileField()
 
-    STATUS = Choices('draft', 'published')
 
-
-class Event(Post, StatusModel):
+class Event(Post):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     description = models.CharField(max_length=DESC_MAX_LEN)
-    rsvp = models.ManyToManyField(User, through='RSVPEvent')
-
-    STATUS = Choices('draft', 'published')
+    rsvp = models.ManyToManyField(User)
 
 
 class Comment(Post):
