@@ -22,39 +22,50 @@ class ExchangeNode(DjangoObjectType):
 
 
 class PostNode(DjangoObjectType):
-    upvote_count = graphene.Int()
-
     class Meta:
         model = models.Post
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_upvote_count(self, info):
-        return self.upvote.count()
-
 
 class TransactionNode(PostNode):
+    like_count = graphene.Int()
+
     class Meta:
         model = models.Transaction
         filter_fields = []
         interfaces = (relay.Node, )
 
+    def resolve_like_count(self, info):
+        return self.like.count()
+
 
 class ArticleNode(PostNode):
+    like_count = graphene.Int()
+
     class Meta:
         model = models.Article
         filter_fields = []
         interfaces = (relay.Node, )
 
+    def resolve_like_count(self, info):
+        return self.like.count()
+
 
 class EventNode(PostNode):
+    like_count = graphene.Int()
+
     class Meta:
         model = models.Event
         filter_fields = []
         interfaces = (relay.Node, )
 
+    def resolve_like_count(self, info):
+        return self.like.count()
+
 
 class CommentNode(PostNode):
+    upvote_count = graphene.Int()
     downvote_count = graphene.Int()
 
     class Meta:
@@ -62,8 +73,11 @@ class CommentNode(PostNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
+    def resolve_upvote_count(self, info):
+        return self.vote.filter(usercommentvote__is_upvote=True).count()
+
     def resolve_downvote_count(self, info):
-        return self.downvote.count()
+        return self.vote.filter(usercommentvote__is_upvote=False).count()
 
 
 class Query(object):
