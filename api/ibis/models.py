@@ -98,10 +98,10 @@ class Post(TimeStampedModel, SoftDeletableModel):
     upvote = models.ManyToManyField(
         User,
         related_name='upvoted',
-        through='UpvoteEvent')
+    )
 
 
-class Transaction(Post, StatusModel):
+class Transaction(Post):
     target = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -131,37 +131,7 @@ class Comment(Post):
         on_delete=models.CASCADE,
     )
     content = models.TextField()
-    downvote = models.ManyToManyField(User, through='DownvoteEvent')
-
-
-class UpvoteEvent(TimeStampedModel):
-    user = models.ForeignKey(
+    downvote = models.ManyToManyField(
         User,
-        on_delete=models.CASCADE,
-    )
-    post = models.ForeignKey(
-        Post,
-        on_delete=models.CASCADE,
-    )
-
-
-class DownvoteEvent(TimeStampedModel):
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-    )
-    comment = models.ForeignKey(
-        Comment,
-        on_delete=models.CASCADE,
-    )
-
-
-class RSVPEvent(TimeStampedModel):
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-    )
-    event = models.ForeignKey(
-        Event,
-        on_delete=models.CASCADE,
+        related_name='downvoted',
     )
