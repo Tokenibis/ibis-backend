@@ -15,11 +15,46 @@ class NonprofitCategory(models.Model):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
+
+class PrivacyPolicy(models.Model):
+    title = models.CharField(max_length=TITLE_MAX_LEN)
+    description = models.CharField(max_length=DESC_MAX_LEN)
+
+
+class NotificationReason(models.Model):
+    title = models.CharField(max_length=TITLE_MAX_LEN)
+    description = models.CharField(max_length=DESC_MAX_LEN)
+
+
+class Settings(models.Model):
     user = models.OneToOneField(
         Profile,
         on_delete=models.CASCADE,
         primary_key=True,
     )
+    follow_privacy = models.ForeignKey(
+        PrivacyPolicy,
+        related_name='hide_follow',
+        on_delete=models.PROTECT,
+    )
+    transaction_privacy = models.ForeignKey(
+        PrivacyPolicy,
+        related_name='hide_transaction',
+        on_delete=models.PROTECT,
+    )
+    blocked_users = models.ManyToManyField(
+        Profile,
+        related_name='blocked',
+    )
+    push_notifications = models.ManyToManyField(
+        NotificationReason,
+        related_name='set_push',
+    )
+    email_notifications = models.ManyToManyField(
+        NotificationReason,
+        related_name='set_email'
+    )
+
 
 class Nonprofit(TimeStampedModel, SoftDeletableModel, StatusModel):
     user = models.OneToOneField(
