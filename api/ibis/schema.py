@@ -1,3 +1,5 @@
+import graphene
+
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -20,10 +22,15 @@ class ExchangeNode(DjangoObjectType):
 
 
 class PostNode(DjangoObjectType):
+    upvote_count = graphene.Int()
+
     class Meta:
         model = models.Post
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_upvote_count(self, info):
+        return self.upvote.count()
 
 
 class TransactionNode(PostNode):
@@ -40,7 +47,7 @@ class ArticleNode(PostNode):
         interfaces = (relay.Node, )
 
 
-class EventNode(DjangoObjectType):
+class EventNode(PostNode):
     class Meta:
         model = models.Event
         filter_fields = []
@@ -48,10 +55,15 @@ class EventNode(DjangoObjectType):
 
 
 class CommentNode(PostNode):
+    downvote_count = graphene.Int()
+
     class Meta:
         model = models.Comment
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_downvote_count(self, info):
+        return self.downvote.count()
 
 
 class Query(object):
