@@ -138,6 +138,7 @@ class Comment(Post):
         related_name='child',
         on_delete=models.CASCADE,
     )
+    content = models.TextField()
     downvote = models.ManyToManyField(User, through='DownvoteEvent')
 
 
