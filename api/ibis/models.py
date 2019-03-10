@@ -90,6 +90,10 @@ class Post(TimeStampedModel, SoftDeletableModel):
         Profile,
         on_delete=models.CASCADE,
     )
+    upvote = models.ManyToManyField(
+        Profile,
+        related_name='upvoted',
+        through='UpvoteEvent')
 
 
 class Transaction(StatusModel):
@@ -131,6 +135,7 @@ class Event(StatusModel):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     description = models.CharField(max_length=DESC_MAX_LEN)
+    rsvp = models.ManyToManyField(Profile, through='RSVPEvent')
 
     STATUS = Choices('draft', 'published')
 
@@ -146,9 +151,10 @@ class Comment(models.Model):
         related_name='child',
         on_delete=models.CASCADE,
     )
+    downvote = models.ManyToManyField(Profile, through='DownvoteEvent')
 
 
-class Upvote(TimeStampedModel):
+class UpvoteEvent(TimeStampedModel):
     user = models.ForeignKey(
         Profile,
         on_delete=models.CASCADE,
@@ -159,7 +165,7 @@ class Upvote(TimeStampedModel):
     )
 
 
-class Downvote(TimeStampedModel):
+class DownvoteEvent(TimeStampedModel):
     user = models.ForeignKey(
         Profile,
         on_delete=models.CASCADE,
@@ -170,7 +176,7 @@ class Downvote(TimeStampedModel):
     )
 
 
-class RSVP(TimeStampedModel):
+class RSVPEvent(TimeStampedModel):
     user = models.ForeignKey(
         Profile,
         on_delete=models.CASCADE,
