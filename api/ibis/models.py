@@ -20,6 +20,9 @@ class NonprofitCategory(models.Model):
 
 
 class PrivacyPolicy(models.Model):
+    class Meta:
+        verbose_name_plural = 'privacy policies'
+
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
