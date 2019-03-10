@@ -100,12 +100,7 @@ class Post(TimeStampedModel, SoftDeletableModel):
         through='UpvoteEvent')
 
 
-class Transaction(StatusModel):
-    post = models.OneToOneField(
-        Post,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
+class Transaction(Post, StatusModel):
     target = models.ForeignKey(
         Profile,
         on_delete=models.CASCADE,
@@ -117,12 +112,7 @@ class Transaction(StatusModel):
     STATUS = Choices('requested', 'completed')
 
 
-class Article(StatusModel):
-    post = models.OneToOneField(
-        Post,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
+class Article(Post, StatusModel):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
     content = models.FileField()
@@ -130,12 +120,7 @@ class Article(StatusModel):
     STATUS = Choices('draft', 'published')
 
 
-class Event(StatusModel):
-    post = models.OneToOneField(
-        Post,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
+class Event(Post, StatusModel):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     description = models.CharField(max_length=DESC_MAX_LEN)
@@ -144,12 +129,7 @@ class Event(StatusModel):
     STATUS = Choices('draft', 'published')
 
 
-class Comment(models.Model):
-    post = models.OneToOneField(
-        Post,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
+class Comment(Post):
     parent = models.ForeignKey(
         Post,
         related_name='child',
