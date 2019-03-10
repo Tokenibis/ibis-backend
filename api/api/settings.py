@@ -50,6 +50,10 @@ DATABASES = {
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+GRAPHENE = {
+    'SCHEMA': 'api.schema.schema'
+}
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -68,6 +72,7 @@ INSTALLED_APPS = [
     'rest_auth',
     'rest_auth.registration',
     'corsheaders',
+    'graphene_django',
     'profiles',
     'ibis',
 ]
