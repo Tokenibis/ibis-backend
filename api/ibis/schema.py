@@ -26,14 +26,14 @@ class PostNode(DjangoObjectType):
         interfaces = (relay.Node, )
 
 
-class TransactionNode(DjangoObjectType):
+class TransactionNode(PostNode):
     class Meta:
         model = models.Transaction
         filter_fields = []
         interfaces = (relay.Node, )
 
 
-class ArticleNode(DjangoObjectType):
+class ArticleNode(PostNode):
     class Meta:
         model = models.Article
         filter_fields = []
@@ -47,7 +47,7 @@ class EventNode(DjangoObjectType):
         interfaces = (relay.Node, )
 
 
-class CommentNode(DjangoObjectType):
+class CommentNode(PostNode):
     class Meta:
         model = models.Comment
         filter_fields = []
