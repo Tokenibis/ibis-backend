@@ -39,24 +39,24 @@ class Settings(models.Model):
     )
     follow_privacy = models.ForeignKey(
         PrivacyPolicy,
-        related_name='hide_follow',
+        related_name='follow_privacy_of',
         on_delete=models.PROTECT,
     )
     transaction_privacy = models.ForeignKey(
         PrivacyPolicy,
-        related_name='hide_transaction',
+        related_name='transaction_privacy_of',
         on_delete=models.PROTECT,
     )
     blocked_users = models.ManyToManyField(
         User,
-        related_name='blocked',
+        related_name='blocked_user_of',
     )
     push_notifications = models.ManyToManyField(
         NotificationReason,
-        related_name='set_push',
+        related_name='push_policy_of',
     )
     email_notifications = models.ManyToManyField(
-        NotificationReason, related_name='set_email')
+        NotificationReason, related_name='email_policy_of')
 
 
 class Nonprofit(TimeStampedModel, SoftDeletableModel):
@@ -76,7 +76,7 @@ class Follow(TimeStampedModel):
     )
     target = models.OneToOneField(
         User,
-        related_name='follower',
+        related_name='followed_by',
         on_delete=models.CASCADE,
     )
 
@@ -106,15 +106,22 @@ class Transaction(Post):
         User,
         on_delete=models.CASCADE,
     )
-
     amount = models.PositiveIntegerField()
     description = models.CharField(max_length=TX_MAX_LEN)
+    like = models.ManyToManyField(
+        User,
+        related_name='likes_transaction',
+    )
 
 
 class Article(Post):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
     content = models.FileField()
+    like = models.ManyToManyField(
+        User,
+        related_name='likes_article',
+    )
 
 
 class Event(Post):
@@ -127,7 +134,7 @@ class Event(Post):
 class Comment(Post):
     parent = models.ForeignKey(
         Post,
-        related_name='child',
+        related_name='parent_of',
         on_delete=models.CASCADE,
     )
     content = models.TextField()
