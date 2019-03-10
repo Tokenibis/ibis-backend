@@ -12,6 +12,9 @@ DESC_MAX_LEN = 320
 
 
 class NonprofitCategory(models.Model):
+    class Meta:
+        verbose_name_plural = 'nonprofit categories'
+
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
