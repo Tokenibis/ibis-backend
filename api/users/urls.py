@@ -1,5 +1,5 @@
 """
-Implementations of Django routing for Ibis profiles
+Implementations of Django routing for Ibis users
 """
 
 from django.urls import include, path

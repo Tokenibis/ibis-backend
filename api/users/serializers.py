@@ -1,5 +1,5 @@
 """
-Implementations of DRF serializers for Ibis profiles
+Implementations of DRF serializers for Ibis users
 
 DRF serializers convert traditional Django views into a JSON object
 that is returned by the REST API.

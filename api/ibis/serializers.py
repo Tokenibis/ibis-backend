@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
 from .models import Transaction
-from profiles.models import Profile
+from users.models import User
 
 
-class ProfilesSerializer(serializers.ModelSerializer):
+class UsersSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Profile
+        model = User
         fields = ('id', 'username', 'is_active', 'last_login', 'date_joined')
 
 

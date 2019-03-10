@@ -19,6 +19,13 @@ class ExchangeNode(DjangoObjectType):
         interfaces = (relay.Node, )
 
 
+class PostNode(DjangoObjectType):
+    class Meta:
+        model = models.Post
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+
 class TransactionNode(DjangoObjectType):
     class Meta:
         model = models.Transaction

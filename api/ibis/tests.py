@@ -2,17 +2,17 @@ from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework.views import status
 from .models import Transaction
-from profiles.models import Profile
-from profiles.serializers import ProfilesSerializer
+from users.models import User
+from users.serializers import UsersSerializer
 
 
 class BaseViewTest(APITestCase):
     client = APIClient()
 
     @staticmethod
-    def create_profile(nickname=''):
+    def create_user(nickname=''):
         if nickname:
-            Profile.objects.create(username=nickname, nickname=nickname)
+            User.objects.create(username=nickname, nickname=nickname)
 
     @staticmethod
     def create_transaction(sender='', receiver='', amount=0, description=''):
@@ -25,8 +25,8 @@ class BaseViewTest(APITestCase):
 
     def setUp(self):
         # add test data
-        self.create_profile('Alice')
-        self.create_profile('Bob')
+        self.create_user('Alice')
+        self.create_user('Bob')
 
 
 class GetAllTransactionsTest(BaseViewTest):
@@ -34,10 +34,10 @@ class GetAllTransactionsTest(BaseViewTest):
 
         # hit the API endpoint
         response = self.client.get(
-            reverse('profiles-all', kwargs={'version': 'v1'}))
+            reverse('users-all', kwargs={'version': 'v1'}))
         # fetch the data from db
-        expected = Profile.objects.all()
-        serialized = ProfilesSerializer(expected, many=True)
+        expected = User.objects.all()
+        serialized = UsersSerializer(expected, many=True)
 
         self.assertEqual(response.data, serialized.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

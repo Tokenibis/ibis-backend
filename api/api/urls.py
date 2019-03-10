@@ -6,6 +6,6 @@ from graphene_django.views import GraphQLView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', get_swagger_view(title='Ibis API'), name='api'),
-    path('auth/', include('profiles.urls')),
+    path('auth/', include('users.urls')),
     path('graphql/', GraphQLView.as_view(graphiql=True)),
 ]

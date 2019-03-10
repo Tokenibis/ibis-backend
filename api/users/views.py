@@ -1,5 +1,5 @@
 """
-Implementations of Django views for Ibis profiles
+Implementations of Django views for Ibis users
 
 Since we are not using the traditional Django MVC framework, all of
 these views need to be serialized by objects from .serializers.py

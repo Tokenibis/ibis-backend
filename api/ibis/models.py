@@ -2,7 +2,7 @@ from django.db import models
 from model_utils import Choices
 from model_utils.models import TimeStampedModel
 from model_utils.models import StatusModel, SoftDeletableModel
-from profiles.models import Profile
+from users.models import User
 
 # TODO: best way to handle this? maybe in settings?
 CAT_MAX_LEN = 10
@@ -31,7 +31,7 @@ class NotificationReason(models.Model):
 
 class Settings(models.Model):
     user = models.OneToOneField(
-        Profile,
+        User,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -46,7 +46,7 @@ class Settings(models.Model):
         on_delete=models.PROTECT,
     )
     blocked_users = models.ManyToManyField(
-        Profile,
+        User,
         related_name='blocked',
     )
     push_notifications = models.ManyToManyField(
@@ -61,7 +61,7 @@ class Settings(models.Model):
 
 class Nonprofit(TimeStampedModel, SoftDeletableModel, StatusModel):
     user = models.OneToOneField(
-        Profile,
+        User,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -73,11 +73,11 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel, StatusModel):
 
 class Follow(TimeStampedModel):
     user = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
     target = models.OneToOneField(
-        Profile,
+        User,
         related_name='follower',
         on_delete=models.CASCADE,
     )
@@ -85,7 +85,7 @@ class Follow(TimeStampedModel):
 
 class Exchange(TimeStampedModel):
     user = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
     is_deposit = models.BooleanField()
@@ -94,18 +94,18 @@ class Exchange(TimeStampedModel):
 
 class Post(TimeStampedModel, SoftDeletableModel):
     user = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
     upvote = models.ManyToManyField(
-        Profile,
+        User,
         related_name='upvoted',
         through='UpvoteEvent')
 
 
 class Transaction(Post, StatusModel):
     target = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
 
@@ -127,7 +127,7 @@ class Event(Post, StatusModel):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     description = models.CharField(max_length=DESC_MAX_LEN)
-    rsvp = models.ManyToManyField(Profile, through='RSVPEvent')
+    rsvp = models.ManyToManyField(User, through='RSVPEvent')
 
     STATUS = Choices('draft', 'published')
 
@@ -138,12 +138,12 @@ class Comment(Post):
         related_name='child',
         on_delete=models.CASCADE,
     )
-    downvote = models.ManyToManyField(Profile, through='DownvoteEvent')
+    downvote = models.ManyToManyField(User, through='DownvoteEvent')
 
 
 class UpvoteEvent(TimeStampedModel):
     user = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
     post = models.ForeignKey(
@@ -154,7 +154,7 @@ class UpvoteEvent(TimeStampedModel):
 
 class DownvoteEvent(TimeStampedModel):
     user = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
     comment = models.ForeignKey(
@@ -165,7 +165,7 @@ class DownvoteEvent(TimeStampedModel):
 
 class RSVPEvent(TimeStampedModel):
     user = models.ForeignKey(
-        Profile,
+        User,
         on_delete=models.CASCADE,
     )
     event = models.ForeignKey(

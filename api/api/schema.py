@@ -1,10 +1,10 @@
 import graphene
 
 import ibis.schema
-import profiles.schema
+import users.schema
 
 
-class Query(profiles.schema.Query, ibis.schema.Query, graphene.ObjectType):
+class Query(users.schema.Query, ibis.schema.Query, graphene.ObjectType):
     pass
 
 

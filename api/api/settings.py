@@ -73,7 +73,7 @@ INSTALLED_APPS = [
     'rest_auth.registration',
     'corsheaders',
     'graphene_django',
-    'profiles',
+    'users',
     'ibis',
 ]
 
@@ -142,7 +142,7 @@ WSGI_APPLICATION = 'api.wsgi.application'
 # Additional Library/App/Middleware Settings
 # ------------------------------------------------------------ #
 
-AUTH_USER_MODEL = 'profiles.Profile'
+AUTH_USER_MODEL = 'users.User'
 
 # TODO: change to https when ready to launch from server
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'

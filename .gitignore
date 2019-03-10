@@ -5,4 +5,4 @@ Pipfile.lock
 
 api/db.sqlite3
 api/ibis/migrations
-api/profiles/migrations
+api/users/migrations

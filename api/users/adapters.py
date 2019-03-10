@@ -1,5 +1,5 @@
 """
-Implementations Django Allauth adapters for Ibis profiles
+Implementations Django Allauth adapters for Ibis users
 """
 
 from django.conf import settings

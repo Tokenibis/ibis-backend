@@ -20,11 +20,11 @@ Please ensure that your environment is set up to run python 3
 
 `(ibis-backend)$ cd api`
 
-`(ibis-backend)$ python3 manage.py makemigrations profiles`
+`(ibis-backend)$ python3 manage.py makemigrations users`
 
 `(ibis-backend)$ python3 manage.py makemigrations ibis`
 
-`(ibis-backend)$ python3 manage.py migrate profiles`
+`(ibis-backend)$ python3 manage.py migrate users`
 
 `(ibis-backend)$ python3 manage.py migrate ibis`
 

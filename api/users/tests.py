@@ -1,5 +1,5 @@
 """
-Django tests for Ibis profiles
+Django tests for Ibis users
 """
 
 from django.test import TestCase
