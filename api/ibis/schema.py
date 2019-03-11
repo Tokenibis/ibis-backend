@@ -48,7 +48,6 @@ class IbisUserNode(users.schema.UserNode):
     last_login = graphene.DateTime()
     date_joined = graphene.DateTime()
 
-    followers = graphene.List(lambda: IbisUserNode)
     transaction_to = graphene.List(TransactionNode)
     transaction_from = graphene.List(TransactionNode)
     balance = graphene.Int()
@@ -73,8 +72,6 @@ class IbisUserNode(users.schema.UserNode):
     def resolve_date_joined(self, info):
         return self.user.date_joined
 
-    def resolve_follower(self, info):
-        return self.follower_set.all()
 
     def resolve_transaction_to(self, info):
         return models.Transaction.objects.filter(user=self)

@@ -28,6 +28,7 @@ class IbisUser(models.Model):
     following = models.ManyToManyField(
         'self',
         related_name='follower',
+        symmetrical=False,
     )
 
 
