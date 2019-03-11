@@ -10,7 +10,7 @@ import ibis.models as models
 class NonprofitNode(DjangoObjectType):
     class Meta:
         model = models.Nonprofit
-        filter_fields = ['category', 'description']
+        filter_fields = []
         interfaces = (relay.Node, )
 
 
