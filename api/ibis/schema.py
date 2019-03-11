@@ -41,10 +41,18 @@ class TransactionNode(PostNode):
 
 
 class IbisUserNode(DjangoObjectType):
+    transaction_to = graphene.List(TransactionNode)
+    transaction_from = graphene.List(TransactionNode)
     class Meta:
         model = models.IbisUser
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_transaction_to(self, info):
+        return models.Transaction.objects.filter(user=self)
+
+    def resolve_transaction_from(self, info):
+        return models.Transaction.objects.filter(target=self)
 
 class ArticleNode(PostNode):
     like_count = graphene.Int()
