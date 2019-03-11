@@ -10,6 +10,23 @@ TX_MAX_LEN = 160
 DESC_MAX_LEN = 320
 
 
+class IbisUser(models.Model):
+    class Meta:
+        verbose_name_plural = 'ibis user'
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
+    transaction_to = models.ManyToManyField(
+        'self',
+        related_name='transaction_from',
+        through='Transaction',
+        symmetrical=False,
+    )
+
+
 class NonprofitCategory(models.Model):
     class Meta:
         verbose_name_plural = 'nonprofit categories'
@@ -33,7 +50,7 @@ class NotificationReason(models.Model):
 
 class Settings(models.Model):
     user = models.OneToOneField(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -48,7 +65,7 @@ class Settings(models.Model):
         on_delete=models.PROTECT,
     )
     blocked_users = models.ManyToManyField(
-        User,
+        IbisUser,
         related_name='blocked_user_of',
     )
     push_notifications = models.ManyToManyField(
@@ -61,7 +78,7 @@ class Settings(models.Model):
 
 class Nonprofit(TimeStampedModel, SoftDeletableModel):
     user = models.OneToOneField(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -71,11 +88,11 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel):
 
 class Follow(TimeStampedModel):
     user = models.ForeignKey(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
     )
     target = models.OneToOneField(
-        User,
+        IbisUser,
         related_name='followed_by',
         on_delete=models.CASCADE,
     )
@@ -83,7 +100,7 @@ class Follow(TimeStampedModel):
 
 class Exchange(TimeStampedModel):
     user = models.ForeignKey(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
     )
     is_withdrawal = models.BooleanField()
@@ -92,20 +109,20 @@ class Exchange(TimeStampedModel):
 
 class Post(TimeStampedModel, SoftDeletableModel):
     user = models.ForeignKey(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
     )
 
 
 class Transaction(Post):
     target = models.ForeignKey(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
     )
     amount = models.PositiveIntegerField()
     description = models.CharField(max_length=TX_MAX_LEN)
     like = models.ManyToManyField(
-        User,
+        IbisUser,
         related_name='likes_transaction',
     )
 
@@ -115,7 +132,7 @@ class Article(Post):
     description = models.CharField(max_length=DESC_MAX_LEN)
     content = models.FileField()
     like = models.ManyToManyField(
-        User,
+        IbisUser,
         related_name='likes_article',
     )
 
@@ -125,11 +142,11 @@ class Event(Post):
     link = models.TextField()
     description = models.CharField(max_length=DESC_MAX_LEN)
     rsvp = models.ManyToManyField(
-        User,
+        IbisUser,
         related_name='rsvp_for',
     )
     like = models.ManyToManyField(
-        User,
+        IbisUser,
         related_name='likes_event',
     )
 
@@ -142,14 +159,14 @@ class Comment(Post):
     )
     content = models.TextField()
     vote = models.ManyToManyField(
-        User,
+        IbisUser,
         through='UserCommentVote',
     )
 
 
 class UserCommentVote(models.Model):
     user = models.ForeignKey(
-        User,
+        IbisUser,
         on_delete=models.CASCADE,
     )
     comment = models.ForeignKey(

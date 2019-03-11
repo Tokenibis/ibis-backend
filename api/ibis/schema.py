@@ -40,6 +40,12 @@ class TransactionNode(PostNode):
         return self.like.count()
 
 
+class IbisUserNode(DjangoObjectType):
+    class Meta:
+        model = models.IbisUser
+        filter_fields = []
+        interfaces = (relay.Node, )
+
 class ArticleNode(PostNode):
     like_count = graphene.Int()
 
@@ -82,6 +88,7 @@ class CommentNode(PostNode):
 
 class Query(object):
 
+    ibis_user = relay.Node.Field(IbisUserNode)
     nonprofit = relay.Node.Field(NonprofitNode)
     exchange = relay.Node.Field(ExchangeNode)
     transaction = relay.Node.Field(TransactionNode)
@@ -89,6 +96,7 @@ class Query(object):
     event = relay.Node.Field(EventNode)
     comment = relay.Node.Field(CommentNode)
 
+    all_ibis_users = DjangoFilterConnectionField(IbisUserNode)
     all_nonprofits = DjangoFilterConnectionField(NonprofitNode)
     all_exchanges = DjangoFilterConnectionField(ExchangeNode)
     all_transactions = DjangoFilterConnectionField(TransactionNode)

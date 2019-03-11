@@ -2,6 +2,7 @@ from django.contrib import admin
 
 import ibis.models as models
 
+admin.site.register(models.IbisUser)
 admin.site.register(models.NonprofitCategory)
 admin.site.register(models.PrivacyPolicy)
 admin.site.register(models.NotificationReason)
