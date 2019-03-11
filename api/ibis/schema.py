@@ -43,6 +43,8 @@ class TransactionNode(PostNode):
 class IbisUserNode(DjangoObjectType):
     transaction_to = graphene.List(TransactionNode)
     transaction_from = graphene.List(TransactionNode)
+    balance = graphene.Int()
+
     class Meta:
         model = models.IbisUser
         filter_fields = []
@@ -53,6 +55,22 @@ class IbisUserNode(DjangoObjectType):
 
     def resolve_transaction_from(self, info):
         return models.Transaction.objects.filter(target=self)
+
+    def resolve_balance(self, info):
+        ex_in = sum([
+            ex.amount for ex in self.exchange_set.all() if ex.is_withdrawal
+        ])
+        ex_out = sum([
+            ex.amount for ex in self.exchange_set.all() if not ex.is_withdrawal
+        ])
+        tx_in = sum([
+            tx.amount for tx in models.Transaction.objects.filter(target=self)
+        ])
+        tx_out = sum([
+            tx.amount for tx in models.Transaction.objects.filter(user=self)
+        ])
+        return (ex_in - ex_out) + (tx_in - tx_out)
+
 
 class ArticleNode(PostNode):
     like_count = graphene.Int()
