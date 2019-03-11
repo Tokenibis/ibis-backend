@@ -5,6 +5,7 @@ from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 
 import ibis.models as models
+import users.schema
 
 
 class NonprofitNode(DjangoObjectType):
@@ -40,7 +41,13 @@ class TransactionNode(PostNode):
         return self.like.count()
 
 
-class IbisUserNode(DjangoObjectType):
+class IbisUserNode(users.schema.UserNode):
+    username = graphene.String()
+    first_name = graphene.String()
+    last_name = graphene.String()
+    last_login = graphene.DateTime()
+    date_joined = graphene.DateTime()
+
     followers = graphene.List(lambda: IbisUserNode)
     transaction_to = graphene.List(TransactionNode)
     transaction_from = graphene.List(TransactionNode)
@@ -50,6 +57,21 @@ class IbisUserNode(DjangoObjectType):
         model = models.IbisUser
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_username(self, info):
+        return self.user.username
+
+    def resolve_first_name(self, info):
+        return self.user.first_name
+
+    def resolve_last_name(self, info):
+        return self.user.last_name
+
+    def resolve_last_login(self, info):
+        return self.user.last_login
+
+    def resolve_date_joined(self, info):
+        return self.user.date_joined
 
     def resolve_follower(self, info):
         return self.follower_set.all()
