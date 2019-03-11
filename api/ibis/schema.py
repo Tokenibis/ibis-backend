@@ -48,6 +48,8 @@ class IbisUserNode(users.schema.UserNode):
     last_login = graphene.DateTime()
     date_joined = graphene.DateTime()
 
+    following_count = graphene.Int()
+    follower_count = graphene.Int()
     transaction_to = graphene.List(TransactionNode)
     transaction_from = graphene.List(TransactionNode)
     balance = graphene.Int()
@@ -72,6 +74,11 @@ class IbisUserNode(users.schema.UserNode):
     def resolve_date_joined(self, info):
         return self.user.date_joined
 
+    def resolve_following_count(self, info):
+        return self.following.count()
+
+    def resolve_follower_count(self, info):
+        return self.follower.count()
 
     def resolve_transaction_to(self, info):
         return models.Transaction.objects.filter(user=self)
