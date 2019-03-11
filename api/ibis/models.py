@@ -86,7 +86,7 @@ class Exchange(TimeStampedModel):
         User,
         on_delete=models.CASCADE,
     )
-    is_deposit = models.BooleanField()
+    is_withdrawal = models.BooleanField()
     amount = models.PositiveIntegerField()
 
 
