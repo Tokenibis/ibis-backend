@@ -25,6 +25,10 @@ class IbisUser(models.Model):
         through='Transaction',
         symmetrical=False,
     )
+    following = models.ManyToManyField(
+        'self',
+        related_name='follower',
+    )
 
 
 class NonprofitCategory(models.Model):
@@ -84,18 +88,6 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel):
     )
     category = models.ManyToManyField(NonprofitCategory)
     description = models.TextField()
-
-
-class Follow(TimeStampedModel):
-    user = models.ForeignKey(
-        IbisUser,
-        on_delete=models.CASCADE,
-    )
-    target = models.OneToOneField(
-        IbisUser,
-        related_name='followed_by',
-        on_delete=models.CASCADE,
-    )
 
 
 class Exchange(TimeStampedModel):

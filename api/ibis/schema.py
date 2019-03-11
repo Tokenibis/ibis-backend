@@ -41,6 +41,7 @@ class TransactionNode(PostNode):
 
 
 class IbisUserNode(DjangoObjectType):
+    followers = graphene.List(lambda: IbisUserNode)
     transaction_to = graphene.List(TransactionNode)
     transaction_from = graphene.List(TransactionNode)
     balance = graphene.Int()
@@ -49,6 +50,9 @@ class IbisUserNode(DjangoObjectType):
         model = models.IbisUser
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_follower(self, info):
+        return self.follower_set.all()
 
     def resolve_transaction_to(self, info):
         return models.Transaction.objects.filter(user=self)
