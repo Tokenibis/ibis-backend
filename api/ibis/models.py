@@ -19,15 +19,16 @@ class IbisUser(models.Model):
         on_delete=models.CASCADE,
         primary_key=True,
     )
+    following = models.ManyToManyField(
+        'self',
+        related_name='follower',
+        symmetrical=False,
+        blank=True,
+    )
     transaction_to = models.ManyToManyField(
         'self',
         related_name='transaction_from',
         through='Transaction',
-        symmetrical=False,
-    )
-    following = models.ManyToManyField(
-        'self',
-        related_name='follower',
         symmetrical=False,
     )
 
@@ -72,13 +73,18 @@ class Settings(models.Model):
     blocked_users = models.ManyToManyField(
         IbisUser,
         related_name='blocked_user_of',
+        blank=True,
     )
     push_notifications = models.ManyToManyField(
         NotificationReason,
         related_name='push_policy_of',
+        blank=True,
     )
     email_notifications = models.ManyToManyField(
-        NotificationReason, related_name='email_policy_of')
+        NotificationReason,
+        related_name='email_policy_of',
+        blank=True,
+    )
 
 
 class Nonprofit(TimeStampedModel, SoftDeletableModel):
@@ -117,6 +123,7 @@ class Transaction(Post):
     like = models.ManyToManyField(
         IbisUser,
         related_name='likes_transaction',
+        blank=True,
     )
 
 
@@ -127,6 +134,7 @@ class Article(Post):
     like = models.ManyToManyField(
         IbisUser,
         related_name='likes_article',
+        blank=True,
     )
 
 
@@ -137,10 +145,12 @@ class Event(Post):
     rsvp = models.ManyToManyField(
         IbisUser,
         related_name='rsvp_for',
+        blank=True,
     )
     like = models.ManyToManyField(
         IbisUser,
         related_name='likes_event',
+        blank=True,
     )
 
 
