@@ -16,7 +16,7 @@ import os
 # Standard Django Settings
 # ------------------------------------------------------------ #
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'app.tokenibis.org']
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -146,6 +146,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ORIGIN_WHITELIST = (
     'localhost:3000'
+    'app.tokenibis.org'
 )
 
 SITE_ID = 1
