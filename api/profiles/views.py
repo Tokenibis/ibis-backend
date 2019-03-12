@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny
 
 from .serializers import CallbackSerializer
 from .adapters import GoogleOAuth2AdapterCustom
+from .adapters import FacebookOAuth2AdapterCustom
 
 
 class CallbackMixin:
@@ -25,7 +26,6 @@ class CallbackMixin:
     Mixin which provides Oauth definitions for inheriting subclass
     """
 
-    adapter_class = GoogleOAuth2AdapterCustom
     client_class = OAuth2Client
     serializer_class = CallbackSerializer
 
@@ -41,16 +41,15 @@ class CallbackMixin:
 
 class Login(APIView):
     """
-    View for returning Ibis-specific url to submit Google Oauth2 request
+    View for returning Ibis-specific url to submit Oauth2 request
 
     The user submits a blank post request to this view and receives,
     view a serialized JSON object, a url that embedds an oauth
-    'client_id' to identify the app with google, a 'redirect_uri' to
+    'client_id' to identify the app with, a 'redirect_uri' to
     redirect the user after login, and a 'state' to secure against
     tampering through the entire process.
     """
 
-    adapter_class = GoogleOAuth2AdapterCustom
     permission_classes = (AllowAny, )
 
     def post(self, request, format=None):
@@ -72,18 +71,6 @@ class Login(APIView):
         return Response({'url': url})
 
 
-class CallbackCreate(CallbackMixin, SocialLoginView):
-    """
-    View for creating/logging in a user into the Ibis app
-
-    After the user obtains logs into Google and obtains an oauth code,
-    they should be directed here. The post request to CallbackCreate
-    consumes the code and state, completes the authentication process
-    with Google, and returns a token to authenticate the user. A new
-    account is automatically created if the user is new.
-    """
-
-
 # NOTE: this functionality has not yet been tested
 class CallbackConnect(CallbackMixin, SocialConnectView):
     """
@@ -94,3 +81,45 @@ class CallbackConnect(CallbackMixin, SocialConnectView):
     # receive a token. Omit it otherwise.
     def get_response(self):
         return Response({'detail': _('Connection completed.')})
+
+
+class GoogleLogin(Login):
+    adapter_class = GoogleOAuth2AdapterCustom
+
+
+class FacebookLogin(Login):
+    adapter_class = FacebookOAuth2AdapterCustom
+
+
+class GoogleCallbackCreate(CallbackMixin, SocialLoginView):
+    """
+    View for creating/logging in a user into the Ibis app
+
+    After the user obtains logs into Google and obtains an oauth code,
+    they should be directed here. The post request to CallbackCreate
+    consumes the code and state, completes the authentication process
+    with Google, and returns a token to authenticate the user. A new
+    account is automatically created if the user is new.
+    """
+    adapter_class = GoogleOAuth2AdapterCustom
+
+
+class FacebookCallbackCreate(CallbackMixin, SocialLoginView):
+    """
+    View for creating/logging in a user into the Ibis app
+
+    After the user obtains logs into Facebook and obtains an oauth code,
+    they should be directed here. The post request to CallbackCreate
+    consumes the code and state, completes the authentication process
+    with Facebook, and returns a token to authenticate the user. A new
+    account is automatically created if the user is new.
+    """
+    adapter_class = FacebookOAuth2AdapterCustom
+
+
+class GoogleCallbackConnect(CallbackConnect):
+    adapter_class = GoogleOAuth2AdapterCustom
+
+
+class FacebookCallbackConnect(CallbackConnect):
+    adapter_class = FacebookOAuth2AdapterCustom

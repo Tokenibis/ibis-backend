@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
     'rest_auth',
     'rest_auth.registration',
     'corsheaders',
@@ -155,4 +156,5 @@ SITE_ID = 1
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
 
-IBIS_APP_URL = 'http://localhost:3000'
+# IBIS_APP_URL = 'http://localhost:3000'
+IBIS_APP_URL = 'https://app.tokenibis.org'
