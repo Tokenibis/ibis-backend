@@ -55,6 +55,9 @@ class NotificationReason(models.Model):
 
 
 class Settings(models.Model):
+    class Meta:
+        verbose_name_plural = 'settings'
+
     user = models.OneToOneField(
         IbisUser,
         on_delete=models.CASCADE,
