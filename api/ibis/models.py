@@ -32,6 +32,9 @@ class IbisUser(models.Model):
         symmetrical=False,
     )
 
+    def __str__(self):
+        return '{} ({})'.format(self.user.username, self.user.id)
+
 
 class NonprofitCategory(models.Model):
     class Meta:
@@ -39,6 +42,9 @@ class NonprofitCategory(models.Model):
 
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
+
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
 
 
 class PrivacyPolicy(models.Model):
@@ -48,10 +54,16 @@ class PrivacyPolicy(models.Model):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
+
 
 class NotificationReason(models.Model):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
+
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
 
 
 class Settings(models.Model):
@@ -89,6 +101,12 @@ class Settings(models.Model):
         blank=True,
     )
 
+    def __str__(self):
+        return 'settings {} ({})'.format(
+            self.user.user.username,
+            self.user.user.id,
+        )
+
 
 class Nonprofit(TimeStampedModel, SoftDeletableModel):
     user = models.OneToOneField(
@@ -96,8 +114,12 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel):
         on_delete=models.CASCADE,
         primary_key=True,
     )
+    title = models.CharField(max_length=TITLE_MAX_LEN)
     category = models.ManyToManyField(NonprofitCategory)
     description = models.TextField()
+
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.user.user.id)
 
 
 class Exchange(TimeStampedModel):
@@ -108,12 +130,20 @@ class Exchange(TimeStampedModel):
     is_withdrawal = models.BooleanField()
     amount = models.PositiveIntegerField()
 
+    def __str__(self):
+        return '{} {} ({})'.format(
+            'withdrawal' if self.is_withdrawal else 'deposit',
+            self.user.user.username,
+            self.id,
+        )
+
 
 class Post(TimeStampedModel, SoftDeletableModel):
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
     )
+    description = models.TextField()
 
 
 class Transaction(Post):
@@ -122,7 +152,6 @@ class Transaction(Post):
         on_delete=models.CASCADE,
     )
     amount = models.PositiveIntegerField()
-    description = models.CharField(max_length=TX_MAX_LEN)
     like = models.ManyToManyField(
         IbisUser,
         related_name='likes_transaction',
@@ -132,7 +161,6 @@ class Transaction(Post):
 
 class Article(Post):
     title = models.CharField(max_length=TITLE_MAX_LEN)
-    description = models.CharField(max_length=DESC_MAX_LEN)
     content = models.FileField()
     like = models.ManyToManyField(
         IbisUser,
@@ -140,11 +168,13 @@ class Article(Post):
         blank=True,
     )
 
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
+
 
 class Event(Post):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
-    description = models.CharField(max_length=DESC_MAX_LEN)
     rsvp = models.ManyToManyField(
         IbisUser,
         related_name='rsvp_for',
@@ -156,6 +186,9 @@ class Event(Post):
         blank=True,
     )
 
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
+
 
 class Comment(Post):
     parent = models.ForeignKey(
@@ -163,7 +196,6 @@ class Comment(Post):
         related_name='parent_of',
         on_delete=models.CASCADE,
     )
-    content = models.TextField()
     vote = models.ManyToManyField(
         IbisUser,
         through='UserCommentVote',
