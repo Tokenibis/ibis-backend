@@ -6,6 +6,8 @@ This is the application backend for the Token Ibis application. It is implemente
 
 `$ sudo apt update && sudo apt upgrade`
 
+`$ sudo apt install graphviz-dev`
+
 `$ pip3 env install pipenv`
 
 ## Setup
@@ -45,3 +47,13 @@ Please ensure that your environment is set up to run python 3
 ## Explore
 
 To explore the contents of the api, navigate to the 'api/' path (e.g. localhost:8000/api)
+
+To produce a visualization of model, execute the following commands
+
+`$ cd ibis-backend`
+
+`$ pipenv shell`
+
+`$ cd api`
+
+`$ python3 manage.py graph_models -a -o ibis_models.png`

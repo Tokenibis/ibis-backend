@@ -5,4 +5,5 @@ django-model-utils
 django-rest-auth[with_social]
 django-rest-framework
 django-rest-swagger
+django-extensions
 graphene_django
