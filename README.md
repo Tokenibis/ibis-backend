@@ -57,3 +57,7 @@ To produce a visualization of model, execute the following commands
 `$ cd api`
 
 `$ python3 manage.py graph_models -a -o ibis_models.png`
+
+## License
+
+Ibis is [MIT licensed](./LICENSE).
