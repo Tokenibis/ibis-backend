@@ -102,11 +102,11 @@ class IbisUserNode(users.schema.UserNode):
         return (ex_in - ex_out) + (tx_in - tx_out)
 
 
-class ArticleNode(PostNode):
+class NewsNode(PostNode):
     like_count = graphene.Int()
 
     class Meta:
-        model = models.Article
+        model = models.News
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -148,7 +148,7 @@ class Query(object):
     nonprofit = relay.Node.Field(NonprofitNode)
     exchange = relay.Node.Field(ExchangeNode)
     transaction = relay.Node.Field(TransactionNode)
-    article = relay.Node.Field(ArticleNode)
+    news = relay.Node.Field(NewsNode)
     event = relay.Node.Field(EventNode)
     comment = relay.Node.Field(CommentNode)
 
@@ -156,6 +156,6 @@ class Query(object):
     all_nonprofits = DjangoFilterConnectionField(NonprofitNode)
     all_exchanges = DjangoFilterConnectionField(ExchangeNode)
     all_transactions = DjangoFilterConnectionField(TransactionNode)
-    all_articles = DjangoFilterConnectionField(ArticleNode)
+    all_news = DjangoFilterConnectionField(NewsNode)
     all_events = DjangoFilterConnectionField(EventNode)
     all_comments = DjangoFilterConnectionField(CommentNode)

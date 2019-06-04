@@ -145,6 +145,15 @@ class Post(TimeStampedModel, SoftDeletableModel):
     )
     description = models.TextField()
 
+class TransactionCategory(models.Model):
+    class Meta:
+        verbose_name_plural = 'transaction categories'
+
+    type = models.CharField(max_length=TITLE_MAX_LEN)
+    description = models.CharField(max_length=DESC_MAX_LEN)
+
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
 
 class Transaction(Post):
     target = models.ForeignKey(
@@ -152,6 +161,7 @@ class Transaction(Post):
         on_delete=models.CASCADE,
     )
     amount = models.PositiveIntegerField()
+    category = models.ManyToManyField(TransactionCategory)
     like = models.ManyToManyField(
         IbisUser,
         related_name='likes_transaction',
@@ -159,12 +169,20 @@ class Transaction(Post):
     )
 
 
-class Article(Post):
+class News(Post):
+    class Meta:
+        verbose_name_plural = 'news'
+
     title = models.CharField(max_length=TITLE_MAX_LEN)
     content = models.FileField()
+    bookmark = models.ManyToManyField(
+        IbisUser,
+        related_name='bookmark_for',
+        blank=True,
+    )
     like = models.ManyToManyField(
         IbisUser,
-        related_name='likes_article',
+        related_name='likes_news',
         blank=True,
     )
 

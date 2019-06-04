@@ -151,7 +151,7 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ORIGIN_WHITELIST = (
-    'localhost:3000'
+    'http://localhost:3000',
 )
 
 SITE_ID = 1
