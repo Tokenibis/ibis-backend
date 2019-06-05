@@ -7,3 +7,4 @@ django-rest-framework
 django-rest-swagger
 django-extensions
 graphene_django
+pillow

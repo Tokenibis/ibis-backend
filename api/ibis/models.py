@@ -31,6 +31,7 @@ class IbisUser(models.Model):
         through='Transaction',
         symmetrical=False,
     )
+    profile_image = models.ImageField(upload_to='profile-photos/%Y/%m/%d/')
 
     def __str__(self):
         return '{} ({})'.format(self.user.username, self.user.id)
@@ -185,6 +186,7 @@ class News(Post):
         related_name='likes_news',
         blank=True,
     )
+    header_image = models.ImageField(upload_to='news-photos/%Y/%m/%d/')
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)

@@ -161,3 +161,6 @@ SITE_ID = 1
 # ------------------------------------------------------------ #
 
 IBIS_APP_URL = 'http://localhost:3000'
+
+# Need to figure out where to store images. This is a temporary solution
+MEDIA_ROOT = '/photo-uploads/'
