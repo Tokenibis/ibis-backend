@@ -146,6 +146,7 @@ class Post(TimeStampedModel, SoftDeletableModel):
     )
     description = models.TextField()
 
+
 class TransactionCategory(models.Model):
     class Meta:
         verbose_name_plural = 'transaction categories'
@@ -155,6 +156,7 @@ class TransactionCategory(models.Model):
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
+
 
 class Transaction(Post):
     target = models.ForeignKey(
