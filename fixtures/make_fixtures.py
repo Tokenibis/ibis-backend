@@ -80,7 +80,8 @@ class Model:
             'pk': pk,
             'fields': {
                 'target': nonprofit,
-                'amount': amount
+                'amount': amount,
+                'like': [],
             }
         })
 
@@ -130,7 +131,8 @@ class Model:
             'pk': pk,
             'fields': {
                 'target': target,
-                'amount': amount
+                'amount': amount,
+                'like': [],
             }
         })
 
@@ -154,8 +156,11 @@ class Model:
             'pk': pk,
             'fields': {
                 'title': title,
+                'like': [],
             }
         })
+
+        return pk
 
     def add_event(self, nonprofit, title, link, description):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
@@ -177,6 +182,7 @@ class Model:
                 'title': title,
                 'link': link,
                 'rsvp': [],
+                'like': [],
             }
         })
 
@@ -206,7 +212,10 @@ class Model:
         event_obj = next((x for x in self.events if x['pk'] == event), None)
         event_obj['fields']['rsvp'].append(person)
 
-
+    def add_like(self, person, post):
+        likeable = self.transfers + self.news + self.events
+        post_obj = next((x for x in likeable if x['pk'] == post), None)
+        post_obj['fields']['like'].append(person)
 
     def get_model(self):
         return self.nonprofit_categories + \
@@ -285,36 +294,42 @@ def run():
         model.add_deposit(person, 10000)
 
     # make random donations
+    donations = []
     for i in range(100):
-        model.add_donation(
-            random.choice(people),
-            random.choice(nonprofits),
-            random.randint(1, 100),
-            markov.generate_markov_text(),
-        )
+        donations.append(
+            model.add_donation(
+                random.choice(people),
+                random.choice(nonprofits),
+                random.randint(1, 100),
+                markov.generate_markov_text(),
+            ))
 
     # make random transactions
+    transactions = []
     for i in range(100):
         sample = random.sample(people, 2)
-        model.add_transaction(
-            sample[0],
-            sample[1],
-            random.randint(1, 100),
-            markov.generate_markov_text(),
-        )
+        transactions.append(
+            model.add_transaction(
+                sample[0],
+                sample[1],
+                random.randint(1, 100),
+                markov.generate_markov_text(),
+            ))
 
     # make fake news
+    news = []
     for i in range(25):
         title = 'Breaking: {} {}s {}'.format(
             random.choice(nouns),
             random.choice(verbs),
             random.choice(nouns),
         )
-        model.add_news(
-            random.choice(nonprofits),
-            title,
-            markov.generate_markov_text(size=90),
-        )
+        news.append(
+            model.add_news(
+                random.choice(nonprofits),
+                title,
+                markov.generate_markov_text(size=90),
+            ))
 
     # make fake events
     events = []
@@ -351,6 +366,17 @@ def run():
         )
         for event in event_sample:
             model.add_rsvp(person, event)
+
+    likeable = transactions + donations + news + events
+
+    # add likes
+    for person in people:
+        likeable_sample = random.sample(
+            likeable,
+            min(random.randint(0, 100), len(likeable)),
+        )
+        for post in likeable_sample:
+            model.add_like(person, post)
 
     # save fixtures
     with open('fixtures.json', 'w') as fd:
