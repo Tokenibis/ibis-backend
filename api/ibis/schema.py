@@ -93,7 +93,7 @@ class IbisUserFilter(django_filters.FilterSet):
         queryset = queryset.annotate(
             is_nonprofit=Exists(
                 models.Nonprofit.objects.filter(
-                    user_id=OuterRef('user_id')))).filter(is_nonprofit=value)
+                    user_id=OuterRef('id')))).filter(is_nonprofit=value)
         return queryset
 
 

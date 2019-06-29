@@ -10,15 +10,10 @@ TX_MAX_LEN = 160
 DESC_MAX_LEN = 320
 
 
-class IbisUser(models.Model):
+class IbisUser(User):
     class Meta:
         verbose_name_plural = 'ibis user'
 
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
     following = models.ManyToManyField(
         'self',
         related_name='follower',
