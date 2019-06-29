@@ -58,54 +58,6 @@ class TransferNode(PostNode):
         return self.like.count()
 
 
-class IbisUserFilter(django_filters.FilterSet):
-    is_nonprofit = django_filters.BooleanFilter(method='filter_is_nonprofit')
-
-    class Meta:
-        model = models.IbisUser
-        fields = ['is_nonprofit']
-
-    def filter_is_nonprofit(self, queryset, name, value):
-        queryset = queryset.annotate(
-            is_nonprofit=Exists(
-                models.Nonprofit.objects.filter(
-                    user_id=OuterRef('user_id')))).filter(is_nonprofit=value)
-        return queryset
-
-
-class IbisUserNode(users.schema.UserNode):
-    following_count = graphene.Int()
-    follower_count = graphene.Int()
-    transfer_to = DjangoFilterConnectionField(TransferNode)
-    transfer_from = DjangoFilterConnectionField(TransferNode)
-    balance = graphene.Int()
-
-    class Meta:
-        model = models.IbisUser
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-    def resolve_following_count(self, *args, **kwargs):
-        return self.following.count()
-
-    def resolve_follower_count(self, *args, **kwargs):
-        return self.follower.count()
-
-    def resolve_transfer_to(self, *args, **kwargs):
-        return models.Transfer.objects.filter(user=self)
-
-    def resolve_transfer_from(self, *args, **kwargs):
-        return models.Transfer.objects.filter(target=self)
-
-    def resolve_balance(self, *args, **kwargs):
-        exchange = sum([ex.amount for ex in self.exchange_set.all()])
-        transfer_in = sum(
-            [tx.amount for tx in models.Transfer.objects.filter(target=self)])
-        transfer_out = sum(
-            [tx.amount for tx in models.Transfer.objects.filter(user=self)])
-        return (exchange) + (transfer_in - transfer_out)
-
-
 class NewsNode(PostNode):
     like_count = graphene.Int()
 
@@ -128,6 +80,64 @@ class EventNode(PostNode):
 
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
+
+
+class IbisUserFilter(django_filters.FilterSet):
+    is_nonprofit = django_filters.BooleanFilter(method='filter_is_nonprofit')
+
+    class Meta:
+        model = models.IbisUser
+        fields = ['is_nonprofit']
+
+    def filter_is_nonprofit(self, queryset, name, value):
+        queryset = queryset.annotate(
+            is_nonprofit=Exists(
+                models.Nonprofit.objects.filter(
+                    user_id=OuterRef('user_id')))).filter(is_nonprofit=value)
+        return queryset
+
+
+class IbisUserNode(users.schema.UserNode):
+    following_count = graphene.Int()
+    follower_count = graphene.Int()
+    balance = graphene.Int()
+
+    transfer_to = DjangoFilterConnectionField(TransferNode)
+    transfer_from = DjangoFilterConnectionField(TransferNode)
+
+    news_set = DjangoFilterConnectionField(NewsNode)
+    event_set = DjangoFilterConnectionField(EventNode)
+
+    class Meta:
+        model = models.IbisUser
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    def resolve_following_count(self, *args, **kwargs):
+        return self.following.count()
+
+    def resolve_follower_count(self, *args, **kwargs):
+        return self.follower.count()
+
+    def resolve_balance(self, *args, **kwargs):
+        exchange = sum([ex.amount for ex in self.exchange_set.all()])
+        transfer_in = sum(
+            [tx.amount for tx in models.Transfer.objects.filter(target=self)])
+        transfer_out = sum(
+            [tx.amount for tx in models.Transfer.objects.filter(user=self)])
+        return (exchange) + (transfer_in - transfer_out)
+
+    def resolve_transfer_to(self, *args, **kwargs):
+        return models.Transfer.objects.filter(user=self)
+
+    def resolve_transfer_from(self, *args, **kwargs):
+        return models.Transfer.objects.filter(target=self)
+
+    def resolve_news_set(self, *args, **kwargs):
+        return models.News.objects.filter(user=self)
+
+    def resolve_event_set(self, *args, **kwargs):
+        return models.Event.objects.filter(user=self)
 
 
 class CommentNode(PostNode):
