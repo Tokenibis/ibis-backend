@@ -16,7 +16,6 @@ class Model:
         self.transfers = []
         self.news = []
         self.events = []
-        self.followers = []
 
     def add_nonprofit_category(self, title, description):
         pk = len(self.nonprofit_categories) + 1
@@ -177,8 +176,11 @@ class Model:
             'fields': {
                 'title': title,
                 'link': link,
+                'rsvp': [],
             }
         })
+
+        return pk
 
     def add_deposit(self, user, amount):
         pk = len(self.exchanges) + 1
@@ -199,6 +201,12 @@ class Model:
         following = user['fields']['following']
         if target not in following:
             following.append(target)
+
+    def add_rsvp(self, person, event):
+        event_obj = next((x for x in self.events if x['pk'] == event), None)
+        event_obj['fields']['rsvp'].append(person)
+
+
 
     def get_model(self):
         return self.nonprofit_categories + \
@@ -309,28 +317,40 @@ def run():
         )
 
     # make fake events
+    events = []
     for i in range(25):
         title = 'The {} {} {}'.format(
             random.choice(adjectives),
             random.choice(nouns),
             random.choice(event_type),
         )
-        model.add_event(
-            random.choice(nonprofits),
-            title,
-            'http://{}.org'.format(title.replace(' ', '_')),
-            markov.generate_markov_text(size=60),
-        )
+        events.append(
+            model.add_event(
+                random.choice(nonprofits),
+                title,
+                'http://{}.org'.format(title.replace(' ', '_')),
+                markov.generate_markov_text(size=60),
+            ))
 
     # add followers
     for person in people:
         targets = random.sample([p for p in people if p != person],
-                                min(random.randint(0, 50), len(people) - 1))
+                                min(random.randint(0, 50),
+                                    len(people) - 1))
         targets.extend(
             random.sample(nonprofits,
                           min(random.randint(0, 50), len(nonprofits))))
         for target in targets:
             model.add_follow(person, target)
+
+    # add rsvps
+    for person in people:
+        event_sample = random.sample(
+            events,
+            min(random.randint(0, 10), len(events)),
+        )
+        for event in event_sample:
+            model.add_rsvp(person, event)
 
     # save fixtures
     with open('fixtures.json', 'w') as fd:
