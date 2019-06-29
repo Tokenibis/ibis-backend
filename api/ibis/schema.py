@@ -31,6 +31,21 @@ class PostNode(DjangoObjectType):
         interfaces = (relay.Node, )
 
 
+class TransferFilter(django_filters.FilterSet):
+    is_donation = django_filters.BooleanFilter(method='filter_is_donation')
+
+    class Meta:
+        model = models.IbisUser
+        fields = ['is_donation']
+
+    def filter_is_donation(self, queryset, name, value):
+        queryset = queryset.annotate(
+            is_donation=Exists(
+                models.Nonprofit.objects.filter(
+                    user_id=OuterRef('target_id')))).filter(is_donation=value)
+        return queryset
+
+
 class TransferNode(PostNode):
     like_count = graphene.Int()
 
@@ -175,7 +190,10 @@ class Query(object):
     )
     all_nonprofits = DjangoFilterConnectionField(NonprofitNode)
     all_exchanges = DjangoFilterConnectionField(ExchangeNode)
-    all_transfers = DjangoFilterConnectionField(TransferNode)
+    all_transfers = DjangoFilterConnectionField(
+        TransferNode,
+        filterset_class=TransferFilter,
+    )
     all_news = DjangoFilterConnectionField(NewsNode)
     all_events = DjangoFilterConnectionField(EventNode)
     all_comments = DjangoFilterConnectionField(CommentNode)
