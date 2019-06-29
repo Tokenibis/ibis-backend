@@ -82,8 +82,8 @@ class IbisUserNode(users.schema.UserNode):
 
     following_count = graphene.Int()
     follower_count = graphene.Int()
-    transfer_to = graphene.List(TransferNode)
-    transfer_from = graphene.List(TransferNode)
+    transfer_to = DjangoFilterConnectionField(TransferNode)
+    transfer_from = DjangoFilterConnectionField(TransferNode)
     balance = graphene.Int()
 
     class Meta:
