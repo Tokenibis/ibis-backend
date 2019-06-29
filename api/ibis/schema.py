@@ -1,7 +1,7 @@
 import django_filters
 import graphene
 
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Q
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -104,6 +104,7 @@ class IbisUserNode(users.schema.UserNode):
 
     transfer_to = DjangoFilterConnectionField(TransferNode)
     transfer_from = DjangoFilterConnectionField(TransferNode)
+    transfer_set = DjangoFilterConnectionField(TransferNode)
 
     news_set = DjangoFilterConnectionField(NewsNode)
     event_set = DjangoFilterConnectionField(EventNode)
@@ -132,6 +133,9 @@ class IbisUserNode(users.schema.UserNode):
 
     def resolve_transfer_from(self, *args, **kwargs):
         return models.Transfer.objects.filter(target=self)
+
+    def resolve_transfer_set(self, *args, **kwargs):
+        return models.Transfer.objects.filter(Q(user=self) | Q(target=self))
 
     def resolve_news_set(self, *args, **kwargs):
         return models.News.objects.filter(user=self)
