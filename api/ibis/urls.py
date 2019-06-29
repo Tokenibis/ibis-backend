@@ -1,10 +1,10 @@
 from django.urls import path
-from .views import ListUsersView, ListTransactionsView
+from .views import ListUsersView, ListTransfersView
 
 urlpatterns = [
     path(
-        'transactions/',
-        ListTransactionsView.as_view(),
-        name='transactions-all'),
+        'transfers/',
+        ListTransfersView.as_view(),
+        name='transfers-all'),
     path('users/', ListUsersView.as_view(), name='users-all'),
 ]

@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework.views import status
-from .models import Transaction
+from .models import Transfer
 from users.models import User
 from users.serializers import UsersSerializer
 
@@ -15,9 +15,9 @@ class BaseViewTest(APITestCase):
             User.objects.create(username=nickname, nickname=nickname)
 
     @staticmethod
-    def create_transaction(sender='', receiver='', amount=0, description=''):
+    def create_transfer(sender='', receiver='', amount=0, description=''):
         if sender and receiver and amount and description:
-            Transaction.objects.create(
+            Transfer.objects.create(
                 sender=sender,
                 receiver=receiver,
                 amount=amount,
@@ -29,8 +29,8 @@ class BaseViewTest(APITestCase):
         self.create_user('Bob')
 
 
-class GetAllTransactionsTest(BaseViewTest):
-    def test_get_all_transactions(self):
+class GetAllTransfersTest(BaseViewTest):
+    def test_get_all_transfers(self):
 
         # hit the API endpoint
         response = self.client.get(

@@ -25,10 +25,10 @@ class IbisUser(models.Model):
         symmetrical=False,
         blank=True,
     )
-    transaction_to = models.ManyToManyField(
+    transfer_to = models.ManyToManyField(
         'self',
-        related_name='transaction_from',
-        through='Transaction',
+        related_name='transfer_from',
+        through='Transfer',
         symmetrical=False,
     )
     profile_image = models.ImageField(upload_to='profile-photos/%Y/%m/%d/')
@@ -81,9 +81,9 @@ class Settings(models.Model):
         related_name='follow_privacy_of',
         on_delete=models.PROTECT,
     )
-    transaction_privacy = models.ForeignKey(
+    transfer_privacy = models.ForeignKey(
         PrivacyPolicy,
-        related_name='transaction_privacy_of',
+        related_name='transfer_privacy_of',
         on_delete=models.PROTECT,
     )
     blocked_users = models.ManyToManyField(
@@ -147,9 +147,9 @@ class Post(TimeStampedModel, SoftDeletableModel):
     description = models.TextField()
 
 
-class TransactionCategory(models.Model):
+class TransferCategory(models.Model):
     class Meta:
-        verbose_name_plural = 'transaction categories'
+        verbose_name_plural = 'transfer categories'
 
     type = models.CharField(max_length=TITLE_MAX_LEN)
     description = models.CharField(max_length=DESC_MAX_LEN)
@@ -158,16 +158,16 @@ class TransactionCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Transaction(Post):
+class Transfer(Post):
     target = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
     )
     amount = models.PositiveIntegerField()
-    category = models.ManyToManyField(TransactionCategory)
+    category = models.ManyToManyField(TransferCategory)
     like = models.ManyToManyField(
         IbisUser,
-        related_name='likes_transaction',
+        related_name='likes_transfer',
         blank=True,
     )
 

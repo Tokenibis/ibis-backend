@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Transaction
+from .models import Transfer
 from users.models import User
 
 
@@ -10,17 +10,17 @@ class UsersSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'is_active', 'last_login', 'date_joined')
 
 
-class TransactionsSerializer(serializers.ModelSerializer):
+class TransfersSerializer(serializers.ModelSerializer):
 
     sender_name = serializers.SerializerMethodField()
     receiver_name = serializers.SerializerMethodField()
 
-    def get_sender_name(self, transaction):
-        return transaction.sender.username
+    def get_sender_name(self, transfer):
+        return transfer.sender.username
 
-    def get_receiver_name(self, transaction):
-        return transaction.receiver.username
+    def get_receiver_name(self, transfer):
+        return transfer.receiver.username
 
     class Meta:
-        model = Transaction
+        model = Transfer
         fields = ('amount', 'datetime', 'sender_name', 'receiver_name')

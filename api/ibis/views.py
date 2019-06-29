@@ -1,6 +1,6 @@
 from rest_framework import generics
-from .models import User, Transaction
-from .serializers import UsersSerializer, TransactionsSerializer
+from .models import User, Transfer
+from .serializers import UsersSerializer, TransfersSerializer
 
 
 class ListUsersView(generics.ListAPIView):
@@ -8,6 +8,6 @@ class ListUsersView(generics.ListAPIView):
     serializer_class = UsersSerializer
 
 
-class ListTransactionsView(generics.ListAPIView):
-    queryset = Transaction.objects.all()
-    serializer_class = TransactionsSerializer
+class ListTransfersView(generics.ListAPIView):
+    queryset = Transfer.objects.all()
+    serializer_class = TransfersSerializer

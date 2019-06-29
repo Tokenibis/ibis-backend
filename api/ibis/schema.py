@@ -29,11 +29,11 @@ class PostNode(DjangoObjectType):
         interfaces = (relay.Node, )
 
 
-class TransactionNode(PostNode):
+class TransferNode(PostNode):
     like_count = graphene.Int()
 
     class Meta:
-        model = models.Transaction
+        model = models.Transfer
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -50,8 +50,8 @@ class IbisUserNode(users.schema.UserNode):
 
     following_count = graphene.Int()
     follower_count = graphene.Int()
-    transaction_to = graphene.List(TransactionNode)
-    transaction_from = graphene.List(TransactionNode)
+    transfer_to = graphene.List(TransferNode)
+    transfer_from = graphene.List(TransferNode)
     balance = graphene.Int()
 
     class Meta:
@@ -80,11 +80,11 @@ class IbisUserNode(users.schema.UserNode):
     def resolve_follower_count(self, info):
         return self.follower.count()
 
-    def resolve_transaction_to(self, info):
-        return models.Transaction.objects.filter(user=self)
+    def resolve_transfer_to(self, info):
+        return models.Transfer.objects.filter(user=self)
 
-    def resolve_transaction_from(self, info):
-        return models.Transaction.objects.filter(target=self)
+    def resolve_transfer_from(self, info):
+        return models.Transfer.objects.filter(target=self)
 
     def resolve_balance(self, info):
         ex_in = sum([
@@ -94,10 +94,10 @@ class IbisUserNode(users.schema.UserNode):
             ex.amount for ex in self.exchange_set.all() if not ex.is_withdrawal
         ])
         tx_in = sum([
-            tx.amount for tx in models.Transaction.objects.filter(target=self)
+            tx.amount for tx in models.Transfer.objects.filter(target=self)
         ])
         tx_out = sum([
-            tx.amount for tx in models.Transaction.objects.filter(user=self)
+            tx.amount for tx in models.Transfer.objects.filter(user=self)
         ])
         return (ex_in - ex_out) + (tx_in - tx_out)
 
@@ -147,7 +147,7 @@ class Query(object):
     ibis_user = relay.Node.Field(IbisUserNode)
     nonprofit = relay.Node.Field(NonprofitNode)
     exchange = relay.Node.Field(ExchangeNode)
-    transaction = relay.Node.Field(TransactionNode)
+    transfer = relay.Node.Field(TransferNode)
     news = relay.Node.Field(NewsNode)
     event = relay.Node.Field(EventNode)
     comment = relay.Node.Field(CommentNode)
@@ -155,7 +155,7 @@ class Query(object):
     all_ibis_users = DjangoFilterConnectionField(IbisUserNode)
     all_nonprofits = DjangoFilterConnectionField(NonprofitNode)
     all_exchanges = DjangoFilterConnectionField(ExchangeNode)
-    all_transactions = DjangoFilterConnectionField(TransactionNode)
+    all_transfers = DjangoFilterConnectionField(TransferNode)
     all_news = DjangoFilterConnectionField(NewsNode)
     all_events = DjangoFilterConnectionField(EventNode)
     all_comments = DjangoFilterConnectionField(CommentNode)
