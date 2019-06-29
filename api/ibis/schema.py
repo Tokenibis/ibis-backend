@@ -98,6 +98,15 @@ class IbisUserFilter(django_filters.FilterSet):
 
 
 class IbisUserNode(users.schema.UserNode):
+    following = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+    follower = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+
     following_count = graphene.Int()
     follower_count = graphene.Int()
     balance = graphene.Int()
@@ -122,6 +131,12 @@ class IbisUserNode(users.schema.UserNode):
         model = models.IbisUser
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_following(self, *args, **kwargs):
+        return self.following
+
+    def resolve_follower(self, *args, **kwargs):
+        return self.follower
 
     def resolve_following_count(self, *args, **kwargs):
         return self.following.count()
