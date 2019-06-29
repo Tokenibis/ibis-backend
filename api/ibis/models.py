@@ -128,12 +128,11 @@ class Exchange(TimeStampedModel):
         IbisUser,
         on_delete=models.CASCADE,
     )
-    is_withdrawal = models.BooleanField()
-    amount = models.PositiveIntegerField()
+    amount = models.IntegerField()
 
     def __str__(self):
         return '{} {} ({})'.format(
-            'withdrawal' if self.is_withdrawal else 'deposit',
+            'withdrawal' if self.amount < 0 else 'deposit',
             self.user.user.username,
             self.id,
         )

@@ -188,7 +188,6 @@ class Model:
             'pk': pk,
             'fields': {
                 'user': user,
-                'is_withdrawal': False,
                 'amount': amount
             }
         })
