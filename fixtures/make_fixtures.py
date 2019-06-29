@@ -13,7 +13,7 @@ class Model:
         self.nonprofits = []
         self.exchanges = []
         self.posts = []
-        self.transactions = []
+        self.transfers = []
         self.news = []
         self.events = []
         self.followers = []
@@ -76,8 +76,8 @@ class Model:
                 'description': description
             }
         })
-        self.transactions.append({
-            'model': 'ibis.Transaction',
+        self.transfers.append({
+            'model': 'ibis.Transfer',
             'pk': pk,
             'fields': {
                 'target': nonprofit,
@@ -126,8 +126,8 @@ class Model:
                 'description': description,
             }
         })
-        self.transactions.append({
-            'model': 'ibis.Transaction',
+        self.transfers.append({
+            'model': 'ibis.Transfer',
             'pk': pk,
             'fields': {
                 'target': target,
@@ -151,7 +151,7 @@ class Model:
         })
 
         self.news.append({
-            'model': 'ibis.Article',
+            'model': 'ibis.News',
             'pk': pk,
             'fields': {
                 'title': title,
@@ -208,7 +208,7 @@ class Model:
             self.nonprofits + \
             self.exchanges + \
             self.posts + \
-            self.transactions + \
+            self.transfers + \
             self.news + \
             self.events
 
