@@ -74,12 +74,6 @@ class IbisUserFilter(django_filters.FilterSet):
 
 
 class IbisUserNode(users.schema.UserNode):
-    username = graphene.String()
-    first_name = graphene.String()
-    last_name = graphene.String()
-    last_login = graphene.DateTime()
-    date_joined = graphene.DateTime()
-
     following_count = graphene.Int()
     follower_count = graphene.Int()
     transfer_to = DjangoFilterConnectionField(TransferNode)
@@ -90,21 +84,6 @@ class IbisUserNode(users.schema.UserNode):
         model = models.IbisUser
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_username(self, *args, **kwargs):
-        return self.user.username
-
-    def resolve_first_name(self, *args, **kwargs):
-        return self.user.first_name
-
-    def resolve_last_name(self, *args, **kwargs):
-        return self.user.last_name
-
-    def resolve_last_login(self, *args, **kwargs):
-        return self.user.last_login
-
-    def resolve_date_joined(self, *args, **kwargs):
-        return self.user.date_joined
 
     def resolve_following_count(self, *args, **kwargs):
         return self.following.count()
