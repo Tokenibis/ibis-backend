@@ -54,7 +54,7 @@ class TransferNode(PostNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_like_count(self, info):
+    def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
 
@@ -91,34 +91,34 @@ class IbisUserNode(users.schema.UserNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_username(self, info):
+    def resolve_username(self, *args, **kwargs):
         return self.user.username
 
-    def resolve_first_name(self, info):
+    def resolve_first_name(self, *args, **kwargs):
         return self.user.first_name
 
-    def resolve_last_name(self, info):
+    def resolve_last_name(self, *args, **kwargs):
         return self.user.last_name
 
-    def resolve_last_login(self, info):
+    def resolve_last_login(self, *args, **kwargs):
         return self.user.last_login
 
-    def resolve_date_joined(self, info):
+    def resolve_date_joined(self, *args, **kwargs):
         return self.user.date_joined
 
-    def resolve_following_count(self, info):
+    def resolve_following_count(self, *args, **kwargs):
         return self.following.count()
 
-    def resolve_follower_count(self, info):
+    def resolve_follower_count(self, *args, **kwargs):
         return self.follower.count()
 
-    def resolve_transfer_to(self, info):
+    def resolve_transfer_to(self, *args, **kwargs):
         return models.Transfer.objects.filter(user=self)
 
-    def resolve_transfer_from(self, info):
+    def resolve_transfer_from(self, *args, **kwargs):
         return models.Transfer.objects.filter(target=self)
 
-    def resolve_balance(self, info):
+    def resolve_balance(self, *args, **kwargs):
         ex_in = sum(
             [ex.amount for ex in self.exchange_set.all() if ex.is_withdrawal])
         ex_out = sum([
@@ -139,7 +139,7 @@ class NewsNode(PostNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_like_count(self, info):
+    def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
 
@@ -151,7 +151,7 @@ class EventNode(PostNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_like_count(self, info):
+    def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
 
@@ -164,10 +164,10 @@ class CommentNode(PostNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_upvote_count(self, info):
+    def resolve_upvote_count(self, *args, **kwargs):
         return self.vote.filter(usercommentvote__is_upvote=True).count()
 
-    def resolve_downvote_count(self, info):
+    def resolve_downvote_count(self, *args, **kwargs):
         return self.vote.filter(usercommentvote__is_upvote=False).count()
 
 
