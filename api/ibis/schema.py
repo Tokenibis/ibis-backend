@@ -1,5 +1,7 @@
+import django_filters
 import graphene
 
+from django.db.models import Exists, OuterRef
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -39,6 +41,21 @@ class TransferNode(PostNode):
 
     def resolve_like_count(self, info):
         return self.like.count()
+
+
+class IbisUserFilter(django_filters.FilterSet):
+    is_nonprofit = django_filters.BooleanFilter(method='filter_is_nonprofit')
+
+    class Meta:
+        model = models.IbisUser
+        fields = ['is_nonprofit']
+
+    def filter_is_nonprofit(self, queryset, name, value):
+        queryset = queryset.annotate(
+            is_nonprofit=Exists(
+                models.Nonprofit.objects.filter(
+                    user_id=OuterRef('user_id')))).filter(is_nonprofit=value)
+        return queryset
 
 
 class IbisUserNode(users.schema.UserNode):
@@ -152,7 +169,10 @@ class Query(object):
     event = relay.Node.Field(EventNode)
     comment = relay.Node.Field(CommentNode)
 
-    all_ibis_users = DjangoFilterConnectionField(IbisUserNode)
+    all_ibis_users = DjangoFilterConnectionField(
+        IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
     all_nonprofits = DjangoFilterConnectionField(NonprofitNode)
     all_exchanges = DjangoFilterConnectionField(ExchangeNode)
     all_transfers = DjangoFilterConnectionField(TransferNode)
