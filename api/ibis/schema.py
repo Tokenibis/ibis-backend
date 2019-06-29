@@ -102,9 +102,18 @@ class IbisUserNode(users.schema.UserNode):
     follower_count = graphene.Int()
     balance = graphene.Int()
 
-    transfer_to = DjangoFilterConnectionField(TransferNode)
-    transfer_from = DjangoFilterConnectionField(TransferNode)
-    transfer_set = DjangoFilterConnectionField(TransferNode)
+    transfer_to = DjangoFilterConnectionField(
+        TransferNode,
+        filterset_class=TransferFilter,
+    )
+    transfer_from = DjangoFilterConnectionField(
+        TransferNode,
+        filterset_class=TransferFilter,
+    )
+    transfer_set = DjangoFilterConnectionField(
+        TransferNode,
+        filterset_class=TransferFilter,
+    )
 
     news_set = DjangoFilterConnectionField(NewsNode)
     event_set = DjangoFilterConnectionField(EventNode)
