@@ -6,3 +6,5 @@ Pipfile.lock
 api/db.sqlite3
 api/ibis/migrations
 api/users/migrations
+
+fixtures/fixtures.json
