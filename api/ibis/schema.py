@@ -69,6 +69,20 @@ class TransferNode(PostNode):
         return self.like.count()
 
 
+class NewsFilter(django_filters.FilterSet):
+    by_following = django_filters.CharFilter(method='filter_by_following')
+
+    class Meta:
+        model = models.News
+        fields = ['by_following']
+
+    def filter_by_following(self, queryset, name, value):
+        queryset = queryset.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+        return queryset
+
+
 class NewsNode(PostNode):
     like_count = graphene.Int()
 
@@ -79,6 +93,20 @@ class NewsNode(PostNode):
 
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
+
+
+class EventFilter(django_filters.FilterSet):
+    by_following = django_filters.CharFilter(method='filter_by_following')
+
+    class Meta:
+        model = models.Event
+        fields = ['by_following']
+
+    def filter_by_following(self, queryset, name, value):
+        queryset = queryset.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+        return queryset
 
 
 class EventNode(PostNode):
@@ -215,6 +243,12 @@ class Query(object):
         TransferNode,
         filterset_class=TransferFilter,
     )
-    all_news = DjangoFilterConnectionField(NewsNode)
-    all_events = DjangoFilterConnectionField(EventNode)
+    all_news = DjangoFilterConnectionField(
+        NewsNode,
+        filterset_class=NewsFilter,
+    )
+    all_events = DjangoFilterConnectionField(
+        EventNode,
+        filterset_class=EventFilter,
+    )
     all_comments = DjangoFilterConnectionField(CommentNode)
