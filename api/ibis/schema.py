@@ -5,6 +5,7 @@ from django.db.models import Exists, OuterRef, Q
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
+from graphql_relay.node.node import from_global_id
 
 import ibis.models as models
 import users.schema
@@ -33,16 +34,26 @@ class PostNode(DjangoObjectType):
 
 class TransferFilter(django_filters.FilterSet):
     is_donation = django_filters.BooleanFilter(method='filter_is_donation')
+    by_following = django_filters.CharFilter(method='filter_by_following')
 
     class Meta:
-        model = models.IbisUser
-        fields = ['is_donation']
+        model = models.Transfer
+        fields = ['is_donation', 'by_following']
 
     def filter_is_donation(self, queryset, name, value):
         queryset = queryset.annotate(
             is_donation=Exists(
                 models.Nonprofit.objects.filter(
                     user_id=OuterRef('target_id')))).filter(is_donation=value)
+        return queryset
+
+    def filter_by_following(self, queryset, name, value):
+        queryset = queryset.filter(
+            Q(
+                target_id__in=models.IbisUser.objects.get(
+                    id=int(from_global_id(value)[1])).following.all()) | Q(
+                        user_id__in=models.IbisUser.objects.get(
+                            id=int(from_global_id(value)[1])).following.all()))
         return queryset
 
 
