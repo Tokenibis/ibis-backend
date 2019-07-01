@@ -1,7 +1,7 @@
 import django_filters
 import graphene
 
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Exists, OuterRef, Q, Count
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -35,6 +35,7 @@ class PostNode(DjangoObjectType):
 class TransferFilter(django_filters.FilterSet):
     is_donation = django_filters.BooleanFilter(method='filter_is_donation')
     by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
 
     class Meta:
         model = models.Transfer
@@ -69,8 +70,28 @@ class TransferNode(PostNode):
         return self.like.count()
 
 
+class NewsOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(NewsOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(NewsOrderingFilter, self).filter(qs, value)
+
+
 class NewsFilter(django_filters.FilterSet):
     by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = NewsOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
 
     class Meta:
         model = models.News
@@ -95,8 +116,28 @@ class NewsNode(PostNode):
         return self.like.count()
 
 
+class EventOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(EventOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(EventOrderingFilter, self).filter(qs, value)
+
+
 class EventFilter(django_filters.FilterSet):
     by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = EventOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
 
     class Meta:
         model = models.Event
@@ -121,8 +162,31 @@ class EventNode(PostNode):
         return self.like.count()
 
 
+class IbisUserOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(IbisUserOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['follower_count', '-follower_count']:
+                if v in value:
+                    qs = qs.annotate(
+                        follower_count=Count('follower')).order_by(v)
+                    value.remove(v)
+
+        return super(IbisUserOrderingFilter, self).filter(qs, value)
+
+
 class IbisUserFilter(django_filters.FilterSet):
     is_nonprofit = django_filters.BooleanFilter(method='filter_is_nonprofit')
+    order_by = IbisUserOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('date_joined', 'date_joined'),
+            ('follower_count', 'follower_count'),
+            ('first_name', 'first_name'),
+            ('last_name', 'last_name'),
+        ))
 
     class Meta:
         model = models.IbisUser
@@ -163,19 +227,20 @@ class IbisUserNode(users.schema.UserNode):
         filterset_class=TransferFilter,
     )
 
-    news_set = DjangoFilterConnectionField(NewsNode)
-    event_set = DjangoFilterConnectionField(EventNode)
+    bookmark_for = DjangoFilterConnectionField(
+        NewsNode,
+        filterset_class=NewsFilter,
+    )
+
+    rsvp_for = DjangoFilterConnectionField(
+        EventNode,
+        filterset_class=EventFilter,
+    )
 
     class Meta:
         model = models.IbisUser
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_following(self, *args, **kwargs):
-        return self.following
-
-    def resolve_follower(self, *args, **kwargs):
-        return self.follower
 
     def resolve_following_count(self, *args, **kwargs):
         return self.following.count()

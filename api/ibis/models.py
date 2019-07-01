@@ -27,9 +27,10 @@ class IbisUser(User):
         symmetrical=False,
     )
     profile_image = models.ImageField(upload_to='profile-photos/%Y/%m/%d/')
+    score = models.IntegerField()
 
     def __str__(self):
-        return '{} ({})'.format(self.user.username, self.user.id)
+        return '{} ({})'.format(self.username, self.id)
 
 
 class NonprofitCategory(models.Model):
@@ -99,8 +100,8 @@ class Settings(models.Model):
 
     def __str__(self):
         return 'settings {} ({})'.format(
-            self.user.user.username,
-            self.user.user.id,
+            self.user.username,
+            self.user.id,
         )
 
 
@@ -115,7 +116,7 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel):
     description = models.TextField()
 
     def __str__(self):
-        return '{} ({})'.format(self.title, self.user.user.id)
+        return '{} ({})'.format(self.title, self.user.id)
 
 
 class Exchange(TimeStampedModel):
@@ -128,7 +129,7 @@ class Exchange(TimeStampedModel):
     def __str__(self):
         return '{} {} ({})'.format(
             'withdrawal' if self.amount < 0 else 'deposit',
-            self.user.user.username,
+            self.user.username,
             self.id,
         )
 
@@ -183,6 +184,7 @@ class News(Post):
         blank=True,
     )
     header_image = models.ImageField(upload_to='news-photos/%Y/%m/%d/')
+    score = models.IntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -201,6 +203,7 @@ class Event(Post):
         related_name='likes_event',
         blank=True,
     )
+    score = models.IntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)

@@ -31,7 +31,7 @@ class Model:
 
         return pk
 
-    def add_nonprofit(self, title, description, category):
+    def add_nonprofit(self, title, description, category, score):
         pk = len(self.users) + 2
 
         self.users.append({
@@ -48,7 +48,9 @@ class Model:
         self.ibisUsers.append({
             'model': 'ibis.IbisUser',
             'pk': pk,
-            'fields': {}
+            'fields': {
+                'score': score,
+            },
         })
 
         self.nonprofits.append({
@@ -57,7 +59,7 @@ class Model:
             'fields': {
                 'title': title,
                 'category': [category],
-                'description': description
+                'description': description,
             }
         })
 
@@ -87,7 +89,7 @@ class Model:
 
         return pk
 
-    def add_person(self, first, last):
+    def add_person(self, first, last, score):
         pk = len(self.users) + 2
 
         self.users.append({
@@ -108,6 +110,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'following': [],
+                'score': score,
             }
         })
 
@@ -138,7 +141,7 @@ class Model:
 
         return pk
 
-    def add_news(self, nonprofit, title, description):
+    def add_news(self, nonprofit, title, description, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
 
@@ -156,13 +159,15 @@ class Model:
             'pk': pk,
             'fields': {
                 'title': title,
+                'bookmark': [],
                 'like': [],
+                'score': score,
             }
         })
 
         return pk
 
-    def add_event(self, nonprofit, title, link, description):
+    def add_event(self, nonprofit, title, link, description, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
 
@@ -183,6 +188,7 @@ class Model:
                 'link': link,
                 'rsvp': [],
                 'like': [],
+                'score': score,
             }
         })
 
@@ -211,6 +217,10 @@ class Model:
     def add_rsvp(self, person, event):
         event_obj = next((x for x in self.events if x['pk'] == event), None)
         event_obj['fields']['rsvp'].append(person)
+
+    def add_bookmark(self, person, news):
+        news_obj = next((x for x in self.news if x['pk'] == news), None)
+        news_obj['fields']['bookmark'].append(person)
 
     def add_like(self, person, post):
         likeable = self.transfers + self.news + self.events
@@ -283,11 +293,15 @@ def run():
             x['title'],
             x['description'],
             random.choice(nonprofit_categories),
+            random.randint(0, 100),
         ) for x in np_raw
     ]
 
     # make people
-    people = [model.add_person(x[0], x[1]) for x in people_raw[:25]]
+    people = [
+        model.add_person(x[0], x[1], random.randint(0, 100))
+        for x in people_raw[:25]
+    ]
 
     # make deposit money for all users
     for person in people:
@@ -329,6 +343,7 @@ def run():
                 random.choice(nonprofits),
                 title,
                 markov.generate_markov_text(size=90),
+                random.randint(0, 100),
             ))
 
     # make fake events
@@ -345,6 +360,7 @@ def run():
                 title,
                 'http://{}.org'.format(title.replace(' ', '_')),
                 markov.generate_markov_text(size=60),
+                random.randint(0, 100),
             ))
 
     # add followers
@@ -366,6 +382,15 @@ def run():
         )
         for event in event_sample:
             model.add_rsvp(person, event)
+
+    # add bookmarks
+    for person in people:
+        news_sample = random.sample(
+            news,
+            min(random.randint(0, 10), len(news)),
+        )
+        for article in news_sample:
+            model.add_bookmark(person, article)
 
     likeable = transactions + donations + news + events
 
