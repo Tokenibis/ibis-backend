@@ -35,6 +35,7 @@ class PostNode(DjangoObjectType):
 
 class TransferFilter(django_filters.FilterSet):
     is_donation = django_filters.BooleanFilter(method='filter_is_donation')
+    by_user = django_filters.CharFilter(method='filter_by_user')
     by_following = django_filters.CharFilter(method='filter_by_following')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
     search = django_filters.CharFilter(method='filter_search')
@@ -43,24 +44,27 @@ class TransferFilter(django_filters.FilterSet):
         model = models.Transfer
         fields = ['is_donation', 'by_following']
 
-    def filter_is_donation(self, queryset, name, value):
-        queryset = queryset.annotate(
+    def filter_is_donation(self, qs, name, value):
+        return qs.annotate(
             is_donation=Exists(
                 models.Nonprofit.objects.filter(
                     user_id=OuterRef('target_id')))).filter(is_donation=value)
-        return queryset
 
-    def filter_by_following(self, queryset, name, value):
-        queryset = queryset.filter(
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(
+            Q(user_id=from_global_id(value)[1])
+            | Q(target_id=from_global_id(value)[1]))
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
             Q(
                 target_id__in=models.IbisUser.objects.get(
                     id=int(from_global_id(value)[1])).following.all()) | Q(
                         user_id__in=models.IbisUser.objects.get(
                             id=int(from_global_id(value)[1])).following.all()))
-        return queryset
 
-    def filter_search(self, queryset, name, value):
-        queryset = queryset.annotate(
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
             user_name=Concat(
                 'user__first_name',
                 Value(' '),
@@ -76,7 +80,6 @@ class TransferFilter(django_filters.FilterSet):
                     | Q(user__username__icontains=value)
                     | Q(target__username__icontains=value)
                     | Q(description__icontains=value))
-        return queryset
 
 
 class TransferNode(PostNode):
@@ -106,6 +109,8 @@ class NewsOrderingFilter(django_filters.OrderingFilter):
 
 
 class NewsFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
     by_following = django_filters.CharFilter(method='filter_by_following')
     order_by = NewsOrderingFilter(
         fields=(
@@ -119,19 +124,25 @@ class NewsFilter(django_filters.FilterSet):
         model = models.News
         fields = ['by_following']
 
-    def filter_by_following(self, queryset, name, value):
-        queryset = queryset.filter(
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_bookmark_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).bookmark_for.all())
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
             user_id__in=models.IbisUser.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
-        return queryset
 
-    def filter_search(self, queryset, name, value):
-        queryset = queryset.annotate(
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
             user_name=Concat('user__first_name', Value(' '), 'user__last_name')
         ).filter(
             Q(user_name__icontains=value) | Q(user__username__icontains=value)
             | Q(title__icontains=value) | Q(description__icontains=value))
-        return queryset
 
 
 class NewsNode(PostNode):
@@ -161,6 +172,8 @@ class EventOrderingFilter(django_filters.OrderingFilter):
 
 
 class EventFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
     by_following = django_filters.CharFilter(method='filter_by_following')
     order_by = EventOrderingFilter(
         fields=(
@@ -174,19 +187,25 @@ class EventFilter(django_filters.FilterSet):
         model = models.Event
         fields = ['by_following']
 
-    def filter_by_following(self, queryset, name, value):
-        queryset = queryset.filter(
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_rsvp_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).rsvp_for.all())
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
             user_id__in=models.IbisUser.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
-        return queryset
 
-    def filter_search(self, queryset, name, value):
-        queryset = queryset.annotate(
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
             user_name=Concat('user__first_name', Value(' '), 'user__last_name')
         ).filter(
             Q(user_name__icontains=value) | Q(user__username__icontains=value)
             | Q(title__icontains=value) | Q(description__icontains=value))
-        return queryset
 
 
 class EventNode(PostNode):
@@ -218,6 +237,8 @@ class IbisUserOrderingFilter(django_filters.OrderingFilter):
 
 class IbisUserFilter(django_filters.FilterSet):
     is_nonprofit = django_filters.BooleanFilter(method='filter_is_nonprofit')
+    followed_by = django_filters.CharFilter(method='filter_followed_by')
+    follower_of = django_filters.CharFilter(method='filter_follower_of')
     order_by = IbisUserOrderingFilter(
         fields=(
             ('score', 'score'),
@@ -232,18 +253,26 @@ class IbisUserFilter(django_filters.FilterSet):
         model = models.IbisUser
         fields = ['is_nonprofit']
 
-    def filter_is_nonprofit(self, queryset, name, value):
-        queryset = queryset.annotate(
+    def filter_is_nonprofit(self, qs, name, value):
+        return qs.annotate(
             is_nonprofit=Exists(
                 models.Nonprofit.objects.filter(
                     user_id=OuterRef('id')))).filter(is_nonprofit=value)
-        return queryset
 
-    def filter_search(self, queryset, name, value):
-        queryset = queryset.annotate(
+    def filter_followed_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).following.all())
+
+    def filter_follower_of(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).follower.all())
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
             name=Concat('first_name', Value(' '), 'last_name')).filter(
                 Q(name__icontains=value) | Q(username__icontains=value))
-        return queryset
 
 
 class IbisUserNode(users.schema.UserNode):
