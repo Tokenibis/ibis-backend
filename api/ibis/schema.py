@@ -175,6 +175,7 @@ class EventFilter(django_filters.FilterSet):
     by_user = django_filters.CharFilter(method='filter_by_user')
     rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
     by_following = django_filters.CharFilter(method='filter_by_following')
+    begin_date = django_filters.CharFilter(method='filter_begin_date')
     order_by = EventOrderingFilter(
         fields=(
             ('score', 'score'),
@@ -199,6 +200,9 @@ class EventFilter(django_filters.FilterSet):
         return qs.filter(
             user_id__in=models.IbisUser.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
+
+    def filter_begin_date(self, qs, name, value):
+        return qs.filter(date__gte=value)
 
     def filter_search(self, qs, name, value):
         return qs.annotate(

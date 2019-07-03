@@ -2,6 +2,9 @@
 
 import json
 import random
+
+from datetime import datetime, timedelta
+
 import markovgen
 
 
@@ -167,7 +170,7 @@ class Model:
 
         return pk
 
-    def add_event(self, nonprofit, title, link, description, score):
+    def add_event(self, nonprofit, title, link, description, date, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
 
@@ -188,6 +191,7 @@ class Model:
                 'link': link,
                 'rsvp': [],
                 'like': [],
+                'date': date,
                 'score': score,
             }
         })
@@ -348,18 +352,21 @@ def run():
 
     # make fake events
     events = []
+    date_next = datetime.now()
     for i in range(25):
         title = 'The {} {} {}'.format(
             random.choice(adjectives),
             random.choice(nouns),
             random.choice(event_type),
         )
+        date_next += timedelta(hours=random.randint(0, 48))
         events.append(
             model.add_event(
                 random.choice(nonprofits),
                 title,
                 'http://{}.org'.format(title.replace(' ', '_')),
                 markov.generate_markov_text(size=60),
+                date_next.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
                 random.randint(0, 100),
             ))
 

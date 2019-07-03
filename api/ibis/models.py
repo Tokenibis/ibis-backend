@@ -204,6 +204,7 @@ class Event(Post):
         blank=True,
     )
     score = models.IntegerField()
+    date = models.DateTimeField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
