@@ -1,7 +1,8 @@
 import django_filters
 import graphene
 
-from django.db.models import Exists, OuterRef, Q, Count
+from django.db.models import Exists, OuterRef, Q, Count, Value
+from django.db.models.functions import Concat
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -36,6 +37,7 @@ class TransferFilter(django_filters.FilterSet):
     is_donation = django_filters.BooleanFilter(method='filter_is_donation')
     by_following = django_filters.CharFilter(method='filter_by_following')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+    search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model = models.Transfer
@@ -55,6 +57,25 @@ class TransferFilter(django_filters.FilterSet):
                     id=int(from_global_id(value)[1])).following.all()) | Q(
                         user_id__in=models.IbisUser.objects.get(
                             id=int(from_global_id(value)[1])).following.all()))
+        return queryset
+
+    def filter_search(self, queryset, name, value):
+        queryset = queryset.annotate(
+            user_name=Concat(
+                'user__first_name',
+                Value(' '),
+                'user__last_name',
+            ), ).annotate(
+                target_name=Concat(
+                    'target__first_name',
+                    Value(' '),
+                    'target__last_name',
+                ), ).filter(
+                    Q(user_name__icontains=value)
+                    | Q(target_name__icontains=value)
+                    | Q(user__username__icontains=value)
+                    | Q(target__username__icontains=value)
+                    | Q(description__icontains=value))
         return queryset
 
 
@@ -92,6 +113,7 @@ class NewsFilter(django_filters.FilterSet):
             ('created', 'created'),
             ('like_count', 'like_count'),
         ))
+    search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model = models.News
@@ -101,6 +123,14 @@ class NewsFilter(django_filters.FilterSet):
         queryset = queryset.filter(
             user_id__in=models.IbisUser.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
+        return queryset
+
+    def filter_search(self, queryset, name, value):
+        queryset = queryset.annotate(
+            user_name=Concat('user__first_name', Value(' '), 'user__last_name')
+        ).filter(
+            Q(user_name__icontains=value) | Q(user__username__icontains=value)
+            | Q(title__icontains=value) | Q(description__icontains=value))
         return queryset
 
 
@@ -138,6 +168,7 @@ class EventFilter(django_filters.FilterSet):
             ('created', 'created'),
             ('like_count', 'like_count'),
         ))
+    search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model = models.Event
@@ -147,6 +178,14 @@ class EventFilter(django_filters.FilterSet):
         queryset = queryset.filter(
             user_id__in=models.IbisUser.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
+        return queryset
+
+    def filter_search(self, queryset, name, value):
+        queryset = queryset.annotate(
+            user_name=Concat('user__first_name', Value(' '), 'user__last_name')
+        ).filter(
+            Q(user_name__icontains=value) | Q(user__username__icontains=value)
+            | Q(title__icontains=value) | Q(description__icontains=value))
         return queryset
 
 
@@ -187,6 +226,7 @@ class IbisUserFilter(django_filters.FilterSet):
             ('first_name', 'first_name'),
             ('last_name', 'last_name'),
         ))
+    search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model = models.IbisUser
@@ -197,6 +237,12 @@ class IbisUserFilter(django_filters.FilterSet):
             is_nonprofit=Exists(
                 models.Nonprofit.objects.filter(
                     user_id=OuterRef('id')))).filter(is_nonprofit=value)
+        return queryset
+
+    def filter_search(self, queryset, name, value):
+        queryset = queryset.annotate(
+            name=Concat('first_name', Value(' '), 'last_name')).filter(
+                Q(name__icontains=value) | Q(username__icontains=value))
         return queryset
 
 
