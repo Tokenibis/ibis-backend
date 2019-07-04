@@ -63,6 +63,7 @@ class Model:
                 'title': title,
                 'category': [category],
                 'description': description,
+                'link': 'https://{}.org'.format(title.replace(' ', '_')),
             }
         })
 
@@ -165,12 +166,13 @@ class Model:
                 'bookmark': [],
                 'like': [],
                 'score': score,
+                'link': 'https://{}.org'.format(title.replace(' ', '_')),
             }
         })
 
         return pk
 
-    def add_event(self, nonprofit, title, link, description, date, score):
+    def add_event(self, nonprofit, title, description, date, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
 
@@ -188,7 +190,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'title': title,
-                'link': link,
+                'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'rsvp': [],
                 'like': [],
                 'date': date,
@@ -364,7 +366,6 @@ def run():
             model.add_event(
                 random.choice(nonprofits),
                 title,
-                'http://{}.org'.format(title.replace(' ', '_')),
                 markov.generate_markov_text(size=60),
                 date_next.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
                 random.randint(0, 100),

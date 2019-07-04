@@ -114,6 +114,7 @@ class Nonprofit(TimeStampedModel, SoftDeletableModel):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     category = models.ManyToManyField(NonprofitCategory)
     description = models.TextField()
+    link = models.TextField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.user.id)
@@ -172,6 +173,7 @@ class News(Post):
         verbose_name_plural = 'news'
 
     title = models.CharField(max_length=TITLE_MAX_LEN)
+    link = models.TextField()
     content = models.FileField()
     bookmark = models.ManyToManyField(
         IbisUser,
