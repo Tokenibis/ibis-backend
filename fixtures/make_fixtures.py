@@ -304,7 +304,7 @@ def run():
     # make people
     people = [
         model.add_person(x[0], x[1], random.randint(0, 100))
-        for x in people_raw[:25]
+        for x in people_raw[:100]
     ]
 
     # make deposit money for all users
@@ -313,7 +313,7 @@ def run():
 
     # make random donations
     donations = []
-    for i in range(100):
+    for i in range(400):
         donations.append(
             model.add_donation(
                 random.choice(people),
@@ -324,7 +324,7 @@ def run():
 
     # make random transactions
     transactions = []
-    for i in range(100):
+    for i in range(400):
         sample = random.sample(people, 2)
         transactions.append(
             model.add_transaction(
@@ -336,7 +336,7 @@ def run():
 
     # make fake news
     news = []
-    for i in range(25):
+    for i in range(200):
         title = 'Breaking: {} {}s {}'.format(
             random.choice(nouns),
             random.choice(verbs),
@@ -353,7 +353,7 @@ def run():
     # make fake events
     events = []
     date_next = datetime.now()
-    for i in range(25):
+    for i in range(200):
         title = 'The {} {} {}'.format(
             random.choice(adjectives),
             random.choice(nouns),
