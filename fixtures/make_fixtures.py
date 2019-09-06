@@ -1,5 +1,20 @@
 #!/usr/bin/python3
 
+# This script generates fixtures (fake test data) for the app. The
+# main parts of this module are as follows:
+#
+# Model: This object acts a logical interface to a fixture
+# datastructure. The internat fixtures (which are series of JSON-like
+# python objects) must mirror the Django model.py files. After
+# appending to the Model via the various add_* methods, call get_model
+# to obtain the final compiled data structure.
+#
+# run: This function is just a series of calls to create a Model
+# object. It uses various from data/ and some fun markovgen and random
+# phrase generator techniques to create semi-syntactically valid
+# random data.
+
+
 import json
 import random
 

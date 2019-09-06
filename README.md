@@ -54,4 +54,4 @@ To produce a visualization of model, execute the following commands
 
 ## License
 
-Ibis is [MIT licensed](./LICENSE).
+This software is licensed under [GNU GPL v3.0](./LICENSE).
