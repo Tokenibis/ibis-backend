@@ -8,3 +8,7 @@ api/ibis/migrations
 api/users/migrations
 
 fixtures/fixtures.json
+lib
+bin
+include
+api/static

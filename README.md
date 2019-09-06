@@ -14,35 +14,33 @@ This is the application backend for the Token Ibis application. It is implemente
 
 Please ensure that your environment is set up to run python 3
 
+`$ virtualenv ibis-backend`
+
 `$ cd ibis-backend`
 
-`$ pipenv shell`
+`$ pip3 install -r requirements.txt`
 
-`(ibis-backend)$ pipenv install -r requirements.txt`
+`$ cd api`
 
-`(ibis-backend)$ cd api`
+`$ python3 manage.py makemigrations users`
 
-`(ibis-backend)$ python3 manage.py makemigrations users`
+`$ python3 manage.py makemigrations ibis`
 
-`(ibis-backend)$ python3 manage.py makemigrations ibis`
+`$ python3 manage.py migrate users`
 
-`(ibis-backend)$ python3 manage.py migrate users`
+`$ python3 manage.py migrate ibis`
 
-`(ibis-backend)$ python3 manage.py migrate ibis`
+`$ python3 manage.py migrate`
 
-`(ibis-backend)$ python3 manage.py migrate`
+`$ python3 manage.py createsuperuser`
 
-`(ibis-backend)$ python3 manage.py createsuperuser`
+`$ python3 manage.py test`
 
-`(ibis-backend)$ python3 manage.py test`
-
-## Run
+## Run - Development
 
 `$ cd ibis-backend/api`
 
-`$ pipenv shell`
-
-`(ibis-backend)$ python manage.py runserver`
+`$ python manage.py runserver`
 
 ## Explore
 
@@ -50,11 +48,7 @@ To explore the contents of the api, navigate to the 'api/' path (e.g. localhost:
 
 To produce a visualization of model, execute the following commands
 
-`$ cd ibis-backend`
-
-`$ pipenv shell`
-
-`$ cd api`
+`$ cd ibis-backend/api`
 
 `$ python3 manage.py graph_models -a -o ibis_models.png`
 

@@ -1,3 +1,4 @@
+django
 django-allauth
 django-cors-headers
 django-filter
