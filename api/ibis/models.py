@@ -174,7 +174,7 @@ class News(Post):
 
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
-    content = models.FileField()
+    content = models.TextField()
     bookmark = models.ManyToManyField(
         IbisUser,
         related_name='bookmark_for',

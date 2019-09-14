@@ -160,7 +160,7 @@ class Model:
 
         return pk
 
-    def add_news(self, nonprofit, title, description, score):
+    def add_news(self, nonprofit, title, description, content, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
 
@@ -179,6 +179,7 @@ class Model:
             'fields': {
                 'title': title,
                 'bookmark': [],
+                'content': content,
                 'like': [],
                 'score': score,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
@@ -364,6 +365,7 @@ def run():
                 random.choice(nonprofits),
                 title,
                 markov.generate_markov_text(size=90),
+                markov.generate_markov_text(size=600),
                 random.randint(0, 100),
             ))
 
