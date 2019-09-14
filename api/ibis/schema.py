@@ -176,6 +176,7 @@ class EventFilter(django_filters.FilterSet):
     rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
     by_following = django_filters.CharFilter(method='filter_by_following')
     begin_date = django_filters.CharFilter(method='filter_begin_date')
+    end_date = django_filters.CharFilter(method='filter_end_date')
     order_by = EventOrderingFilter(
         fields=(
             ('score', 'score'),
@@ -203,6 +204,9 @@ class EventFilter(django_filters.FilterSet):
 
     def filter_begin_date(self, qs, name, value):
         return qs.filter(date__gte=value)
+
+    def filter_end_date(self, qs, name, value):
+        return qs.filter(date__lt=value)
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
