@@ -8,7 +8,7 @@ This is the application backend for the Token Ibis application. It is implemente
 
 `$ sudo apt install graphviz-dev`
 
-`$ pip3 env install pipenv`
+`$ pip3 install pipenv`
 
 ## Setup
 
@@ -18,7 +18,7 @@ Please ensure that your environment is set up to run python 3
 
 `$ cd ibis-backend`
 
-`$ pip3 install -r requirements.txt`
+`$ pip3 install -r requirements.txt --user`
 
 `$ cd api`
 
@@ -34,13 +34,11 @@ Please ensure that your environment is set up to run python 3
 
 `$ python3 manage.py createsuperuser`
 
-`$ python3 manage.py test`
-
 ## Run - Development
 
 `$ cd ibis-backend/api`
 
-`$ python manage.py runserver`
+`$ python3 manage.py runserver`
 
 ## Explore
 
