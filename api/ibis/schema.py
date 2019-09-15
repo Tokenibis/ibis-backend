@@ -3,13 +3,70 @@ import graphene
 
 from django.db.models import Exists, OuterRef, Q, Count, Value
 from django.db.models.functions import Concat
-from graphene import relay
+from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay.node.node import from_global_id
 
 import ibis.models as models
 import users.schema
+
+
+class NonprofitCategoryNode(DjangoObjectType):
+    class Meta:
+        model = models.NonprofitCategory
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+
+class NonprofitCategoryCreate(Mutation):
+    class Arguments:
+        title = graphene.String(required=True)
+        description = graphene.String(required=True)
+
+    nonprofitCategory = graphene.Field(NonprofitCategoryNode)
+
+    def mutate(self, info, title, description):
+        nonprofitCategory = models.NonprofitCategory.objects.create(
+            title=title,
+            description=description,
+        )
+        nonprofitCategory.save()
+        return NonprofitCategoryCreate(nonprofitCategory=nonprofitCategory)
+
+
+class NonprofitCategoryUpdate(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        title = graphene.String()
+        description = graphene.String()
+
+    nonprofitCategory = graphene.Field(NonprofitCategoryNode)
+
+    def mutate(self, info, id, title='', description=''):
+        nonprofitCategory = models.NonprofitCategory.objects.get(
+            pk=from_global_id(id)[1])
+        if title:
+            nonprofitCategory.title = title
+        if description:
+            nonprofitCategory.description = description
+        nonprofitCategory.save()
+        return NonprofitCategoryUpdate(nonprofitCategory=nonprofitCategory)
+
+
+class NonprofitCategoryDelete(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            models.NonprofitCategory.objects.get(
+                pk=from_global_id(id)[1]).delete()
+            return NonprofitCategoryDelete(status=True)
+        except models.NonprofitCategory.DoesNotExist:
+            return NonprofitCategoryDelete(status=False)
 
 
 class NonprofitNode(DjangoObjectType):
@@ -373,6 +430,7 @@ class CommentNode(PostNode):
 
 class Query(object):
 
+    nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
     ibis_user = relay.Node.Field(IbisUserNode)
     nonprofit = relay.Node.Field(NonprofitNode)
     exchange = relay.Node.Field(ExchangeNode)
@@ -381,6 +439,8 @@ class Query(object):
     event = relay.Node.Field(EventNode)
     comment = relay.Node.Field(CommentNode)
 
+    all_nonprofit_categories = DjangoFilterConnectionField(
+        NonprofitCategoryNode)
     all_ibis_users = DjangoFilterConnectionField(
         IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -400,3 +460,9 @@ class Query(object):
         filterset_class=EventFilter,
     )
     all_comments = DjangoFilterConnectionField(CommentNode)
+
+
+class Mutation(graphene.ObjectType):
+    create_nonprofit_category = NonprofitCategoryCreate.Field()
+    update_nonprofit_category = NonprofitCategoryUpdate.Field()
+    delete_nonprofit_category = NonprofitCategoryDelete.Field()
