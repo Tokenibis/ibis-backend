@@ -14,7 +14,6 @@
 # phrase generator techniques to create semi-syntactically valid
 # random data.
 
-
 import json
 import random
 
@@ -26,12 +25,17 @@ import markovgen
 class Model:
     def __init__(self):
         self.nonprofit_categories = []
-        self.users = []
+        self.transaction_categories = []
         self.ibisUsers = []
+        self.users = []
+        self.people = []
         self.nonprofits = []
         self.exchanges = []
+        self.deposits = []
         self.posts = []
         self.transfers = []
+        self.donations = []
+        self.transactions = []
         self.news = []
         self.events = []
 
@@ -49,17 +53,36 @@ class Model:
 
         return pk
 
+    def add_transaction_category(self, title, description):
+        pk = len(self.transaction_categories) + 1
+
+        self.transaction_categories.append({
+            'model': 'ibis.TransactionCategory',
+            'pk': pk,
+            'fields': {
+                'title': title,
+                'description': description,
+            },
+        })
+
+        return pk
+
     def add_nonprofit(self, title, description, category, score):
         pk = len(self.users) + 2
+
+        unique_title = title
+        i = 0
+        while unique_title in [x['fields']['title'] for x in self.nonprofits]:
+            i += 1
+            unique_title = '{} ({})'.format(title, i)
 
         self.users.append({
             'model': 'users.User',
             'pk': pk,
             'fields': {
-                'username':
-                '{}_{}'.format(title[:10].lower().replace(' ', '_'), pk),
-                'first_name':
-                title,
+                'username': unique_title,
+                'first_name': unique_title,
+                'last_name': '',
             }
         })
 
@@ -75,8 +98,8 @@ class Model:
             'model': 'ibis.Nonprofit',
             'pk': pk,
             'fields': {
-                'title': title,
-                'category': [category],
+                'title': unique_title,
+                'category': category,
                 'description': description,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
             }
@@ -100,11 +123,18 @@ class Model:
             'model': 'ibis.Transfer',
             'pk': pk,
             'fields': {
-                'target': nonprofit,
                 'amount': amount,
                 'like': [],
             }
         })
+        self.donations.append({
+            'model': 'ibis.Donation',
+            'pk': pk,
+            'fields': {
+                'target': nonprofit,
+            }
+        })
+
 
         return pk
 
@@ -133,9 +163,15 @@ class Model:
             }
         })
 
+        self.people.append({
+            'model': 'ibis.Person',
+            'pk': pk,
+            'fields': {},
+        })
+
         return pk
 
-    def add_transaction(self, source, target, amount, description):
+    def add_transaction(self, source, target, category, amount, description):
         assert source not in [x['pk'] for x in self.nonprofits]
         assert target not in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
@@ -152,9 +188,16 @@ class Model:
             'model': 'ibis.Transfer',
             'pk': pk,
             'fields': {
-                'target': target,
                 'amount': amount,
                 'like': [],
+            }
+        })
+        self.transactions.append({
+            'model': 'ibis.Transaction',
+            'pk': pk,
+            'fields': {
+                'target': target,
+                'category': category,
             }
         })
 
@@ -188,7 +231,17 @@ class Model:
 
         return pk
 
-    def add_event(self, nonprofit, title, description, date, score):
+    def add_event(
+            self,
+            nonprofit,
+            title,
+            description,
+            date,
+            address,
+            latitude,
+            longitude,
+            score,
+    ):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.posts) + 1
 
@@ -210,6 +263,9 @@ class Model:
                 'rsvp': [],
                 'like': [],
                 'date': date,
+                'address': address,
+                'latitude': latitude,
+                'longitude': longitude,
                 'score': score,
             }
         })
@@ -217,14 +273,20 @@ class Model:
         return pk
 
     def add_deposit(self, user, amount):
-        pk = len(self.exchanges) + 1
+        pk = len(self.deposits) + 1
 
         self.exchanges.append({
             'model': 'ibis.Exchange',
             'pk': pk,
             'fields': {
-                'user': user,
                 'amount': amount
+            }
+        })
+        self.deposits.append({
+            'model': 'ibis.Deposit',
+            'pk': pk,
+            'fields': {
+                'user': user,
             }
         })
 
@@ -251,12 +313,17 @@ class Model:
 
     def get_model(self):
         return self.nonprofit_categories + \
+            self.transaction_categories + \
             self.users + \
             self.ibisUsers + \
+            self.people + \
             self.nonprofits + \
             self.exchanges + \
+            self.deposits + \
             self.posts + \
             self.transfers + \
+            self.donations + \
+            self.transactions + \
             self.news + \
             self.events
 
@@ -271,6 +338,9 @@ def run():
 
     with open('data/nonprofit_categories.json') as fd:
         np_cat_raw = json.load(fd)
+
+    with open('data/transfer_categories.json') as fd:
+        tx_cat_raw = json.load(fd)
 
     with open('data/nonprofits.json') as fd:
         np_raw = sorted(json.load(fd), key=lambda x: x['title'])
@@ -307,6 +377,11 @@ def run():
     # make nonprofit categories from charity navigator categories
     nonprofit_categories = [
         model.add_nonprofit_category(x, np_cat_raw[x]) for x in np_cat_raw
+    ]
+
+    # make transfer categories
+    transaction_categories = [
+        model.add_transaction_category(x, tx_cat_raw[x]) for x in tx_cat_raw
     ]
 
     # make nonprofits from scraped list of real nonprofits
@@ -348,6 +423,7 @@ def run():
             model.add_transaction(
                 sample[0],
                 sample[1],
+                random.choice(transaction_categories),
                 random.randint(1, 100),
                 markov.generate_markov_text(),
             ))
@@ -379,12 +455,18 @@ def run():
             random.choice(event_type),
         )
         date_next += timedelta(hours=random.randint(0, 48))
+        latitude = 35.107 + (random.random() * 0.2 - 0.1)
+        longitude = -106.630 + (random.random() * 0.2 - 0.1)
+        address = '55555 Road Ave.\nAlbuquerque NM, 87555'
         events.append(
             model.add_event(
                 random.choice(nonprofits),
                 title,
                 markov.generate_markov_text(size=60),
                 date_next.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
+                address,
+                latitude,
+                longitude,
                 random.randint(0, 100),
             ))
 
@@ -430,7 +512,7 @@ def run():
 
     # save fixtures
     with open('fixtures.json', 'w') as fd:
-        json.dump(model.get_model(), fd)
+        json.dump(model.get_model(), fd, indent=2)
 
 
 if __name__ == '__main__':
