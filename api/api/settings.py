@@ -16,7 +16,7 @@ import os
 # Standard Django Settings
 # ------------------------------------------------------------ #
 
-ALLOWED_HOSTS = ['api.tokenibis.org', 'localhost']
+ALLOWED_HOSTS = ['*']
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -150,11 +150,13 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ORIGIN_WHITELIST = (
-    'http://localhost:3000',
-    'https://app.tokenibis.org',
-    'http://app.tokenibis.org:3000',
-)
+CORS_ORIGIN_ALLOW_ALL = True
+
+#CORS_ORIGIN_WHITELIST = (
+#    'http://localhost:3000',
+#    'https://app.tokenibis.org',
+#    'http://app.tokenibis.org:3000',
+#)
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 

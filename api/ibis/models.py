@@ -20,24 +20,33 @@ class IbisUser(User):
         symmetrical=False,
         blank=True,
     )
-    transfer_to = models.ManyToManyField(
-        'self',
-        related_name='transfer_from',
-        through='Transfer',
-        symmetrical=False,
-    )
-    profile_image = models.ImageField(upload_to='profile-photos/%Y/%m/%d/')
-    score = models.IntegerField()
+    avatar = models.TextField()
+    score = models.PositiveIntegerField()
 
     def __str__(self):
-        return '{} ({})'.format(self.username, self.id)
+        return '{}{}{}'.format(
+            self.first_name,
+            ' ' if self.first_name and self.last_name else '',
+            self.last_name,
+        )
 
 
 class NonprofitCategory(models.Model):
     class Meta:
         verbose_name_plural = 'nonprofit categories'
 
-    title = models.CharField(max_length=TITLE_MAX_LEN)
+    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
+    description = models.CharField(max_length=DESC_MAX_LEN)
+
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
+
+
+class TransactionCategory(models.Model):
+    class Meta:
+        verbose_name_plural = 'transaction categories'
+
+    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
     def __str__(self):
@@ -48,7 +57,7 @@ class PrivacyPolicy(models.Model):
     class Meta:
         verbose_name_plural = 'privacy policies'
 
-    title = models.CharField(max_length=TITLE_MAX_LEN)
+    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
     def __str__(self):
@@ -56,7 +65,7 @@ class PrivacyPolicy(models.Model):
 
 
 class NotificationReason(models.Model):
-    title = models.CharField(max_length=TITLE_MAX_LEN)
+    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
     description = models.CharField(max_length=DESC_MAX_LEN)
 
     def __str__(self):
@@ -105,34 +114,58 @@ class Settings(models.Model):
         )
 
 
-class Nonprofit(TimeStampedModel, SoftDeletableModel):
-    user = models.OneToOneField(
+class Person(IbisUser):
+    class Meta:
+        verbose_name = "Person"
+        verbose_name_plural = "People"
+
+    transaction_to = models.ManyToManyField(
         IbisUser,
-        on_delete=models.CASCADE,
-        primary_key=True,
+        related_name='transaction_from',
+        through='Transaction',
+        symmetrical=False,
     )
-    title = models.CharField(max_length=TITLE_MAX_LEN)
-    category = models.ManyToManyField(NonprofitCategory)
+
+
+class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
+    class Meta:
+        verbose_name = "Nonprofit"
+
+    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
+    category = models.ForeignKey(
+        NonprofitCategory,
+        on_delete=models.CASCADE,
+    )
     description = models.TextField()
     link = models.TextField()
 
+    donation_to = models.ManyToManyField(
+        IbisUser,
+        related_name='donation_from',
+        through='Donation',
+        symmetrical=False,
+    )
+
     def __str__(self):
-        return '{} ({})'.format(self.title, self.user.id)
+        return self.title
 
 
 class Exchange(TimeStampedModel):
+    amount = models.PositiveIntegerField()
+
+
+class Deposit(Exchange):
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
     )
-    amount = models.IntegerField()
 
-    def __str__(self):
-        return '{} {} ({})'.format(
-            'withdrawal' if self.amount < 0 else 'deposit',
-            self.user.username,
-            self.id,
-        )
+
+class Withdrawal(Exchange):
+    user = models.ForeignKey(
+        Nonprofit,
+        on_delete=models.CASCADE,
+    )
 
 
 class Post(TimeStampedModel, SoftDeletableModel):
@@ -143,28 +176,30 @@ class Post(TimeStampedModel, SoftDeletableModel):
     description = models.TextField()
 
 
-class TransferCategory(models.Model):
-    class Meta:
-        verbose_name_plural = 'transfer categories'
-
-    type = models.CharField(max_length=TITLE_MAX_LEN)
-    description = models.CharField(max_length=DESC_MAX_LEN)
-
-    def __str__(self):
-        return '{} ({})'.format(self.title, self.id)
-
-
 class Transfer(Post):
-    target = models.ForeignKey(
-        IbisUser,
-        on_delete=models.CASCADE,
-    )
     amount = models.PositiveIntegerField()
-    category = models.ManyToManyField(TransferCategory)
     like = models.ManyToManyField(
         IbisUser,
         related_name='likes_transfer',
         blank=True,
+    )
+
+
+class Donation(Transfer):
+    target = models.ForeignKey(
+        Nonprofit,
+        on_delete=models.CASCADE,
+    )
+
+
+class Transaction(Transfer):
+    target = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+    )
+    category = models.ForeignKey(
+        TransactionCategory,
+        on_delete=models.CASCADE,
     )
 
 
@@ -174,7 +209,7 @@ class News(Post):
 
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
-    content = models.FileField()
+    content = models.TextField()
     bookmark = models.ManyToManyField(
         IbisUser,
         related_name='bookmark_for',
@@ -186,7 +221,7 @@ class News(Post):
         blank=True,
     )
     header_image = models.ImageField(upload_to='news-photos/%Y/%m/%d/')
-    score = models.IntegerField()
+    score = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -205,8 +240,11 @@ class Event(Post):
         related_name='likes_event',
         blank=True,
     )
-    score = models.IntegerField()
     date = models.DateTimeField()
+    address = models.TextField()
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    score = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
