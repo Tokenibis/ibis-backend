@@ -83,6 +83,7 @@ class Model:
                 'username': unique_title,
                 'first_name': unique_title,
                 'last_name': '',
+                'email': '{}@example.com'.format(unique_title),
             }
         })
 
@@ -139,17 +140,18 @@ class Model:
 
     def add_person(self, first, last, score):
         pk = len(self.users) + 2
+        username = '{}_{}'.format('{}_{}'.format(first, last)[:10].lower(), pk)
 
         self.users.append({
             'model': 'users.User',
             'pk': pk,
             'fields': {
-                'username':
-                '{}_{}'.format('{}_{}'.format(first, last)[:10].lower(), pk),
+                'username': username,
                 'first_name':
                 first,
                 'last_name':
                 last,
+                'email': '{}@example.com'.format(username),
             }
         })
 
