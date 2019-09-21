@@ -6,7 +6,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 cd $DIR
-./make_fixtures.py
+python3 make_fixtures.py
 
 cd $DIR/../api
 rm db.sqlite3
