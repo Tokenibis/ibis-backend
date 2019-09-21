@@ -9,3 +9,4 @@ django-rest-swagger
 django-extensions
 graphene_django
 pillow
+python-dateutil
