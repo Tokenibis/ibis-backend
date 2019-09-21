@@ -979,6 +979,85 @@ class PersonNode(IbisUserNode, UserNode):
         return (deposit) + (transfer_in - transfer_out)
 
 
+class PersonCreate(Mutation):
+    class Arguments:
+        username = graphene.String(required=True)
+        email = graphene.String(required=True)
+        first_name = graphene.String(required=True)
+        last_name = graphene.String(required=True)
+        score = graphene.String()
+
+    person = graphene.Field(PersonNode)
+
+    def mutate(
+            self,
+            info,
+            username,
+            email,
+            first_name,
+            last_name,
+            score=0,
+    ):
+        person = models.Person.objects.create(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            score=score,
+        )
+        person.save()
+        return PersonCreate(person=person)
+
+
+class PersonUpdate(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        username = graphene.String()
+        email = graphene.String()
+        first_name = graphene.String()
+        last_name = graphene.String()
+
+    person = graphene.Field(PersonNode)
+
+    def mutate(
+            self,
+            info,
+            id,
+            username='',
+            email='',
+            first_name='',
+            last_name='',
+            score=None,
+    ):
+        person = models.Person.objects.get(pk=from_global_id(id)[1])
+        if username:
+            person.username = username
+        if email:
+            person.email = email
+        if first_name:
+            person.first_name = first_name
+        if last_name:
+            person.first_name = last_name
+        if type(score) == int:
+            nonprofit.score = score
+        person.save()
+        return PersonUpdate(person=person)
+
+
+class PersonDelete(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
+            return PersonDelete(status=True)
+        except models.IbisUser.DoesNotExist:
+            return PersonDelete(status=False)
+
+
 # --- Nonprofit ------------------------------------------------------------- #
 
 
@@ -994,31 +1073,51 @@ class NonprofitNode(IbisUserNode):
     def resolve_balance(self, *args, **kwargs):
         deposit = sum([ex.amount for ex in self.deposit_set.all()])
         withdrawal = sum([ex.amount for ex in self.withdrawal_set.all()])
-        transfer_in = sum([
+        donation_in = sum([
             tx.transfer.amount
-            for tx in models.Transaction.objects.filter(target=self)
+            for tx in models.Donation.objects.filter(target=self)
         ])
         transfer_out = sum([
             tx.transfer.amount
             for tx in models.Transaction.objects.filter(user=self)
         ])
-        return (deposit - withdrawal) + (transfer_in - transfer_out)
+        return (deposit - withdrawal) + (donation_in - transfer_out)
 
 
 class NonprofitCreate(Mutation):
     class Arguments:
+        username = graphene.String(required=True)
+        email = graphene.String(required=True)
         title = graphene.String(required=True)
         category = graphene.ID(required=True)
         description = graphene.String(required=True)
         link = graphene.String(required=True)
+        score = graphene.Int()
 
     nonprofit = graphene.Field(NonprofitNode)
 
-    def mutate(self, info, user, title, category, description, link):
+    def mutate(
+            self,
+            info,
+            username,
+            email,
+            title,
+            category,
+            description,
+            link,
+            score=0,
+    ):
         nonprofit = models.Nonprofit.objects.create(
+            username=username,
+            email=email,
+            first_name=title,
+            last_name='',
             title=title,
             description=description,
             link=link,
+            category=models.NonprofitCategory.objects.get(
+                pk=from_global_id(category)[1]),
+            score=score,
         )
         nonprofit.save()
         return NonprofitCreate(nonprofit=nonprofit)
@@ -1027,30 +1126,45 @@ class NonprofitCreate(Mutation):
 class NonprofitUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
+        username = graphene.String()
+        email = graphene.String()
         title = graphene.String()
         category = graphene.ID()
         description = graphene.String()
         link = graphene.String()
+        score = graphene.Int()
 
     nonprofit = graphene.Field(NonprofitNode)
 
-    def mutate(self,
-               info,
-               id,
-               title='',
-               category=None,
-               description='',
-               link=''):
+    def mutate(
+            self,
+            info,
+            id,
+            username='',
+            email='',
+            title='',
+            category=None,
+            description='',
+            link='',
+            score=0,
+    ):
         nonprofit = models.Nonprofit.objects.get(pk=from_global_id(id)[1])
+        if username:
+            nonprofit.username = username
+        if email:
+            nonprofit.email = email
         if title:
             nonprofit.title = title
+            nonprofit.first_name = title
         if category:
-            nonprofit.category = models.NonprofitCategories.objects.get(
+            nonprofit.category = models.NonprofitCategory.objects.get(
                 pk=from_global_id(category)[1])
         if description:
             nonprofit.description = description
         if link:
             nonprofit.link = link
+        if type(score) == int:
+            nonprofit.score = score
 
         nonprofit.save()
         return NonprofitUpdate(nonprofit=nonprofit)
@@ -1064,9 +1178,9 @@ class NonprofitDelete(Mutation):
 
     def mutate(self, info, id):
         try:
-            models.Nonprofit.objects.get(pk=from_global_id(id)[1]).delete()
+            models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
             return NonprofitDelete(status=True)
-        except models.Nonprofit.DoesNotExist:
+        except models.IbisUser.DoesNotExist:
             return NonprofitDelete(status=False)
 
 
@@ -1165,7 +1279,7 @@ class Query(object):
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)
-    all_transfer_categories = DjangoFilterConnectionField(
+    all_transaction_categories = DjangoFilterConnectionField(
         TransactionCategoryNode)
     all_people = DjangoFilterConnectionField(
         PersonNode,
@@ -1200,6 +1314,14 @@ class Mutation(graphene.ObjectType):
     create_nonprofit_category = NonprofitCategoryCreate.Field()
     update_nonprofit_category = NonprofitCategoryUpdate.Field()
     delete_nonprofit_category = NonprofitCategoryDelete.Field()
+
+    create_transaction_category = TransactionCategoryCreate.Field()
+    update_transaction_category = TransactionCategoryUpdate.Field()
+    delete_transaction_category = TransactionCategoryDelete.Field()
+
+    create_person = PersonCreate.Field()
+    update_person = PersonUpdate.Field()
+    delete_person = PersonDelete.Field()
 
     create_nonprofit = NonprofitCreate.Field()
     update_nonprofit = NonprofitUpdate.Field()
