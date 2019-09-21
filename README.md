@@ -20,6 +20,12 @@ Please ensure that your environment is set up to run python 3
 
 `$ pip3 install -r requirements.txt --user`
 
+### Option 1 - Load Fixtures
+
+`$ ./fixtures/load_fixtures.sh`
+
+### Option 2 - Manual Setup
+
 `$ cd api`
 
 `$ python3 manage.py makemigrations users`
