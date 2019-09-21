@@ -20,7 +20,7 @@ class IbisUser(User):
         symmetrical=False,
         blank=True,
     )
-    profile_image = models.ImageField(upload_to='profile-photos/%Y/%m/%d/')
+    avatar = models.TextField()
     score = models.PositiveIntegerField()
 
     def __str__(self):

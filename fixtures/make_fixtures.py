@@ -21,6 +21,9 @@ from datetime import datetime, timedelta
 
 import markovgen
 
+BIRDS = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
+BIRDS_LEN = 234
+
 
 class Model:
     def __init__(self):
@@ -57,8 +60,10 @@ class Model:
         pk = len(self.transaction_categories) + 1
 
         self.transaction_categories.append({
-            'model': 'ibis.TransactionCategory',
-            'pk': pk,
+            'model':
+            'ibis.TransactionCategory',
+            'pk':
+            pk,
             'fields': {
                 'title': title,
                 'description': description,
@@ -92,6 +97,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'score': score,
+                'avatar': BIRDS.format(hash(title) % BIRDS_LEN)
             },
         })
 
@@ -147,10 +153,8 @@ class Model:
             'pk': pk,
             'fields': {
                 'username': username,
-                'first_name':
-                first,
-                'last_name':
-                last,
+                'first_name': first,
+                'last_name': last,
                 'email': '{}@example.com'.format(username),
             }
         })
@@ -161,6 +165,7 @@ class Model:
             'fields': {
                 'following': [],
                 'score': score,
+                'avatar': BIRDS.format(hash(first + ' ' + last) % BIRDS_LEN)
             }
         })
 
@@ -442,11 +447,11 @@ def run():
         sentences = raw.split('.')
         sentences[0] = '[{}](https://tokenibis.org)\n'.format(sentences[0])
         sentences.insert(
-            round(len(sentences) * 0.25),
-            '\n# {}\n'.format(markov.generate_markov_text(size=3)))
+            round(len(sentences) * 0.25), '\n# {}\n'.format(
+                markov.generate_markov_text(size=3)))
         sentences.insert(
-            round(len(sentences) * 0.5),
-            '\n# {}\n'.format(markov.generate_markov_text(size=3)))
+            round(len(sentences) * 0.5), '\n# {}\n'.format(
+                markov.generate_markov_text(size=3)))
         for i in range(2, 5):
             sentences[-i] = '\n* {}\n'.format(sentences[-i])
         content = '.'.join(sentences)
