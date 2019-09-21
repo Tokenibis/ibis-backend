@@ -135,7 +135,6 @@ class Model:
             }
         })
 
-
         return pk
 
     def add_person(self, first, last, score):
@@ -436,12 +435,25 @@ def run():
             random.choice(verbs),
             random.choice(nouns),
         )
+        raw = markov.generate_markov_text(size=600).strip()
+        description = raw[:300]
+        sentences = raw.split('.')
+        sentences[0] = '[{}](https://tokenibis.org)\n'.format(sentences[0])
+        sentences.insert(
+            round(len(sentences) * 0.25),
+            '\n# {}\n'.format(markov.generate_markov_text(size=3)))
+        sentences.insert(
+            round(len(sentences) * 0.5),
+            '\n# {}\n'.format(markov.generate_markov_text(size=3)))
+        for i in range(2, 5):
+            sentences[-i] = '\n* {}\n'.format(sentences[-i])
+        content = '.'.join(sentences)
         news.append(
             model.add_news(
                 random.choice(nonprofits),
                 title,
-                markov.generate_markov_text(size=90),
-                markov.generate_markov_text(size=600),
+                description,
+                content,
                 random.randint(0, 100),
             ))
 
@@ -457,7 +469,7 @@ def run():
         date_next += timedelta(hours=random.randint(0, 48))
         latitude = 35.107 + (random.random() * 0.2 - 0.1)
         longitude = -106.630 + (random.random() * 0.2 - 0.1)
-        address = '55555 Road Ave.\nAlbuquerque NM, 87555'
+        address = 'The Convention Thingy\n55555 Road Ave.\nAlbuquerque NM, 87555'
         events.append(
             model.add_event(
                 random.choice(nonprofits),
