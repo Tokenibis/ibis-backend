@@ -21,11 +21,12 @@ class IbisUser(User):
         blank=True,
     )
     profile_image = models.ImageField(upload_to='profile-photos/%Y/%m/%d/')
-    score = models.IntegerField()
+    score = models.PositiveIntegerField()
 
     def __str__(self):
-        return '{} {}'.format(
+        return '{}{}{}'.format(
             self.first_name,
+            ' ' if self.first_name and self.last_name else '',
             self.last_name,
         )
 
@@ -114,6 +115,10 @@ class Settings(models.Model):
 
 
 class Person(IbisUser):
+    class Meta:
+        verbose_name = "Person"
+        verbose_name_plural = "People"
+
     transaction_to = models.ManyToManyField(
         IbisUser,
         related_name='transaction_from',
@@ -123,6 +128,9 @@ class Person(IbisUser):
 
 
 class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
+    class Meta:
+        verbose_name = "Nonprofit"
+
     title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
     category = models.ForeignKey(
         NonprofitCategory,
@@ -213,7 +221,7 @@ class News(Post):
         blank=True,
     )
     header_image = models.ImageField(upload_to='news-photos/%Y/%m/%d/')
-    score = models.IntegerField()
+    score = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -236,7 +244,7 @@ class Event(Post):
     address = models.TextField()
     latitude = models.FloatField()
     longitude = models.FloatField()
-    score = models.IntegerField()
+    score = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
