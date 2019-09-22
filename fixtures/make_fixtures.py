@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 import markovgen
 
 BIRDS = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
-BIRDS_LEN = 234
+BIRDS_LEN = 233
 
 
 class Model:
