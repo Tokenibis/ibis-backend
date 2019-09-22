@@ -584,17 +584,29 @@ class NewsCreate(Mutation):
         description = graphene.String(required=True)
         title = graphene.String(required=True)
         link = graphene.String(required=True)
+        image = graphene.String(required=True)
         content = graphene.String(required=True)
         score = graphene.Int(required=True)
 
     news = graphene.Field(NewsNode)
 
-    def mutate(self, info, user, description, title, link, content, score):
+    def mutate(
+            self,
+            info,
+            user,
+            description,
+            title,
+            link,
+            image,
+            content,
+            score,
+    ):
         news = models.News.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
             link=link,
+            image=image,
             content=content,
             score=score,
         )
@@ -609,6 +621,7 @@ class NewsUpdate(Mutation):
         description = graphene.String()
         title = graphene.String()
         link = graphene.String()
+        image = graphene.String()
         content = graphene.String()
         score = graphene.Int()
 
@@ -622,6 +635,7 @@ class NewsUpdate(Mutation):
             description='',
             title='',
             link='',
+            image='',
             content='',
             score=0,
     ):
@@ -634,6 +648,8 @@ class NewsUpdate(Mutation):
             news.title = title
         if link:
             news.link = link
+        if image:
+            news.image = image
         if content:
             news.content = content
         if score:
@@ -737,6 +753,7 @@ class EventCreate(Mutation):
         description = graphene.String(required=True)
         title = graphene.String(required=True)
         link = graphene.String(required=True)
+        image = graphene.String(required=True)
         date = graphene.String(required=True)
         address = graphene.String(required=True)
         latitude = graphene.Float(required=True)
@@ -752,6 +769,7 @@ class EventCreate(Mutation):
             description,
             title,
             link,
+            image,
             date,
             address,
             latitude,
@@ -763,6 +781,7 @@ class EventCreate(Mutation):
             description=description,
             title=title,
             link=link,
+            image=image,
             date=dateutil.parser.parse(date),
             address=address,
             latitude=latitude,
@@ -780,6 +799,7 @@ class EventUpdate(Mutation):
         description = graphene.String()
         title = graphene.String()
         link = graphene.String()
+        image = graphene.String()
         date = graphene.String()
         address = graphene.String()
         latitude = graphene.Float()
@@ -796,6 +816,7 @@ class EventUpdate(Mutation):
             description='',
             title='',
             link='',
+            image='',
             date='',
             address='',
             latitude=None,
@@ -812,6 +833,8 @@ class EventUpdate(Mutation):
             event.title = title
         if link:
             event.link = link
+        if image:
+            event.image = image
         if date:
             event.date = date
         if address:

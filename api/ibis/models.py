@@ -209,6 +209,7 @@ class News(Post):
 
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
+    image = models.TextField()
     content = models.TextField()
     bookmark = models.ManyToManyField(
         IbisUser,
@@ -220,7 +221,6 @@ class News(Post):
         related_name='likes_news',
         blank=True,
     )
-    header_image = models.ImageField(upload_to='news-photos/%Y/%m/%d/')
     score = models.PositiveIntegerField()
 
     def __str__(self):
@@ -230,6 +230,7 @@ class News(Post):
 class Event(Post):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
+    image = models.TextField()
     rsvp = models.ManyToManyField(
         IbisUser,
         related_name='rsvp_for',

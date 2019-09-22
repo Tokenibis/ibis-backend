@@ -232,6 +232,7 @@ class Model:
                 'like': [],
                 'score': score,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
+                'image': BIRDS.format(hash(title) % BIRDS_LEN),
             }
         })
 
@@ -266,6 +267,7 @@ class Model:
             'fields': {
                 'title': title,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
+                'image': BIRDS.format(hash(title) % BIRDS_LEN),
                 'rsvp': [],
                 'like': [],
                 'date': date,
