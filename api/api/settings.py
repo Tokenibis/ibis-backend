@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
     'rest_auth',
     'rest_auth.registration',
     'corsheaders',
@@ -166,7 +167,4 @@ SITE_ID = 1
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
 
-IBIS_APP_URL = 'http://localhost:3000'
-
-# Need to figure out where to store images. This is a temporary solution
-MEDIA_ROOT = '/photo-uploads/'
+IBIS_APP_URL = 'https://app.tokenibis.org'
