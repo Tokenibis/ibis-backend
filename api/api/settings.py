@@ -16,7 +16,7 @@ import os
 # Standard Django Settings
 # ------------------------------------------------------------ #
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['api.tokenibis.org', 'app.tokenibis.org']
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -151,20 +151,26 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = True
 
-#CORS_ORIGIN_WHITELIST = (
-#    'http://localhost:3000',
-#    'https://app.tokenibis.org',
-#    'http://app.tokenibis.org:3000',
-#)
+CORS_ORIGIN_WHITELIST = (
+    'https://app.tokenibis.org',
+)
+
+CSRF_TRUSTED_ORIGINS = ['api.tokenibis.org', 'app.tokenibis.org']
+
+CSRF_COOKIE_DOMAIN = 'tokenibis.org'
 
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 SITE_ID = 1
 
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+
+SOCIALACCOUNT_QUERY_EMAIL = True
+
 # ------------------------------------------------------------ #
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
 
-IBIS_APP_URL = 'https://app.tokenibis.org'
+IBIS_APP_URL = 'https://app.tokenibis.org/'

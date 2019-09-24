@@ -29,12 +29,12 @@ class CallbackSerializer(SocialLoginSerializer):
         the session, the Login and CreateCallback requests must
         originate from the same endpoint and must be authenticated.
         """
-        # try:
-        #     SocialLogin.verify_and_unstash_state(
-        #         self.context['request'],
-        #         value,
-        #     )
-        # # Allauth raises PermissionDenied if the validation fails
-        # except PermissionDenied:
-        #     raise ValidationError(_('State did not match.'))
+        try:
+            SocialLogin.verify_and_unstash_state(
+                self.context['request'],
+                value,
+            )
+        # Allauth raises PermissionDenied if the validation fails
+        except PermissionDenied:
+            raise ValidationError(_('State did not match.'))
         return value
