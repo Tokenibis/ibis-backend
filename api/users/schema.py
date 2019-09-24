@@ -1,15 +1,26 @@
+import graphene
+
 from graphene import relay
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
+from allauth.socialaccount.models import SocialAccount
 
 import users.models as models
 
 
 class UserNode(DjangoObjectType):
+    facebook_ID = graphene.Int()
+
     class Meta:
         model = models.User
         filter_fields = ['id', 'username']
         interfaces = (relay.Node, )
+
+    def resolve_facebook_ID(self, *args, **kwargs):
+        try:
+            return SocialAccount.objects.get(user=self).uid
+        except SocialAccount.DoesNotExist:
+            return 0
 
 
 class Query(object):
