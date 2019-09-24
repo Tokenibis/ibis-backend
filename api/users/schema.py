@@ -9,7 +9,7 @@ import users.models as models
 
 
 class UserNode(DjangoObjectType):
-    facebook_ID = graphene.Int()
+    facebook_ID = graphene.String()
 
     class Meta:
         model = models.User
@@ -20,7 +20,7 @@ class UserNode(DjangoObjectType):
         try:
             return SocialAccount.objects.get(user=self).uid
         except SocialAccount.DoesNotExist:
-            return 0
+            return ''
 
 
 class Query(object):
