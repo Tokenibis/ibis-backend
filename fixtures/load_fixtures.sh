@@ -17,5 +17,5 @@ python3 manage.py makemigrations ibis
 python3 manage.py migrate users
 python3 manage.py migrate ibis
 python3 manage.py migrate
-python3 manage.py createsuperuser --username admin --email 'admin@admin.com' --noinput
+python3 manage.py createsuperuser --username dummy --email 'admin@admin.com' --noinput
 python3 manage.py loaddata $DIR/fixtures.json
