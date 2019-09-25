@@ -8,6 +8,7 @@ api/ibis/migrations
 api/users/migrations
 
 fixtures/fixtures.json
+fixtures/data/social_apps.json
 lib
 bin
 include

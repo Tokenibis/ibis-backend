@@ -42,6 +42,29 @@ class Model:
         self.news = []
         self.events = []
 
+        with open('data/social_apps.json') as fd:
+            app = json.load(fd)
+
+        self.sites = [{
+            'model': 'sites.Site',
+            'pk': 1,
+            'fields': {
+                'domain': '127.0.0.1', 
+            }
+        }]   
+
+        self.socialApplications = [{
+            'model': 'socialaccount.SocialApp',
+            'pk': 1,
+            'fields': {
+                'name': 'facebook',
+                'provider': 'facebook',
+                'client_id': app['client_id'],
+                'secret': app['secret'],
+                'sites': [1], 
+            }
+        }]
+
     def add_nonprofit_category(self, title, description):
         pk = len(self.nonprofit_categories) + 1
 
@@ -333,8 +356,9 @@ class Model:
             self.donations + \
             self.transactions + \
             self.news + \
-            self.events
-
+            self.events + \
+            self.sites + \
+            self.socialApplications
 
 def run():
 
