@@ -8,5 +8,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', get_swagger_view(title='Ibis API'), name='api'),
     path('auth/', include('users.urls')),
+    path('ibis/', include('ibis.urls')),
     path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
 ]
