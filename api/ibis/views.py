@@ -12,8 +12,6 @@ class LoginView(generics.GenericAPIView):
     serializer_class = LoginFormSerializer
 
     def post(self, request, *args, **kwargs):
-        print(request.user.id)
-        print(request.auth)
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
