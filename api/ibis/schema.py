@@ -697,6 +697,14 @@ class TransactionDelete(Mutation):
 
 class NewsNode(PostNode):
     like_count = graphene.Int()
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+    bookmark = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
 
     class Meta:
         model = models.News
@@ -705,6 +713,12 @@ class NewsNode(PostNode):
 
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
+
+    def resolve_like(self, *args, **kwargs):
+        return self.like
+
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
 
 
 class NewsCreate(Mutation):
@@ -806,6 +820,14 @@ class NewsDelete(Mutation):
 
 class EventNode(PostNode):
     like_count = graphene.Int()
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+    rsvp = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
 
     class Meta:
         model = models.Event
@@ -814,6 +836,12 @@ class EventNode(PostNode):
 
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
+
+    def resolve_like(self, *args, **kwargs):
+        return self.like
+
+    def resolve_rsvp(self, *args, **kwargs):
+        return self.rsvp
 
 
 class EventCreate(Mutation):
@@ -1343,13 +1371,13 @@ class FollowDelete(FollowMutation):
 class LikeMutation(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        post = graphene.ID(required=True)
+        target = graphene.ID(required=True)
 
     post = graphene.Field(PostNode)
 
     @classmethod
-    def mutate(cls, operation, user, post):
-        post_type, post_id = from_global_id(post)
+    def mutate(cls, operation, user, target):
+        post_type, post_id = from_global_id(target)
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
 
         if post_type == 'DonationNode':
@@ -1390,9 +1418,9 @@ class VoteCreate(Mutation):
 
     comment = graphene.Field(CommentNode)
 
-    def mutate(self, info, user, comment, is_upvote):
+    def mutate(self, info, user, target, is_upvote):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        comment_obj = models.Comment.objects.get(pk=from_global_id(comment)[1])
+        comment_obj = models.Comment.objects.get(pk=from_global_id(target)[1])
         vote_obj = models.UserCommentVote.objects.create(
             user=user_obj,
             comment=comment_obj,
@@ -1406,13 +1434,13 @@ class VoteCreate(Mutation):
 class VoteDelete(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        comment = graphene.ID(required=True)
+        target = graphene.ID(required=True)
 
     comment = graphene.Field(CommentNode)
 
-    def mutate(self, info, user, comment):
+    def mutate(self, info, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        comment_obj = models.Comment.objects.get(pk=from_global_id(comment)[1])
+        comment_obj = models.Comment.objects.get(pk=from_global_id(target)[1])
         models.UserCommentVote.objects.get(
             user=user_obj, comment=comment_obj).delete()
 
@@ -1425,14 +1453,14 @@ class VoteDelete(Mutation):
 class BookmarkMutation(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        news = graphene.ID(required=True)
+        target = graphene.ID(required=True)
 
     news = graphene.Field(NewsNode)
 
     @classmethod
-    def mutate(cls, operation, user, news):
+    def mutate(cls, operation, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        news_obj = models.News.objects.get(pk=from_global_id(news)[1])
+        news_obj = models.News.objects.get(pk=from_global_id(target)[1])
         getattr(news_obj.bookmark, operation)(user_obj)
         news_obj.save()
         return BookmarkMutation(news=news_obj)
@@ -1454,14 +1482,14 @@ class BookmarkDelete(BookmarkMutation):
 class RsvpMutation(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        event = graphene.ID(required=True)
+        target = graphene.ID(required=True)
 
     event = graphene.Field(EventNode)
 
     @classmethod
-    def mutate(cls, operation, user, event):
+    def mutate(cls, operation, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        event_obj = models.Event.objects.get(pk=from_global_id(event)[1])
+        event_obj = models.Event.objects.get(pk=from_global_id(target)[1])
         getattr(event_obj.rsvp, operation)(user_obj)
         event_obj.save()
         return RsvpMutation(event=event_obj)
