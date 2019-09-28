@@ -1062,7 +1062,7 @@ class PersonUpdate(Mutation):
         if last_name:
             person.first_name = last_name
         if type(score) == int:
-            nonprofit.score = score
+            person.score = score
         person.save()
         return PersonUpdate(person=person)
 
