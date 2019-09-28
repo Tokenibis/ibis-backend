@@ -12,6 +12,211 @@ import dateutil.parser
 import ibis.models as models
 from users.schema import UserNode
 
+# --- Filters --------------------------------------------------------------- #
+
+
+class IbisUserOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(IbisUserOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['follower_count', '-follower_count']:
+                if v in value:
+                    qs = qs.annotate(
+                        follower_count=Count('follower')).order_by(v)
+                    value.remove(v)
+
+        return super(IbisUserOrderingFilter, self).filter(qs, value)
+
+
+class IbisUserFilter(django_filters.FilterSet):
+    followed_by = django_filters.CharFilter(method='filter_followed_by')
+    follower_of = django_filters.CharFilter(method='filter_follower_of')
+    order_by = IbisUserOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('date_joined', 'date_joined'),
+            ('follower_count', 'follower_count'),
+            ('first_name', 'first_name'),
+            ('last_name', 'last_name'),
+        ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.IbisUser
+        fields = []
+
+    def filter_followed_by(self, qs, name, value):
+        return qs.filter(
+            id__in=self.Meta.model.objects.get(
+                id=from_global_id(value)[1]).following.all())
+
+    def filter_follower_of(self, qs, name, value):
+        return qs.filter(
+            id__in=self.Meta.model.objects.get(
+                id=from_global_id(value)[1]).follower.all())
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            name=Concat('first_name', Value(' '), 'last_name')).filter(
+                Q(name__icontains=value) | Q(username__icontains=value))
+
+
+class TransferFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.Transfer
+        fields = ['by_following']
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(
+            Q(user_id=from_global_id(value)[1])
+            | Q(target_id=from_global_id(value)[1]))
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            Q(
+                target_id__in=models.IbisUser.objects.get(
+                    id=int(from_global_id(value)[1])).following.all()) | Q(
+                        user_id__in=models.IbisUser.objects.get(
+                            id=int(from_global_id(value)[1])).following.all()))
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat(
+                'user__first_name',
+                Value(' '),
+                'user__last_name',
+            ), ).annotate(
+                target_name=Concat(
+                    'target__first_name',
+                    Value(' '),
+                    'target__last_name',
+                ), ).filter(
+                    Q(user_name__icontains=value)
+                    | Q(target_name__icontains=value)
+                    | Q(user__username__icontains=value)
+                    | Q(target__username__icontains=value)
+                    | Q(description__icontains=value))
+
+
+class NewsOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(NewsOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(NewsOrderingFilter, self).filter(qs, value)
+
+
+class NewsFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = NewsOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.News
+        fields = ['by_following']
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_bookmark_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).bookmark_for.all())
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value)
+                                 | Q(title__icontains=value))
+
+
+class EventOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(EventOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(EventOrderingFilter, self).filter(qs, value)
+
+
+class EventFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    begin_date = django_filters.CharFilter(method='filter_begin_date')
+    end_date = django_filters.CharFilter(method='filter_end_date')
+    order_by = EventOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.Event
+        fields = ['by_following']
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_rsvp_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).rsvp_for.all())
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+
+    def filter_begin_date(self, qs, name, value):
+        return qs.filter(date__gte=value)
+
+    def filter_end_date(self, qs, name, value):
+        return qs.filter(date__lt=value)
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value)
+                                 | Q(title__icontains=value))
+
+
 # --- Nonprofit Category ---------------------------------------------------- #
 
 
@@ -266,48 +471,6 @@ class PostNode(DjangoObjectType):
 # --- Transfer -------------------------------------------------------------- #
 
 
-class TransferFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.Transfer
-        fields = ['by_following']
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(
-            Q(user_id=from_global_id(value)[1])
-            | Q(target_id=from_global_id(value)[1]))
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            Q(
-                target_id__in=models.IbisUser.objects.get(
-                    id=int(from_global_id(value)[1])).following.all()) | Q(
-                        user_id__in=models.IbisUser.objects.get(
-                            id=int(from_global_id(value)[1])).following.all()))
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat(
-                'user__first_name',
-                Value(' '),
-                'user__last_name',
-            ), ).annotate(
-                target_name=Concat(
-                    'target__first_name',
-                    Value(' '),
-                    'target__last_name',
-                ), ).filter(
-                    Q(user_name__icontains=value)
-                    | Q(target_name__icontains=value)
-                    | Q(user__username__icontains=value)
-                    | Q(target__username__icontains=value)
-                    | Q(description__icontains=value))
-
-
 class TransferNode(PostNode):
     like_count = graphene.Int()
 
@@ -325,6 +488,10 @@ class TransferNode(PostNode):
 
 class DonationNode(TransferNode):
     amount = graphene.Int()
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
 
     class Meta:
         model = models.Donation
@@ -333,6 +500,9 @@ class DonationNode(TransferNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.transfer.amount
+
+    def resolve_like(self, *args, **kwargs):
+        return self.transfer.like
 
 
 class DonationCreate(Mutation):
@@ -419,6 +589,10 @@ class DonationDelete(Mutation):
 
 class TransactionNode(TransferNode):
     amount = graphene.Int()
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
 
     class Meta:
         model = models.Transaction
@@ -427,6 +601,9 @@ class TransactionNode(TransferNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.transfer.amount
+
+    def resolve_like(self, *args, **kwargs):
+        return self.transfer.like
 
 
 class TransactionCreate(Mutation):
@@ -512,58 +689,6 @@ class TransactionDelete(Mutation):
 
 
 # --- News ------------------------------------------------------------------ #
-
-
-class NewsOrderingFilter(django_filters.OrderingFilter):
-    def __init__(self, *args, **kwargs):
-        super(NewsOrderingFilter, self).__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
-        if value:
-            for v in ['like_count', '-like_count']:
-                if v in value:
-                    qs = qs.annotate(like_count=Count('like')).order_by(v)
-                    value.remove(v)
-
-        return super(NewsOrderingFilter, self).filter(qs, value)
-
-
-class NewsFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    order_by = NewsOrderingFilter(
-        fields=(
-            ('score', 'score'),
-            ('created', 'created'),
-            ('like_count', 'like_count'),
-        ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.News
-        fields = ['by_following']
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(user_id=from_global_id(value)[1])
-
-    def filter_bookmark_by(self, qs, name, value):
-        return qs.filter(
-            id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).bookmark_for.all())
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            user_id__in=models.IbisUser.objects.get(
-                id=int(from_global_id(value)[1])).following.all())
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat('user__first_name', Value(' '),
-                             'user__last_name')).filter(
-                                 Q(user_name__icontains=value)
-                                 | Q(user__username__icontains=value)
-                                 | Q(title__icontains=value))
 
 
 class NewsNode(PostNode):
@@ -673,66 +798,6 @@ class NewsDelete(Mutation):
 
 
 # --- Event ----------------------------------------------------------------- #
-
-
-class EventOrderingFilter(django_filters.OrderingFilter):
-    def __init__(self, *args, **kwargs):
-        super(EventOrderingFilter, self).__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
-        if value:
-            for v in ['like_count', '-like_count']:
-                if v in value:
-                    qs = qs.annotate(like_count=Count('like')).order_by(v)
-                    value.remove(v)
-
-        return super(EventOrderingFilter, self).filter(qs, value)
-
-
-class EventFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    begin_date = django_filters.CharFilter(method='filter_begin_date')
-    end_date = django_filters.CharFilter(method='filter_end_date')
-    order_by = EventOrderingFilter(
-        fields=(
-            ('score', 'score'),
-            ('created', 'created'),
-            ('like_count', 'like_count'),
-        ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.Event
-        fields = ['by_following']
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(user_id=from_global_id(value)[1])
-
-    def filter_rsvp_by(self, qs, name, value):
-        return qs.filter(
-            id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).rsvp_for.all())
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            user_id__in=models.IbisUser.objects.get(
-                id=int(from_global_id(value)[1])).following.all())
-
-    def filter_begin_date(self, qs, name, value):
-        return qs.filter(date__gte=value)
-
-    def filter_end_date(self, qs, name, value):
-        return qs.filter(date__lt=value)
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat('user__first_name', Value(' '),
-                             'user__last_name')).filter(
-                                 Q(user_name__icontains=value)
-                                 | Q(user__username__icontains=value)
-                                 | Q(title__icontains=value))
 
 
 class EventNode(PostNode):
@@ -862,54 +927,6 @@ class EventDelete(Mutation):
 
 
 # --- Ibis User ------------------------------------------------------------- #
-
-
-class IbisUserOrderingFilter(django_filters.OrderingFilter):
-    def __init__(self, *args, **kwargs):
-        super(IbisUserOrderingFilter, self).__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
-        if value:
-            for v in ['follower_count', '-follower_count']:
-                if v in value:
-                    qs = qs.annotate(
-                        follower_count=Count('follower')).order_by(v)
-                    value.remove(v)
-
-        return super(IbisUserOrderingFilter, self).filter(qs, value)
-
-
-class IbisUserFilter(django_filters.FilterSet):
-    followed_by = django_filters.CharFilter(method='filter_followed_by')
-    follower_of = django_filters.CharFilter(method='filter_follower_of')
-    order_by = IbisUserOrderingFilter(
-        fields=(
-            ('score', 'score'),
-            ('date_joined', 'date_joined'),
-            ('follower_count', 'follower_count'),
-            ('first_name', 'first_name'),
-            ('last_name', 'last_name'),
-        ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.IbisUser
-        fields = []
-
-    def filter_followed_by(self, qs, name, value):
-        return qs.filter(
-            id__in=self.Meta.model.objects.get(
-                id=from_global_id(value)[1]).following.all())
-
-    def filter_follower_of(self, qs, name, value):
-        return qs.filter(
-            id__in=self.Meta.model.objects.get(
-                id=from_global_id(value)[1]).follower.all())
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            name=Concat('first_name', Value(' '), 'last_name')).filter(
-                Q(name__icontains=value) | Q(username__icontains=value))
 
 
 class IbisUserNode(UserNode):
@@ -1062,7 +1079,7 @@ class PersonUpdate(Mutation):
         if last_name:
             person.first_name = last_name
         if type(score) == int:
-            nonprofit.score = score
+            person.score = score
         person.save()
         return PersonUpdate(person=person)
 
@@ -1287,6 +1304,227 @@ class CommentDelete(Mutation):
             return CommentDelete(status=False)
 
 
+# --- Likes ----------------------------------------------------------------- #
+
+
+class LikeCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        post = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, post):
+        post_type, post_id = from_global_id(post)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            if post_type == 'DonationNode':
+                models.Donation.objects.get(pk=post_id).like.add(user_obj)
+            elif post_type == 'TransactionNode':
+                models.Transaction.objects.get(pk=post_id).like.add(user_obj)
+            elif post_type == 'NewsNode':
+                models.News.objects.get(pk=post_id).like.add(user_obj)
+            elif post_type == 'EventNode':
+                models.Event.objects.get(pk=post_id).like.add(user_obj)
+            else:
+                raise KeyError('Object has no "like" operation')
+        except (
+                KeyError,
+                models.IbisUser.DoesNotExist,
+                models.Donation.DoesNotExist,
+                models.Transaction.DoesNotExist,
+                models.News.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return LikeCreate(status=False)
+
+        return LikeCreate(status=True)
+
+
+class LikeDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        post = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, post):
+        post_type, post_id = from_global_id(post)
+
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            if post_type == 'DonationNode':
+                models.Donation.objects.get(pk=post_id).like.remove(user_obj)
+            elif post_type == 'TransactionNode':
+                models.Transaction.objects.get(
+                    pk=post_id).like.remove(user_obj)
+            elif post_type == 'NewsNode':
+                models.News.objects.get(pk=post_id).like.remove(user_obj)
+            elif post_type == 'EventNode':
+                models.Event.objects.get(pk=post_id).like.remove(user_obj)
+            else:
+                raise KeyError('Object has no "like" operation')
+        except (
+                KeyError,
+                models.IbisUser.DoesNotExist,
+                models.Donation.DoesNotExist,
+                models.Transaction.DoesNotExist,
+                models.News.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return LikeDelete(status=False)
+
+        return LikeDelete(status=True)
+
+
+# --- Vote ------------------------------------------------------------------ #
+
+
+class VoteCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        comment = graphene.ID(required=True)
+        is_upvote = graphene.Boolean(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, comment, is_upvote):
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.UserCommentVote.objects.create(
+                user=user_obj,
+                comment=from_global_id(comment)[1],
+                is_upvote=is_upvote,
+            )
+        except (
+                models.IbisUser.DoesNotExist,
+                models.UserCommentVote.DoesNotExist,
+        ) as e:
+            print(e)
+            return VoteCreate(status=False)
+
+        return VoteCreate(status=True)
+
+
+class VoteDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        comment = graphene.ID(required=True)
+        is_upvote = graphene.Boolean(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, comment, is_upvote):
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.UserCommentVote.objects.get(
+                user=user_obj, comment=from_global_id(comment)).delete()
+        except (
+                models.IbisUser.DoesNotExist,
+                models.UserCommentVote.DoesNotExist,
+        ) as e:
+            print(e)
+            return VoteDelete(status=False)
+
+        return VoteDelete(status=True)
+
+
+# --- Bookmarks ----------------------------------------------------------------- #
+
+
+class BookmarkCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        news = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, news):
+        news_type, news_id = from_global_id(news)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.News.objects.get(pk=news_id).bookmark.add(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.News.DoesNotExist,
+        ) as e:
+            print(e)
+            return BookmarkCreate(status=False)
+
+        return BookmarkCreate(status=True)
+
+
+class BookmarkDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        news = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, news):
+        news_type, news_id = from_global_id(news)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.News.objects.get(pk=news_id).bookmark.remove(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return BookmarkDelete(status=False)
+
+        return BookmarkDelete(status=True)
+
+
+# --- RSVPs --------------------------------------------------------------------- #
+
+
+class RSVPCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        event = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, event):
+        event_type, event_id = from_global_id(event)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.Event.objects.get(pk=event_id).rsvp.add(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return RSVPCreate(status=False)
+
+        return RSVPCreate(status=True)
+
+
+class RSVPDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        event = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, event):
+        event_type, event_id = from_global_id(event)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.Event.objects.get(pk=event_id).rsvp.remove(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return RSVPDelete(status=False)
+
+        return RSVPDelete(status=True)
+
+
 class Query(object):
 
     nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
@@ -1377,3 +1615,15 @@ class Mutation(graphene.ObjectType):
     create_comment = CommentCreate.Field()
     update_comment = CommentUpdate.Field()
     delete_comment = CommentDelete.Field()
+
+    create_like = LikeCreate.Field()
+    delete_like = LikeDelete.Field()
+
+    create_vote = VoteCreate.Field()
+    delete_vote = VoteDelete.Field()
+
+    create_bookmark = BookmarkCreate.Field()
+    delete_bookmark = BookmarkDelete.Field()
+
+    create_RSVP = RSVPCreate.Field()
+    delete_RSVP = RSVPDelete.Field()
