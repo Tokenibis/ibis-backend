@@ -1308,6 +1308,49 @@ class CommentDelete(Mutation):
             return CommentDelete(status=False)
 
 
+# --- Follow ---------------------------------------------------------------- #
+
+
+class FollowCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, target):
+        try:
+            target_obj = models.IbisUser.objects.get(
+                pk=from_global_id(target)[1])
+            models.IbisUser.objects.get(
+                pk=from_global_id(user)[1]).following.add(target_obj)
+        except models.IbisUser.DoesNotExist as e:
+            print(e)
+            return FollowCreate(status=False)
+
+        return FollowCreate(status=True)
+
+
+class FollowDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, target):
+        try:
+            target_obj = models.IbisUser.objects.get(
+                pk=from_global_id(target)[1])
+            models.IbisUser.objects.get(
+                pk=from_global_id(user)[1]).following.remove(target_obj)
+        except models.IbisUser.DoesNotExist as e:
+            print(e)
+            return FollowDelete(status=False)
+
+        return FollowDelete(status=True)
+
+
 # --- Likes ----------------------------------------------------------------- #
 
 
@@ -1619,6 +1662,9 @@ class Mutation(graphene.ObjectType):
     create_comment = CommentCreate.Field()
     update_comment = CommentUpdate.Field()
     delete_comment = CommentDelete.Field()
+
+    create_follow = FollowCreate.Field()
+    delete_follow = FollowDelete.Field()
 
     create_like = LikeCreate.Field()
     delete_like = LikeDelete.Field()
