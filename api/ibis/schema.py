@@ -31,6 +31,7 @@ class IbisUserOrderingFilter(django_filters.OrderingFilter):
 
 
 class IbisUserFilter(django_filters.FilterSet):
+    id = django_filters.CharFilter(method='filter_id')
     followed_by = django_filters.CharFilter(method='filter_followed_by')
     follower_of = django_filters.CharFilter(method='filter_follower_of')
     order_by = IbisUserOrderingFilter(
@@ -46,6 +47,9 @@ class IbisUserFilter(django_filters.FilterSet):
     class Meta:
         model = models.IbisUser
         fields = []
+
+    def filter_id(self, qs, name, value):
+        return qs.filter(id=from_global_id(value)[1])
 
     def filter_followed_by(self, qs, name, value):
         return qs.filter(

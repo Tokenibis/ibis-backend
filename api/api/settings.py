@@ -16,7 +16,7 @@ import os
 # Standard Django Settings
 # ------------------------------------------------------------ #
 
-ALLOWED_HOSTS = ['api.tokenibis.org', 'app.tokenibis.org']
+ALLOWED_HOSTS = ['localhost', 'api.tokenibis.org', 'app.tokenibis.org']
 
 AUTH_PASSWORD_VALIDATORS = [
     {
