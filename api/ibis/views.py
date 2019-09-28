@@ -46,5 +46,5 @@ class IdentifyView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         return response.Response({
             'user_id':
-            to_global_id('PersonNode', str(request.user.id)),
+            to_global_id('PersonNode', str(request.user.id)) if request.user.id else '',
         })
