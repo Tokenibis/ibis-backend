@@ -488,6 +488,10 @@ class TransferNode(PostNode):
 
 class DonationNode(TransferNode):
     amount = graphene.Int()
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
 
     class Meta:
         model = models.Donation
@@ -496,6 +500,9 @@ class DonationNode(TransferNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.transfer.amount
+
+    def resolve_like(self, *args, **kwargs):
+        return self.transfer.like
 
 
 class DonationCreate(Mutation):
@@ -582,6 +589,10 @@ class DonationDelete(Mutation):
 
 class TransactionNode(TransferNode):
     amount = graphene.Int()
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
 
     class Meta:
         model = models.Transaction
@@ -590,6 +601,9 @@ class TransactionNode(TransferNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.transfer.amount
+
+    def resolve_like(self, *args, **kwargs):
+        return self.transfer.like
 
 
 class TransactionCreate(Mutation):
