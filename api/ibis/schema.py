@@ -12,6 +12,211 @@ import dateutil.parser
 import ibis.models as models
 from users.schema import UserNode
 
+# --- Filters --------------------------------------------------------------- #
+
+
+class IbisUserOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(IbisUserOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['follower_count', '-follower_count']:
+                if v in value:
+                    qs = qs.annotate(
+                        follower_count=Count('follower')).order_by(v)
+                    value.remove(v)
+
+        return super(IbisUserOrderingFilter, self).filter(qs, value)
+
+
+class IbisUserFilter(django_filters.FilterSet):
+    followed_by = django_filters.CharFilter(method='filter_followed_by')
+    follower_of = django_filters.CharFilter(method='filter_follower_of')
+    order_by = IbisUserOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('date_joined', 'date_joined'),
+            ('follower_count', 'follower_count'),
+            ('first_name', 'first_name'),
+            ('last_name', 'last_name'),
+        ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.IbisUser
+        fields = []
+
+    def filter_followed_by(self, qs, name, value):
+        return qs.filter(
+            id__in=self.Meta.model.objects.get(
+                id=from_global_id(value)[1]).following.all())
+
+    def filter_follower_of(self, qs, name, value):
+        return qs.filter(
+            id__in=self.Meta.model.objects.get(
+                id=from_global_id(value)[1]).follower.all())
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            name=Concat('first_name', Value(' '), 'last_name')).filter(
+                Q(name__icontains=value) | Q(username__icontains=value))
+
+
+class TransferFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.Transfer
+        fields = ['by_following']
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(
+            Q(user_id=from_global_id(value)[1])
+            | Q(target_id=from_global_id(value)[1]))
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            Q(
+                target_id__in=models.IbisUser.objects.get(
+                    id=int(from_global_id(value)[1])).following.all()) | Q(
+                        user_id__in=models.IbisUser.objects.get(
+                            id=int(from_global_id(value)[1])).following.all()))
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat(
+                'user__first_name',
+                Value(' '),
+                'user__last_name',
+            ), ).annotate(
+                target_name=Concat(
+                    'target__first_name',
+                    Value(' '),
+                    'target__last_name',
+                ), ).filter(
+                    Q(user_name__icontains=value)
+                    | Q(target_name__icontains=value)
+                    | Q(user__username__icontains=value)
+                    | Q(target__username__icontains=value)
+                    | Q(description__icontains=value))
+
+
+class NewsOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(NewsOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(NewsOrderingFilter, self).filter(qs, value)
+
+
+class NewsFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = NewsOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.News
+        fields = ['by_following']
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_bookmark_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).bookmark_for.all())
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value)
+                                 | Q(title__icontains=value))
+
+
+class EventOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(EventOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(EventOrderingFilter, self).filter(qs, value)
+
+
+class EventFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    begin_date = django_filters.CharFilter(method='filter_begin_date')
+    end_date = django_filters.CharFilter(method='filter_end_date')
+    order_by = EventOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.Event
+        fields = ['by_following']
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_rsvp_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).rsvp_for.all())
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+
+    def filter_begin_date(self, qs, name, value):
+        return qs.filter(date__gte=value)
+
+    def filter_end_date(self, qs, name, value):
+        return qs.filter(date__lt=value)
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value)
+                                 | Q(title__icontains=value))
+
+
 # --- Nonprofit Category ---------------------------------------------------- #
 
 
@@ -266,48 +471,6 @@ class PostNode(DjangoObjectType):
 # --- Transfer -------------------------------------------------------------- #
 
 
-class TransferFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.Transfer
-        fields = ['by_following']
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(
-            Q(user_id=from_global_id(value)[1])
-            | Q(target_id=from_global_id(value)[1]))
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            Q(
-                target_id__in=models.IbisUser.objects.get(
-                    id=int(from_global_id(value)[1])).following.all()) | Q(
-                        user_id__in=models.IbisUser.objects.get(
-                            id=int(from_global_id(value)[1])).following.all()))
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat(
-                'user__first_name',
-                Value(' '),
-                'user__last_name',
-            ), ).annotate(
-                target_name=Concat(
-                    'target__first_name',
-                    Value(' '),
-                    'target__last_name',
-                ), ).filter(
-                    Q(user_name__icontains=value)
-                    | Q(target_name__icontains=value)
-                    | Q(user__username__icontains=value)
-                    | Q(target__username__icontains=value)
-                    | Q(description__icontains=value))
-
-
 class TransferNode(PostNode):
     like_count = graphene.Int()
 
@@ -514,58 +677,6 @@ class TransactionDelete(Mutation):
 # --- News ------------------------------------------------------------------ #
 
 
-class NewsOrderingFilter(django_filters.OrderingFilter):
-    def __init__(self, *args, **kwargs):
-        super(NewsOrderingFilter, self).__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
-        if value:
-            for v in ['like_count', '-like_count']:
-                if v in value:
-                    qs = qs.annotate(like_count=Count('like')).order_by(v)
-                    value.remove(v)
-
-        return super(NewsOrderingFilter, self).filter(qs, value)
-
-
-class NewsFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    order_by = NewsOrderingFilter(
-        fields=(
-            ('score', 'score'),
-            ('created', 'created'),
-            ('like_count', 'like_count'),
-        ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.News
-        fields = ['by_following']
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(user_id=from_global_id(value)[1])
-
-    def filter_bookmark_by(self, qs, name, value):
-        return qs.filter(
-            id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).bookmark_for.all())
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            user_id__in=models.IbisUser.objects.get(
-                id=int(from_global_id(value)[1])).following.all())
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat('user__first_name', Value(' '),
-                             'user__last_name')).filter(
-                                 Q(user_name__icontains=value)
-                                 | Q(user__username__icontains=value)
-                                 | Q(title__icontains=value))
-
-
 class NewsNode(PostNode):
     like_count = graphene.Int()
 
@@ -673,66 +784,6 @@ class NewsDelete(Mutation):
 
 
 # --- Event ----------------------------------------------------------------- #
-
-
-class EventOrderingFilter(django_filters.OrderingFilter):
-    def __init__(self, *args, **kwargs):
-        super(EventOrderingFilter, self).__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
-        if value:
-            for v in ['like_count', '-like_count']:
-                if v in value:
-                    qs = qs.annotate(like_count=Count('like')).order_by(v)
-                    value.remove(v)
-
-        return super(EventOrderingFilter, self).filter(qs, value)
-
-
-class EventFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    begin_date = django_filters.CharFilter(method='filter_begin_date')
-    end_date = django_filters.CharFilter(method='filter_end_date')
-    order_by = EventOrderingFilter(
-        fields=(
-            ('score', 'score'),
-            ('created', 'created'),
-            ('like_count', 'like_count'),
-        ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.Event
-        fields = ['by_following']
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(user_id=from_global_id(value)[1])
-
-    def filter_rsvp_by(self, qs, name, value):
-        return qs.filter(
-            id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).rsvp_for.all())
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            user_id__in=models.IbisUser.objects.get(
-                id=int(from_global_id(value)[1])).following.all())
-
-    def filter_begin_date(self, qs, name, value):
-        return qs.filter(date__gte=value)
-
-    def filter_end_date(self, qs, name, value):
-        return qs.filter(date__lt=value)
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat('user__first_name', Value(' '),
-                             'user__last_name')).filter(
-                                 Q(user_name__icontains=value)
-                                 | Q(user__username__icontains=value)
-                                 | Q(title__icontains=value))
 
 
 class EventNode(PostNode):
@@ -862,54 +913,6 @@ class EventDelete(Mutation):
 
 
 # --- Ibis User ------------------------------------------------------------- #
-
-
-class IbisUserOrderingFilter(django_filters.OrderingFilter):
-    def __init__(self, *args, **kwargs):
-        super(IbisUserOrderingFilter, self).__init__(*args, **kwargs)
-
-    def filter(self, qs, value):
-        if value:
-            for v in ['follower_count', '-follower_count']:
-                if v in value:
-                    qs = qs.annotate(
-                        follower_count=Count('follower')).order_by(v)
-                    value.remove(v)
-
-        return super(IbisUserOrderingFilter, self).filter(qs, value)
-
-
-class IbisUserFilter(django_filters.FilterSet):
-    followed_by = django_filters.CharFilter(method='filter_followed_by')
-    follower_of = django_filters.CharFilter(method='filter_follower_of')
-    order_by = IbisUserOrderingFilter(
-        fields=(
-            ('score', 'score'),
-            ('date_joined', 'date_joined'),
-            ('follower_count', 'follower_count'),
-            ('first_name', 'first_name'),
-            ('last_name', 'last_name'),
-        ))
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.IbisUser
-        fields = []
-
-    def filter_followed_by(self, qs, name, value):
-        return qs.filter(
-            id__in=self.Meta.model.objects.get(
-                id=from_global_id(value)[1]).following.all())
-
-    def filter_follower_of(self, qs, name, value):
-        return qs.filter(
-            id__in=self.Meta.model.objects.get(
-                id=from_global_id(value)[1]).follower.all())
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            name=Concat('first_name', Value(' '), 'last_name')).filter(
-                Q(name__icontains=value) | Q(username__icontains=value))
 
 
 class IbisUserNode(UserNode):
@@ -1459,6 +1462,7 @@ class BookmarkDelete(Mutation):
             return BookmarkDelete(status=False)
 
         return BookmarkDelete(status=True)
+
 
 # --- RSVPs --------------------------------------------------------------------- #
 
