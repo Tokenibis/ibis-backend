@@ -1,15 +1,14 @@
-from rest_framework import generics, response, exceptions
+from rest_framework import generics, response, exceptions, serializers
 from .models import IbisUser, Person
-from .serializers import LoginFormSerializer
 from users.models import User
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 
-
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
 
+
 class LoginView(generics.GenericAPIView):
-    serializer_class = LoginFormSerializer
+    serializer_class = serializers.Serializer
 
     def post(self, request, *args, **kwargs):
         serializerform = self.get_serializer(data=request.data)
@@ -19,7 +18,8 @@ class LoginView(generics.GenericAPIView):
         # return the graph id
         exists = IbisUser.objects.filter(id=request.user.id).exists()
         if not exists:
-            social_accounts = SocialAccount.objects.filter(user=request.user.id)
+            social_accounts = SocialAccount.objects.filter(
+                user=request.user.id)
             assert len(social_accounts) == 1, \
                     'New Ibis Users must be authenticated through social accounts'
 
@@ -33,8 +33,18 @@ class LoginView(generics.GenericAPIView):
             person.avatar = FB_AVATAR.format(social_account.uid)
             person.score = 0
             person.save()
-             
+
         return response.Response({
-            'user_id': to_global_id('PersonNode', str(request.user.id)),
-            'is_new_account': not exists,
+            'user_id':
+            to_global_id('PersonNode', str(request.user.id)),
+            'is_new_account':
+            not exists,
+        })
+
+
+class IdentifyView(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        return response.Response({
+            'user_id':
+            to_global_id('PersonNode', str(request.user.id)),
         })
