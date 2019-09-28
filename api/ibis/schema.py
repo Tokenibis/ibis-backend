@@ -1287,6 +1287,226 @@ class CommentDelete(Mutation):
             return CommentDelete(status=False)
 
 
+# --- Likes ----------------------------------------------------------------- #
+
+
+class LikeCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        post = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, post):
+        post_type, post_id = from_global_id(post)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            if post_type == 'DonationNode':
+                models.Donation.objects.get(pk=post_id).like.add(user_obj)
+            elif post_type == 'TransactionNode':
+                models.Transaction.objects.get(pk=post_id).like.add(user_obj)
+            elif post_type == 'NewsNode':
+                models.News.objects.get(pk=post_id).like.add(user_obj)
+            elif post_type == 'EventNode':
+                models.Event.objects.get(pk=post_id).like.add(user_obj)
+            else:
+                raise KeyError('Object has no "like" operation')
+        except (
+                KeyError,
+                models.IbisUser.DoesNotExist,
+                models.Donation.DoesNotExist,
+                models.Transaction.DoesNotExist,
+                models.News.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return LikeCreate(status=False)
+
+        return LikeCreate(status=True)
+
+
+class LikeDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        post = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, post):
+        post_type, post_id = from_global_id(post)
+
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            if post_type == 'DonationNode':
+                models.Donation.objects.get(pk=post_id).like.remove(user_obj)
+            elif post_type == 'TransactionNode':
+                models.Transaction.objects.get(
+                    pk=post_id).like.remove(user_obj)
+            elif post_type == 'NewsNode':
+                models.News.objects.get(pk=post_id).like.remove(user_obj)
+            elif post_type == 'EventNode':
+                models.Event.objects.get(pk=post_id).like.remove(user_obj)
+            else:
+                raise KeyError('Object has no "like" operation')
+        except (
+                KeyError,
+                models.IbisUser.DoesNotExist,
+                models.Donation.DoesNotExist,
+                models.Transaction.DoesNotExist,
+                models.News.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return LikeDelete(status=False)
+
+        return LikeDelete(status=True)
+
+
+# --- Vote ------------------------------------------------------------------ #
+
+
+class VoteCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        comment = graphene.ID(required=True)
+        is_upvote = graphene.Boolean(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, comment, is_upvote):
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.UserCommentVote.objects.create(
+                user=user_obj,
+                comment=from_global_id(comment)[1],
+                is_upvote=is_upvote,
+            )
+        except (
+                models.IbisUser.DoesNotExist,
+                models.UserCommentVote.DoesNotExist,
+        ) as e:
+            print(e)
+            return VoteCreate(status=False)
+
+        return VoteCreate(status=True)
+
+
+class VoteDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        comment = graphene.ID(required=True)
+        is_upvote = graphene.Boolean(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, comment, is_upvote):
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.UserCommentVote.objects.get(
+                user=user_obj, comment=from_global_id(comment)).delete()
+        except (
+                models.IbisUser.DoesNotExist,
+                models.UserCommentVote.DoesNotExist,
+        ) as e:
+            print(e)
+            return VoteDelete(status=False)
+
+        return VoteDelete(status=True)
+
+
+# --- Bookmarks ----------------------------------------------------------------- #
+
+
+class BookmarkCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        news = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, news):
+        news_type, news_id = from_global_id(news)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.News.objects.get(pk=news_id).bookmark.add(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.News.DoesNotExist,
+        ) as e:
+            print(e)
+            return BookmarkCreate(status=False)
+
+        return BookmarkCreate(status=True)
+
+
+class BookmarkDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        news = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, news):
+        news_type, news_id = from_global_id(news)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.News.objects.get(pk=news_id).bookmark.remove(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return BookmarkDelete(status=False)
+
+        return BookmarkDelete(status=True)
+
+# --- RSVPs --------------------------------------------------------------------- #
+
+
+class RSVPCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        event = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, event):
+        event_type, event_id = from_global_id(event)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.Event.objects.get(pk=event_id).rsvp.add(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return RSVPCreate(status=False)
+
+        return RSVPCreate(status=True)
+
+
+class RSVPDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        event = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, event):
+        event_type, event_id = from_global_id(event)
+        try:
+            user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            models.Event.objects.get(pk=event_id).rsvp.remove(user_obj)
+        except (
+                models.IbisUser.DoesNotExist,
+                models.Event.DoesNotExist,
+        ) as e:
+            print(e)
+            return RSVPDelete(status=False)
+
+        return RSVPDelete(status=True)
+
+
 class Query(object):
 
     nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
@@ -1377,3 +1597,15 @@ class Mutation(graphene.ObjectType):
     create_comment = CommentCreate.Field()
     update_comment = CommentUpdate.Field()
     delete_comment = CommentDelete.Field()
+
+    create_like = LikeCreate.Field()
+    delete_like = LikeDelete.Field()
+
+    create_vote = VoteCreate.Field()
+    delete_vote = VoteDelete.Field()
+
+    create_bookmark = BookmarkCreate.Field()
+    delete_bookmark = BookmarkDelete.Field()
+
+    create_RSVP = RSVPCreate.Field()
+    delete_RSVP = RSVPDelete.Field()
