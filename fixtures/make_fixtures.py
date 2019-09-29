@@ -42,16 +42,16 @@ class Model:
         self.news = []
         self.events = []
 
-        with open('data/social_apps.json') as fd:
-            app = json.load(fd)
+        with open('../config.json') as fd:
+            app = json.load(fd)['social']
 
         self.sites = [{
             'model': 'sites.Site',
             'pk': 1,
             'fields': {
-                'domain': '127.0.0.1', 
+                'domain': '127.0.0.1',
             }
-        }]   
+        }]
 
         self.socialApplications = [{
             'model': 'socialaccount.SocialApp',
@@ -59,9 +59,9 @@ class Model:
             'fields': {
                 'name': 'facebook',
                 'provider': 'facebook',
-                'client_id': app['client_id'],
-                'secret': app['secret'],
-                'sites': [1], 
+                'client_id': app['facebook']['client_id'],
+                'secret': app['facebook']['secret_key'],
+                'sites': [1],
             }
         }]
 
@@ -359,6 +359,7 @@ class Model:
             self.events + \
             self.sites + \
             self.socialApplications
+
 
 def run():
 

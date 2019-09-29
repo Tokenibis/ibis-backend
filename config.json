@@ -1,0 +1,25 @@
+{
+  "payment": {
+    "paypal": {
+      "use_sandbox": true,
+      "sandbox": {
+	"client_id": "",
+	"secret_key": ""
+      },
+      "live": {
+	"client_id": "",
+	"secret_key": ""
+      }
+    }
+  },
+  "social": {
+    "facebook": {
+      "client_id": "",
+      "secret_key": ""
+    }
+    "google": {
+      "client_id": "",
+      "secret_key": ""
+    }
+  }
+}
