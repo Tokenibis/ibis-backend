@@ -8,7 +8,7 @@ from braintreehttp.http_error import HttpError
 
 class PayPalClient:
     def __init__(self):
-        if settings.PAYPAL_IS_SANDBOX:
+        if settings.PAYPAL_USE_SANDBOX:
             environment = SandboxEnvironment(
                 client_id=settings.PAYPAL_SANDBOX_CLIENT_ID,
                 client_secret=settings.PAYPAL_SANDBOX_SECRET_KEY,

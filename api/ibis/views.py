@@ -76,10 +76,10 @@ class PaymentView(generics.GenericAPIView):
         deposit = Deposit.objects.create(
             user=user,
             amount=amount,
-            payment_id=payment_id,
+            payment_id='paypal:{}'.format(payment_id),
         )
         deposit.save()
 
-        return {
+        return response.Response({
             'depositID': to_global_id('DepositNode', deposit.id),
-        }
+        })

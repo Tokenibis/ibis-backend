@@ -159,7 +159,7 @@ class Deposit(Exchange):
         IbisUser,
         on_delete=models.CASCADE,
     )
-    payment_id = models.TextField()
+    payment_id = models.TextField(unique=True)
 
 
 class Withdrawal(Exchange):

@@ -13,7 +13,8 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 import os
 import json
 
-CONF = json.load('config.json')
+with open('../config.json') as fd:
+    CONF = json.load(fd)
 
 # ------------------------------------------------------------ #
 # Standard Django Settings
@@ -180,7 +181,7 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 
 IBIS_APP_URL = 'https://app.tokenibis.org/'
 
-PAYPAL_IS_SANDBOX = CONF['payment']['paypal']['is_sandbox']
+PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
 
 PAYPAL_SANDBOX_CLIENT_ID = CONF['payment']['paypal']['sandbox']['client_id']
 
