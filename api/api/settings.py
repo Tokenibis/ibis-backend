@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+import json
+
+CONF = json.load('config.json')
 
 # ------------------------------------------------------------ #
 # Standard Django Settings
@@ -176,3 +179,13 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 # ------------------------------------------------------------ #
 
 IBIS_APP_URL = 'https://app.tokenibis.org/'
+
+PAYPAL_IS_SANDBOX = CONF['payment']['paypal']['is_sandbox']
+
+PAYPAL_SANDBOX_CLIENT_ID = CONF['payment']['paypal']['sandbox']['client_id']
+
+PAYPAL_SANDBOX_SECRET_KEY = CONF['payment']['paypal']['sandbox']['secret_key']
+
+PAYPAL_LIVE_CLIENT_ID = CONF['payment']['paypal']['live']['client_id']
+
+PAYPAL_LIVE_SECRET_KEY = CONF['payment']['paypal']['live']['secret_key']

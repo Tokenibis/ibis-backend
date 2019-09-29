@@ -358,13 +358,15 @@ class DepositCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
         amount = graphene.String(required=True)
+        payment_id = graphene.String()
 
     deposit = graphene.Field(DepositNode)
 
-    def mutate(self, info, user, amount):
+    def mutate(self, info, user, amount, payment_id=''):
         deposit = models.Deposit.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             amount=amount,
+            payment_id=payment_id,
         )
         deposit.save()
         return DepositCreate(deposit=deposit)
@@ -375,16 +377,19 @@ class DepositUpdate(Mutation):
         id = graphene.ID(required=True)
         user = graphene.ID()
         amount = graphene.String()
+        payment_id = graphene.String()
 
     deposit = graphene.Field(DepositNode)
 
-    def mutate(self, info, id, user=None, amount=''):
+    def mutate(self, info, id, user=None, amount='', payment_id=''):
         deposit = models.Deposit.objects.get(pk=from_global_id(id)[1])
         if user:
             deposit.user = models.IbisUser.objects.get(
                 pk=from_global_id(user)[1])
         if amount:
             deposit.amount = amount
+        if payment_id:
+            deposit.payment_id = payment_id
         deposit.save()
         return DepositUpdate(deposit=deposit)
 

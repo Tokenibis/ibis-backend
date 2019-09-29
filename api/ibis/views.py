@@ -1,8 +1,11 @@
 from rest_framework import generics, response, exceptions, serializers
-from .models import IbisUser, Person
 from users.models import User
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
+
+from .models import IbisUser, Person, Deposit
+from .serializers import PaymentSerializer
+from .payments import PayPalClient
 
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
 
@@ -14,8 +17,6 @@ class LoginView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
-        # attempt to create a new ibis user if one doesn't exist
-        # return the graph id
         exists = IbisUser.objects.filter(id=request.user.id).exists()
         if not exists:
             social_accounts = SocialAccount.objects.filter(
@@ -46,5 +47,39 @@ class IdentifyView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         return response.Response({
             'user_id':
-            to_global_id('PersonNode', str(request.user.id)) if request.user.id else '',
+            to_global_id('PersonNode', str(request.user.id))
+            if request.user.id else '',
         })
+
+
+class PaymentView(generics.GenericAPIView):
+    serializer_class = PaymentSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.paypal_client = PayPalClient()
+
+    def post(self, request, *args, **kwargs):
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail="No valid values")
+        payment_id, amount = self.paypal_client.get_order(
+            request.data['orderID'])
+
+        if not (payment_id and amount):
+            print('Error fetching order information')
+            return {
+                'depositID': '',
+            }
+
+        user = IbisUser.objects.get(pk=request.user.id)
+        deposit = Deposit.objects.create(
+            user=user,
+            amount=amount,
+            payment_id=payment_id,
+        )
+        deposit.save()
+
+        return {
+            'depositID': to_global_id('DepositNode', deposit.id),
+        }
