@@ -467,12 +467,12 @@ class WithdrawalDelete(Mutation):
             return WithdrawalDelete(status=False)
 
 
-# --- Post ------------------------------------------------------------------ #
+# --- Content ------------------------------------------------------------------ #
 
 
-class PostNode(DjangoObjectType):
+class ContentNode(DjangoObjectType):
     class Meta:
-        model = models.Post
+        model = models.Content
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -480,7 +480,7 @@ class PostNode(DjangoObjectType):
 # --- Transfer -------------------------------------------------------------- #
 
 
-class TransferNode(PostNode):
+class TransferNode(ContentNode):
     like_count = graphene.Int()
 
     class Meta:
@@ -700,7 +700,7 @@ class TransactionDelete(Mutation):
 # --- News ------------------------------------------------------------------ #
 
 
-class NewsNode(PostNode):
+class NewsNode(ContentNode):
     like_count = graphene.Int()
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
@@ -733,7 +733,7 @@ class NewsCreate(Mutation):
         title = graphene.String(required=True)
         link = graphene.String(required=True)
         image = graphene.String(required=True)
-        content = graphene.String(required=True)
+        body = graphene.String(required=True)
         score = graphene.Int(required=True)
 
     news = graphene.Field(NewsNode)
@@ -746,7 +746,7 @@ class NewsCreate(Mutation):
             title,
             link,
             image,
-            content,
+            body,
             score,
     ):
         news = models.News.objects.create(
@@ -755,7 +755,7 @@ class NewsCreate(Mutation):
             title=title,
             link=link,
             image=image,
-            content=content,
+            body=body,
             score=score,
         )
         news.save()
@@ -770,7 +770,7 @@ class NewsUpdate(Mutation):
         title = graphene.String()
         link = graphene.String()
         image = graphene.String()
-        content = graphene.String()
+        body = graphene.String()
         score = graphene.Int()
 
     news = graphene.Field(NewsNode)
@@ -784,7 +784,7 @@ class NewsUpdate(Mutation):
             title='',
             link='',
             image='',
-            content='',
+            body='',
             score=0,
     ):
         news = models.News.objects.get(pk=from_global_id(id)[1])
@@ -798,8 +798,8 @@ class NewsUpdate(Mutation):
             news.link = link
         if image:
             news.image = image
-        if content:
-            news.content = content
+        if body:
+            news.body = body
         if score:
             news.score = score
         news.save()
@@ -823,7 +823,7 @@ class NewsDelete(Mutation):
 # --- Event ----------------------------------------------------------------- #
 
 
-class EventNode(PostNode):
+class EventNode(ContentNode):
     like_count = graphene.Int()
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
@@ -1264,7 +1264,7 @@ class NonprofitDelete(Mutation):
 # --- Comment --------------------------------------------------------------- #
 
 
-class CommentNode(PostNode):
+class CommentNode(ContentNode):
     upvote_count = graphene.Int()
     downvote_count = graphene.Int()
 
@@ -1292,7 +1292,7 @@ class CommentCreate(Mutation):
         comment = models.Comment.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
-            parent=models.Post.objects.get(pk=from_global_id(parent)[1]),
+            parent=models.Content.objects.get(pk=from_global_id(parent)[1]),
         )
         comment.save()
         return CommentCreate(comment=comment)
@@ -1321,7 +1321,7 @@ class CommentUpdate(Mutation):
         if description:
             comment.description = description
         if parent:
-            comment.parent = models.Post.objects.get(
+            comment.parent = models.Content.objects.get(
                 pk=from_global_id(parent)[1])
         comment.save()
         return CommentUpdate(comment=comment)
@@ -1378,28 +1378,28 @@ class LikeMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    post = graphene.Field(PostNode)
+    content = graphene.Field(ContentNode)
 
     @classmethod
     def mutate(cls, operation, user, target):
-        post_type, post_id = from_global_id(target)
+        content_type, content_id = from_global_id(target)
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
 
-        if post_type == 'DonationNode':
-            post_obj = models.Donation.objects.get(pk=post_id)
-        elif post_type == 'TransactionNode':
-            post_obj = models.Transaction.objects.get(pk=post_id)
-        elif post_type == 'NewsNode':
-            post_obj = models.News.objects.get(pk=post_id)
-        elif post_type == 'EventNode':
-            post_obj = models.Event.objects.get(pk=post_id)
+        if content_type == 'DonationNode':
+            content_obj = models.Donation.objects.get(pk=content_id)
+        elif content_type == 'TransactionNode':
+            content_obj = models.Transaction.objects.get(pk=content_id)
+        elif content_type == 'NewsNode':
+            content_obj = models.News.objects.get(pk=content_id)
+        elif content_type == 'EventNode':
+            content_obj = models.Event.objects.get(pk=content_id)
         else:
             raise KeyError('Object has no "like" operation')
 
-        getattr(post_obj.like, operation)(user_obj)
-        post_obj.save()
+        getattr(content_obj.like, operation)(user_obj)
+        content_obj.save()
         return LikeMutation(
-            post=models.Post.objects.get(pk=post_obj.post_ptr_id))
+            content=models.Content.objects.get(pk=content_obj.content_ptr_id))
 
 
 class LikeCreate(LikeMutation):
