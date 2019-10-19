@@ -169,7 +169,7 @@ class Withdrawal(Exchange):
     )
 
 
-class Content(TimeStampedModel, SoftDeletableModel):
+class Entry(TimeStampedModel, SoftDeletableModel):
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
@@ -177,7 +177,7 @@ class Content(TimeStampedModel, SoftDeletableModel):
     description = models.TextField()
 
 
-class Transfer(Content):
+class Transfer(Entry):
     amount = models.PositiveIntegerField()
     like = models.ManyToManyField(
         IbisUser,
@@ -204,7 +204,7 @@ class Transaction(Transfer):
     )
 
 
-class News(Content):
+class News(Entry):
     class Meta:
         verbose_name_plural = 'news'
 
@@ -228,7 +228,7 @@ class News(Content):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Event(Content):
+class Event(Entry):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     image = models.TextField()
@@ -252,9 +252,9 @@ class Event(Content):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Comment(Content):
+class Comment(Entry):
     parent = models.ForeignKey(
-        Content,
+        Entry,
         related_name='parent_of',
         on_delete=models.CASCADE,
     )

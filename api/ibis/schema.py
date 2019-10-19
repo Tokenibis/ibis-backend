@@ -467,12 +467,12 @@ class WithdrawalDelete(Mutation):
             return WithdrawalDelete(status=False)
 
 
-# --- Content ------------------------------------------------------------------ #
+# --- Entry ------------------------------------------------------------------ #
 
 
-class ContentNode(DjangoObjectType):
+class EntryNode(DjangoObjectType):
     class Meta:
-        model = models.Content
+        model = models.Entry
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -480,7 +480,7 @@ class ContentNode(DjangoObjectType):
 # --- Transfer -------------------------------------------------------------- #
 
 
-class TransferNode(ContentNode):
+class TransferNode(EntryNode):
     like_count = graphene.Int()
 
     class Meta:
@@ -700,7 +700,7 @@ class TransactionDelete(Mutation):
 # --- News ------------------------------------------------------------------ #
 
 
-class NewsNode(ContentNode):
+class NewsNode(EntryNode):
     like_count = graphene.Int()
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
@@ -823,7 +823,7 @@ class NewsDelete(Mutation):
 # --- Event ----------------------------------------------------------------- #
 
 
-class EventNode(ContentNode):
+class EventNode(EntryNode):
     like_count = graphene.Int()
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
@@ -1264,7 +1264,7 @@ class NonprofitDelete(Mutation):
 # --- Comment --------------------------------------------------------------- #
 
 
-class CommentNode(ContentNode):
+class CommentNode(EntryNode):
     upvote_count = graphene.Int()
     downvote_count = graphene.Int()
 
@@ -1292,7 +1292,7 @@ class CommentCreate(Mutation):
         comment = models.Comment.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
-            parent=models.Content.objects.get(pk=from_global_id(parent)[1]),
+            parent=models.Entry.objects.get(pk=from_global_id(parent)[1]),
         )
         comment.save()
         return CommentCreate(comment=comment)
@@ -1321,7 +1321,7 @@ class CommentUpdate(Mutation):
         if description:
             comment.description = description
         if parent:
-            comment.parent = models.Content.objects.get(
+            comment.parent = models.Entry.objects.get(
                 pk=from_global_id(parent)[1])
         comment.save()
         return CommentUpdate(comment=comment)
@@ -1378,28 +1378,28 @@ class LikeMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    content = graphene.Field(ContentNode)
+    entry = graphene.Field(EntryNode)
 
     @classmethod
     def mutate(cls, operation, user, target):
-        content_type, content_id = from_global_id(target)
+        entry_type, entry_id = from_global_id(target)
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
 
-        if content_type == 'DonationNode':
-            content_obj = models.Donation.objects.get(pk=content_id)
-        elif content_type == 'TransactionNode':
-            content_obj = models.Transaction.objects.get(pk=content_id)
-        elif content_type == 'NewsNode':
-            content_obj = models.News.objects.get(pk=content_id)
-        elif content_type == 'EventNode':
-            content_obj = models.Event.objects.get(pk=content_id)
+        if entry_type == 'DonationNode':
+            entry_obj = models.Donation.objects.get(pk=entry_id)
+        elif entry_type == 'TransactionNode':
+            entry_obj = models.Transaction.objects.get(pk=entry_id)
+        elif entry_type == 'NewsNode':
+            entry_obj = models.News.objects.get(pk=entry_id)
+        elif entry_type == 'EventNode':
+            entry_obj = models.Event.objects.get(pk=entry_id)
         else:
             raise KeyError('Object has no "like" operation')
 
-        getattr(content_obj.like, operation)(user_obj)
-        content_obj.save()
+        getattr(entry_obj.like, operation)(user_obj)
+        entry_obj.save()
         return LikeMutation(
-            content=models.Content.objects.get(pk=content_obj.content_ptr_id))
+            entry=models.Entry.objects.get(pk=entry_obj.entry_ptr_id))
 
 
 class LikeCreate(LikeMutation):
