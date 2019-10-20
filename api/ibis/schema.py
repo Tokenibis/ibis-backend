@@ -231,6 +231,7 @@ class VoteFilter(django_filters.FilterSet):
     def filter_by_user(self, qs, name, value):
         return qs.filter(user_id=from_global_id(value)[1])
 
+
 class VotableOrderingFilter(django_filters.OrderingFilter):
     def __init__(self, *args, **kwargs):
         super(VotableOrderingFilter, self).__init__(*args, **kwargs)
@@ -1723,7 +1724,8 @@ class VoteCreate(Mutation):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
         try:
-            vote_obj = models.Vote.objects.get(user=user_obj, target=target_obj)
+            vote_obj = models.Vote.objects.get(
+                user=user_obj, target=target_obj)
             vote_obj.is_upvote = is_upvote
         except models.Vote.DoesNotExist:
             vote_obj = models.Vote.objects.create(
@@ -1746,7 +1748,8 @@ class VoteDelete(Mutation):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
         try:
-            vote_obj = models.Vote.objects.get(user=user_obj, target=target_obj).delete()
+            vote_obj = models.Vote.objects.get(
+                user=user_obj, target=target_obj).delete()
             return VoteDelete(status=True)
         except models.Vote.DoesNotExist:
             return VoteDelete(status=False)
