@@ -222,10 +222,14 @@ class EventFilter(django_filters.FilterSet):
 
 
 class VoteFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+
     class Meta:
         model = models.Vote
         fields = []
 
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
 
 class VotableOrderingFilter(django_filters.OrderingFilter):
     def __init__(self, *args, **kwargs):
@@ -238,8 +242,7 @@ class VotableOrderingFilter(django_filters.OrderingFilter):
                 if v in value:
                     qs = qs.annotate(
                         vote_difference=Count(
-                            'vote_from', filter=Q(
-                                vote_from__is_upvote=True)) -
+                            'vote_from', filter=Q(vote_from__is_upvote=True)) -
                         Count(
                             'vote_from', filter=Q(
                                 vote_from__is_upvote=False))).order_by(v)
@@ -1647,45 +1650,6 @@ class LikeDelete(LikeMutation):
         return LikeMutation.mutate('remove', **kwargs)
 
 
-# --- Vote ------------------------------------------------------------------ #
-
-
-class VoteCreate(Mutation):
-    class Arguments:
-        user = graphene.ID(required=True)
-        target = graphene.ID(required=True)
-        is_upvote = graphene.Boolean(required=True)
-
-    votable = graphene.Field(VotableNode)
-
-    def mutate(self, info, user, target, is_upvote):
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        votable_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
-        vote_obj = models.Vote.objects.create(
-            user=user_obj,
-            votable=votable_obj,
-            is_upvote=is_upvote,
-        )
-
-        vote_obj.save()
-        return VoteCreate(votable=votable_obj)
-
-
-class VoteDelete(Mutation):
-    class Arguments:
-        user = graphene.ID(required=True)
-        target = graphene.ID(required=True)
-
-    votable = graphene.Field(VotableNode)
-
-    def mutate(self, info, user, target):
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        votable_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
-        models.Vote.objects.get(user=user_obj, votable=votable_obj).delete()
-
-        return VoteDelete(votable=votable_obj)
-
-
 # --- Bookmarks ----------------------------------------------------------------- #
 
 
@@ -1742,6 +1706,50 @@ class RsvpCreate(RsvpMutation):
 class RsvpDelete(RsvpMutation):
     def mutate(self, info, **kwargs):
         return RsvpMutation.mutate('remove', **kwargs)
+
+
+# --- Vote ------------------------------------------------------------------ #
+
+
+class VoteCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+        is_upvote = graphene.Boolean(required=True)
+
+    vote = graphene.Field(VoteNode)
+
+    def mutate(self, info, user, target, is_upvote):
+        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
+        try:
+            vote_obj = models.Vote.objects.get(user=user_obj, target=target_obj)
+            vote_obj.is_upvote = is_upvote
+        except models.Vote.DoesNotExist:
+            vote_obj = models.Vote.objects.create(
+                user=user_obj,
+                target=target_obj,
+                is_upvote=is_upvote,
+            )
+        vote_obj.save()
+        return VoteCreate(vote=vote_obj)
+
+
+class VoteDelete(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, user, target):
+        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
+        try:
+            vote_obj = models.Vote.objects.get(user=user_obj, target=target_obj).delete()
+            return VoteDelete(status=True)
+        except models.Vote.DoesNotExist:
+            return VoteDelete(status=False)
 
 
 # --------------------------------------------------------------------------- #
