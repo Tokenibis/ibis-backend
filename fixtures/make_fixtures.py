@@ -16,6 +16,7 @@
 
 import json
 import random
+import hashlib
 
 from datetime import datetime, timedelta
 
@@ -35,12 +36,16 @@ class Model:
         self.nonprofits = []
         self.exchanges = []
         self.deposits = []
-        self.posts = []
+        self.entries = []
         self.transfers = []
         self.donations = []
         self.transactions = []
         self.news = []
         self.events = []
+        self.votable = []
+        self.posts = []
+        self.comments = []
+        self.votes = []
 
         with open('../config.json') as fd:
             app = json.load(fd)['social']
@@ -119,8 +124,8 @@ class Model:
             'model': 'ibis.IbisUser',
             'pk': pk,
             'fields': {
+                'avatar': BIRDS.format(hash(title) % BIRDS_LEN),
                 'score': score,
-                'avatar': BIRDS.format(hash(title) % BIRDS_LEN)
             },
         })
 
@@ -137,16 +142,17 @@ class Model:
 
         return pk
 
-    def add_donation(self, person, nonprofit, amount, description):
+    def add_donation(self, person, nonprofit, amount, description, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
-        pk = len(self.posts) + 1
+        pk = len(self.entries) + 1
 
-        self.posts.append({
-            'model': 'ibis.Post',
+        self.entries.append({
+            'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
                 'user': person,
-                'description': description
+                'description': description,
+                'score': score,
             }
         })
         self.transfers.append({
@@ -187,8 +193,8 @@ class Model:
             'pk': pk,
             'fields': {
                 'following': [],
+                'avatar': BIRDS.format(hash(first + ' ' + last) % BIRDS_LEN),
                 'score': score,
-                'avatar': BIRDS.format(hash(first + ' ' + last) % BIRDS_LEN)
             }
         })
 
@@ -200,17 +206,18 @@ class Model:
 
         return pk
 
-    def add_transaction(self, source, target, category, amount, description):
+    def add_transaction(self, source, target, category, amount, description, score):
         assert source not in [x['pk'] for x in self.nonprofits]
         assert target not in [x['pk'] for x in self.nonprofits]
-        pk = len(self.posts) + 1
+        pk = len(self.entries) + 1
 
-        self.posts.append({
-            'model': 'ibis.Post',
+        self.entries.append({
+            'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
                 'user': source,
                 'description': description,
+                'score': score,
             }
         })
         self.transfers.append({
@@ -232,16 +239,17 @@ class Model:
 
         return pk
 
-    def add_news(self, nonprofit, title, description, content, score):
+    def add_news(self, nonprofit, title, description, body, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
-        pk = len(self.posts) + 1
+        pk = len(self.entries) + 1
 
-        self.posts.append({
-            'model': 'ibis.Post',
+        self.entries.append({
+            'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
                 'user': nonprofit,
                 'description': description,
+                'score': score,
             }
         })
 
@@ -251,9 +259,8 @@ class Model:
             'fields': {
                 'title': title,
                 'bookmark': [],
-                'content': content,
+                'body': body,
                 'like': [],
-                'score': score,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
             }
@@ -273,14 +280,15 @@ class Model:
             score,
     ):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
-        pk = len(self.posts) + 1
+        pk = len(self.entries) + 1
 
-        self.posts.append({
-            'model': 'ibis.Post',
+        self.entries.append({
+            'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
                 'user': nonprofit,
                 'description': description,
+                'score': score,
             }
         })
 
@@ -297,7 +305,69 @@ class Model:
                 'address': address,
                 'latitude': latitude,
                 'longitude': longitude,
+            }
+        })
+
+        return pk
+
+    def add_post(self, user, title, description, body, score):
+        pk = len(self.entries) + 1
+
+        self.entries.append({
+            'model': 'ibis.Entry',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'description': description,
                 'score': score,
+            }
+        })
+
+        self.votable.append({
+            'model': 'ibis.Votable',
+            'pk': pk,
+            'fields': {
+                'vote': [],
+            }
+        })
+
+        self.posts.append({
+            'model': 'ibis.Post',
+            'pk': pk,
+            'fields': {
+                'title': title,
+                'body': body,
+            }
+        })
+
+        return pk
+
+    def add_comment(self, user, parent, description, score):
+        pk = len(self.entries) + 1
+
+        self.entries.append({
+            'model': 'ibis.Entry',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'description': description,
+                'score': score,
+            }
+        })
+
+        self.votable.append({
+            'model': 'ibis.Votable',
+            'pk': pk,
+            'fields': {
+                'vote': [],
+            }
+        })
+
+        self.comments.append({
+            'model': 'ibis.Comment',
+            'pk': pk,
+            'fields': {
+                'parent': parent,
             }
         })
 
@@ -306,18 +376,24 @@ class Model:
     def add_deposit(self, user, amount):
         pk = len(self.deposits) + 1
 
+        sha = hashlib.sha256()
+        sha.update(str(pk).encode())
+        payment_id = sha.hexdigest()
+
         self.exchanges.append({
             'model': 'ibis.Exchange',
             'pk': pk,
             'fields': {
-                'amount': amount
+                'amount': amount,
             }
         })
+
         self.deposits.append({
             'model': 'ibis.Deposit',
             'pk': pk,
             'fields': {
                 'user': user,
+                'payment_id': payment_id,
             }
         })
 
@@ -337,10 +413,23 @@ class Model:
         news_obj = next((x for x in self.news if x['pk'] == news), None)
         news_obj['fields']['bookmark'].append(person)
 
-    def add_like(self, person, post):
+    def add_like(self, person, entry):
         likeable = self.transfers + self.news + self.events
-        post_obj = next((x for x in likeable if x['pk'] == post), None)
-        post_obj['fields']['like'].append(person)
+        entry_obj = next((x for x in likeable if x['pk'] == entry), None)
+        entry_obj['fields']['like'].append(person)
+
+    def add_vote(self, person, target, is_upvote):
+        pk = len(self.votes) + 1
+
+        self.votes.append({
+            'model': 'ibis.Vote',
+            'pk': pk,
+            'fields': {
+                'user': person,
+                'target': target,
+                'is_upvote': is_upvote,
+            }
+        })
 
     def get_model(self):
         return self.nonprofit_categories + \
@@ -351,12 +440,16 @@ class Model:
             self.nonprofits + \
             self.exchanges + \
             self.deposits + \
-            self.posts + \
+            self.entries + \
             self.transfers + \
             self.donations + \
             self.transactions + \
             self.news + \
             self.events + \
+            self.votable + \
+            self.posts + \
+            self.comments + \
+            self.votes + \
             self.sites + \
             self.socialApplications
 
@@ -446,6 +539,7 @@ def run():
                 random.choice(nonprofits),
                 random.randint(1, 100),
                 markov.generate_markov_text(),
+                random.randint(0, 100),
             ))
 
     # make random transactions
@@ -459,6 +553,7 @@ def run():
                 random.choice(transaction_categories),
                 random.randint(1, 100),
                 markov.generate_markov_text(),
+                random.randint(0, 100),
             ))
 
     # make fake news
@@ -481,13 +576,13 @@ def run():
                 markov.generate_markov_text(size=3)))
         for i in range(2, 5):
             sentences[-i] = '\n* {}\n'.format(sentences[-i])
-        content = '.'.join(sentences)
+        body = '.'.join(sentences)
         news.append(
             model.add_news(
                 random.choice(nonprofits),
                 title,
                 description,
-                content,
+                body,
                 random.randint(0, 100),
             ))
 
@@ -513,6 +608,39 @@ def run():
                 address,
                 latitude,
                 longitude,
+                random.randint(0, 100),
+            ))
+
+    # make fake posts
+    posts = []
+    for i in range(200):
+        title = 'How can I {} a {} with {}?'.format(
+            random.choice(verbs).lower(),
+            random.choice(nouns).lower(),
+            random.choice(nouns).lower(),
+        )
+        description = markov.generate_markov_text(size=60)
+        body = markov.generate_markov_text(size=200)
+        posts.append(
+            model.add_post(
+                random.choice(people),
+                title,
+                description,
+                body,
+                random.randint(0, 100),
+            ))
+
+    # make fake comments
+    comments = []
+    for i in range(400):
+        commentable = transactions + donations + news + events + posts + comments
+        parent = random.choice(commentable)
+        description = markov.generate_markov_text(size=100)
+        comments.append(
+            model.add_comment(
+                random.choice(people),
+                parent,
+                description,
                 random.randint(0, 100),
             ))
 
@@ -553,8 +681,17 @@ def run():
             likeable,
             min(random.randint(0, 100), len(likeable)),
         )
-        for post in likeable_sample:
-            model.add_like(person, post)
+        for entry in likeable_sample:
+            model.add_like(person, entry)
+
+    # add votes
+    for person in people:
+        votable_sample = random.sample(
+            posts + comments,
+            min(random.randint(0, 50), len(posts + comments)),
+        )
+        for entry in votable_sample:
+            model.add_vote(person, entry, random.random() > 0.25)
 
     # save fixtures
     with open('fixtures.json', 'w') as fd:

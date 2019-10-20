@@ -21,7 +21,7 @@ class IbisUser(User):
         blank=True,
     )
     avatar = models.TextField()
-    score = models.PositiveIntegerField()
+    score = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -175,6 +175,7 @@ class Entry(TimeStampedModel, SoftDeletableModel):
         on_delete=models.CASCADE,
     )
     description = models.TextField()
+    score = models.PositiveIntegerField(default=0)
 
 
 class Transfer(Entry):
@@ -222,7 +223,6 @@ class News(Entry):
         related_name='likes_news',
         blank=True,
     )
-    score = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -246,31 +246,44 @@ class Event(Entry):
     address = models.TextField()
     latitude = models.FloatField()
     longitude = models.FloatField()
-    score = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Comment(Entry):
+class Votable(Entry):
+    vote = models.ManyToManyField(
+        IbisUser,
+        through='Vote',
+        blank=True,
+    )
+
+
+class Post(Votable):
+    title = models.CharField(max_length=TITLE_MAX_LEN)
+    body = models.TextField()
+
+
+class Comment(Votable):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',
         on_delete=models.CASCADE,
     )
-    vote = models.ManyToManyField(
-        IbisUser,
-        through='UserCommentVote',
-    )
 
 
-class UserCommentVote(models.Model):
+class Vote(models.Model):
     user = models.ForeignKey(
         IbisUser,
+        related_name='vote_for',
         on_delete=models.CASCADE,
     )
-    comment = models.ForeignKey(
-        Comment,
+    target = models.ForeignKey(
+        Votable,
+        related_name='vote_from',
         on_delete=models.CASCADE,
     )
     is_upvote = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('user', 'target')

@@ -221,6 +221,109 @@ class EventFilter(django_filters.FilterSet):
                                  | Q(title__icontains=value))
 
 
+class VoteFilter(django_filters.FilterSet):
+    class Meta:
+        model = models.Vote
+        fields = []
+
+
+class VotableOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(VotableOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+
+            for v in ['vote_difference', '-vote_difference']:
+                if v in value:
+                    qs = qs.annotate(
+                        vote_difference=Count(
+                            'vote_from', filter=Q(
+                                vote_from__is_upvote=True)) -
+                        Count(
+                            'vote_from', filter=Q(
+                                vote_from__is_upvote=False))).order_by(v)
+                    value.remove(v)
+
+            for v in ['upvote_count', '-upvote_count']:
+                if v in value:
+                    qs = qs.annotate(
+                        upvote_count=Count(
+                            'vote_from', filter=Q(
+                                vote_from__is_upvote=True))).order_by(v)
+                    value.remove(v)
+
+            for v in ['downvote_count', '-downvote_count']:
+                if v in value:
+                    qs = qs.annotate(
+                        downvote_count=Count(
+                            'vote_from', filter=Q(
+                                vote_from__is_upvote=False))).order_by(v)
+                    value.remove(v)
+
+        return super(VotableOrderingFilter, self).filter(qs, value)
+
+
+class VotableFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    by_following = django_filters.CharFilter(method='filter_by_following')
+    order_by = VotableOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('vote_difference', 'vote_difference'),
+            ('upvote_count', 'upvote_count'),
+            ('downvote_count', 'downvote_count'),
+        ))
+
+    class Meta:
+        model = models.Votable
+        fields = []
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
+
+
+class PostFilter(VotableFilter):
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.Post
+        fields = []
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value)
+                                 | Q(title__icontains=value))
+
+
+class CommentFilter(VotableFilter):
+    has_parent = django_filters.CharFilter(method='filter_has_parent')
+    search = django_filters.CharFilter(method='filter_search')
+
+    class Meta:
+        model = models.Comment
+        fields = []
+
+    def filter_has_parent(self, qs, name, value):
+        return qs.filter(parent_id=from_global_id(value)[1])
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value))
+
+
 # --- Nonprofit Category ---------------------------------------------------- #
 
 
@@ -235,6 +338,7 @@ class NonprofitCategoryCreate(Mutation):
     class Arguments:
         title = graphene.String(required=True)
         description = graphene.String(required=True)
+        score = graphene.String(required=True)
 
     nonprofitCategory = graphene.Field(NonprofitCategoryNode)
 
@@ -467,14 +571,22 @@ class WithdrawalDelete(Mutation):
             return WithdrawalDelete(status=False)
 
 
-# --- Entry ------------------------------------------------------------------ #
+# --- Entry ----------------------------------------------------------------- #
 
 
 class EntryNode(DjangoObjectType):
+    comments = DjangoFilterConnectionField(
+        lambda: CommentNode,
+        filterset_class=CommentFilter,
+    )
+
     class Meta:
         model = models.Entry
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_comments(self, *args, **kwargs):
+        return models.Comment.objects.filter(parent=self)
 
 
 # --- Transfer -------------------------------------------------------------- #
@@ -523,15 +635,17 @@ class DonationCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
+        score = graphene.Int()
 
     donation = graphene.Field(DonationNode)
 
-    def mutate(self, info, user, description, target, amount):
+    def mutate(self, info, user, description, target, amount, score=0):
         donation = models.Donation.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
             target=models.Nonprofit.objects.get(pk=from_global_id(target)[1]),
             amount=amount,
+            score=score,
         )
         donation.save()
         return DonationCreate(donation=donation)
@@ -625,10 +739,18 @@ class TransactionCreate(Mutation):
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
         category = graphene.ID(required=True)
+        score = graphene.Int()
 
     transaction = graphene.Field(TransactionNode)
 
-    def mutate(self, info, user, description, target, amount, category):
+    def mutate(self,
+               info,
+               user,
+               description,
+               target,
+               amount,
+               category,
+               score=0):
         transaction = models.Transaction.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
@@ -636,6 +758,7 @@ class TransactionCreate(Mutation):
             amount=amount,
             category=models.TransactionCategory.objects.get(
                 pk=from_global_id(category)[1]),
+            score=score,
         )
         transaction.save()
         return TransactionCreate(transaction=transaction)
@@ -734,7 +857,7 @@ class NewsCreate(Mutation):
         link = graphene.String(required=True)
         image = graphene.String(required=True)
         body = graphene.String(required=True)
-        score = graphene.Int(required=True)
+        score = graphene.Int()
 
     news = graphene.Field(NewsNode)
 
@@ -747,7 +870,7 @@ class NewsCreate(Mutation):
             link,
             image,
             body,
-            score,
+            score=0,
     ):
         news = models.News.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -860,7 +983,7 @@ class EventCreate(Mutation):
         address = graphene.String(required=True)
         latitude = graphene.Float(required=True)
         longitude = graphene.Float(required=True)
-        score = graphene.Int(required=True)
+        score = graphene.Int()
 
     event = graphene.Field(EventNode)
 
@@ -876,7 +999,7 @@ class EventCreate(Mutation):
             address,
             latitude,
             longitude,
-            score,
+            score=0,
     ):
         event = models.Event.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -1062,7 +1185,7 @@ class PersonCreate(Mutation):
         email = graphene.String(required=True)
         first_name = graphene.String(required=True)
         last_name = graphene.String(required=True)
-        score = graphene.String()
+        score = graphene.Int()
 
     person = graphene.Field(PersonNode)
 
@@ -1261,23 +1384,135 @@ class NonprofitDelete(Mutation):
             return NonprofitDelete(status=False)
 
 
+# --- Votable --------------------------------------------------------------- #
+
+
+class VoteNode(DjangoObjectType):
+
+    target = lambda: VotableNode
+
+    class Meta:
+        model = models.Vote
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    def resolve_target(self, *args, **kwargs):
+        return self.target.votable_ptr
+
+
+class VotableNode(DjangoObjectType):
+    vote_difference = graphene.Int()
+    upvote_count = graphene.Int()
+    downvote_count = graphene.Int()
+    upvote = DjangoFilterConnectionField(
+        VoteNode,
+        filterset_class=VoteFilter,
+    )
+    downvote = DjangoFilterConnectionField(
+        VoteNode,
+        filterset_class=VoteFilter,
+    )
+
+    class Meta:
+        model = models.Votable
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    def resolve_vote_difference(self, *args, **kwargs):
+        return self.vote_from.filter(
+            is_upvote=True).count() - self.vote_from.filter(
+                is_upvote=False).count()
+
+    def resolve_upvote_count(self, *args, **kwargs):
+        return self.vote_from.filter(is_upvote=True).count()
+
+    def resolve_downvote_count(self, *args, **kwargs):
+        return self.vote_from.filter(is_upvote=False).count()
+
+    def resolve_upvote(self, *args, **kwargs):
+        return self.vote_from.filter(is_upvote=True)
+
+    def resolve_downvote(self, *args, **kwargs):
+        return self.vote_from.filter(is_upvote=False)
+
+
+# --- Post ------------------------------------------------------------------ #
+
+
+class PostNode(VotableNode):
+    class Meta:
+        model = models.Post
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+
+class PostCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        description = graphene.String(required=True)
+        body = graphene.String(required=True)
+
+    post = graphene.Field(PostNode)
+
+    def mutate(self, info, user, description, body):
+        post = models.Post.objects.create(
+            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            description=description,
+            body=body,
+        )
+        post.save()
+        return PostCreate(post=post)
+
+
+class PostUpdate(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        user = graphene.ID()
+        description = graphene.String()
+        body = graphene.String()
+
+    post = graphene.Field(PostNode)
+
+    def mutate(
+            self,
+            info,
+            user=None,
+            description='',
+            body=None,
+    ):
+        post = models.Post.objects.get(pk=from_global_id(id)[1])
+        if user:
+            post.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        if description:
+            post.description = description
+        if body:
+            post.body = body
+        post.save()
+        return PostUpdate(post=post)
+
+
+class PostDelete(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, id):
+        try:
+            models.Post.objects.get(pk=from_global_id(id)[1]).delete()
+            return PostDelete(status=True)
+        except models.Post.DoesNotExist:
+            return PostDelete(status=False)
+
+
 # --- Comment --------------------------------------------------------------- #
 
 
-class CommentNode(EntryNode):
-    upvote_count = graphene.Int()
-    downvote_count = graphene.Int()
-
+class CommentNode(VotableNode):
     class Meta:
         model = models.Comment
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_upvote_count(self, *args, **kwargs):
-        return self.vote.filter(usercommentvote__is_upvote=True).count()
-
-    def resolve_downvote_count(self, *args, **kwargs):
-        return self.vote.filter(usercommentvote__is_upvote=False).count()
 
 
 class CommentCreate(Mutation):
@@ -1418,22 +1653,22 @@ class LikeDelete(LikeMutation):
 class VoteCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        comment = graphene.ID(required=True)
+        target = graphene.ID(required=True)
         is_upvote = graphene.Boolean(required=True)
 
-    comment = graphene.Field(CommentNode)
+    votable = graphene.Field(VotableNode)
 
     def mutate(self, info, user, target, is_upvote):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        comment_obj = models.Comment.objects.get(pk=from_global_id(target)[1])
-        vote_obj = models.UserCommentVote.objects.create(
+        votable_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
+        vote_obj = models.Vote.objects.create(
             user=user_obj,
-            comment=comment_obj,
+            votable=votable_obj,
             is_upvote=is_upvote,
         )
 
         vote_obj.save()
-        return VoteCreate(comment=comment_obj)
+        return VoteCreate(votable=votable_obj)
 
 
 class VoteDelete(Mutation):
@@ -1441,15 +1676,14 @@ class VoteDelete(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    comment = graphene.Field(CommentNode)
+    votable = graphene.Field(VotableNode)
 
     def mutate(self, info, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        comment_obj = models.Comment.objects.get(pk=from_global_id(target)[1])
-        models.UserCommentVote.objects.get(
-            user=user_obj, comment=comment_obj).delete()
+        votable_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
+        models.Vote.objects.get(user=user_obj, votable=votable_obj).delete()
 
-        return VoteDelete(comment=comment_obj)
+        return VoteDelete(votable=votable_obj)
 
 
 # --- Bookmarks ----------------------------------------------------------------- #
@@ -1524,6 +1758,7 @@ class Query(object):
     transaction = relay.Node.Field(TransactionNode)
     news = relay.Node.Field(NewsNode)
     event = relay.Node.Field(EventNode)
+    post = relay.Node.Field(PostNode)
     comment = relay.Node.Field(CommentNode)
 
     all_nonprofit_categories = DjangoFilterConnectionField(
@@ -1556,7 +1791,14 @@ class Query(object):
         EventNode,
         filterset_class=EventFilter,
     )
-    all_comments = DjangoFilterConnectionField(CommentNode)
+    all_posts = DjangoFilterConnectionField(
+        PostNode,
+        filterset_class=PostFilter,
+    )
+    all_comments = DjangoFilterConnectionField(
+        CommentNode,
+        filterset_class=CommentFilter,
+    )
 
 
 class Mutation(graphene.ObjectType):
@@ -1599,6 +1841,10 @@ class Mutation(graphene.ObjectType):
     create_event = EventCreate.Field()
     update_event = EventUpdate.Field()
     delete_event = EventDelete.Field()
+
+    create_post = PostCreate.Field()
+    update_post = PostUpdate.Field()
+    delete_post = PostDelete.Field()
 
     create_comment = CommentCreate.Field()
     update_comment = CommentUpdate.Field()
