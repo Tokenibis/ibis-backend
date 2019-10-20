@@ -73,10 +73,6 @@ class TransferFilter(django_filters.FilterSet):
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
     search = django_filters.CharFilter(method='filter_search')
 
-    class Meta:
-        model = models.Transfer
-        fields = ['by_following']
-
     def filter_by_user(self, qs, name, value):
         return qs.filter(
             Q(user_id=from_global_id(value)[1])
@@ -107,6 +103,18 @@ class TransferFilter(django_filters.FilterSet):
                     | Q(user__username__icontains=value)
                     | Q(target__username__icontains=value)
                     | Q(description__icontains=value))
+
+
+class DonationFilter(TransferFilter):
+    class Meta:
+        model = models.Donation
+        fields = []
+
+
+class TransactionFilter(TransferFilter):
+    class Meta:
+        model = models.Transaction
+        fields = []
 
 
 class NewsOrderingFilter(django_filters.OrderingFilter):
@@ -593,30 +601,16 @@ class EntryNode(DjangoObjectType):
         return models.Comment.objects.filter(parent=self)
 
 
-# --- Transfer -------------------------------------------------------------- #
-
-
-class TransferNode(EntryNode):
-    like_count = graphene.Int()
-
-    class Meta:
-        model = models.Transfer
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
-
-
 # --- Donation -------------------------------------------------------------- #
 
 
-class DonationNode(TransferNode):
+class DonationNode(EntryNode):
     amount = graphene.Int()
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
+    like_count = graphene.Int()
 
     class Meta:
         model = models.Donation
@@ -624,10 +618,13 @@ class DonationNode(TransferNode):
         interfaces = (relay.Node, )
 
     def resolve_amount(self, *args, **kwargs):
-        return self.transfer.amount
+        return self.amount
 
     def resolve_like(self, *args, **kwargs):
-        return self.transfer.like
+        return self.like
+
+    def resolve_like_count(self, *args, **kwargs):
+        return self.like.count()
 
 
 class DonationCreate(Mutation):
@@ -714,12 +711,13 @@ class DonationDelete(Mutation):
 # --- Transaction ----------------------------------------------------------- #
 
 
-class TransactionNode(TransferNode):
+class TransactionNode(EntryNode):
     amount = graphene.Int()
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
+    like_count = graphene.Int()
 
     class Meta:
         model = models.Transaction
@@ -727,10 +725,13 @@ class TransactionNode(TransferNode):
         interfaces = (relay.Node, )
 
     def resolve_amount(self, *args, **kwargs):
-        return self.transfer.amount
+        return self.amount
 
     def resolve_like(self, *args, **kwargs):
-        return self.transfer.like
+        return self.like
+
+    def resolve_like_count(self, *args, **kwargs):
+        return self.like.count()
 
 
 class TransactionCreate(Mutation):
@@ -1103,30 +1104,8 @@ class IbisUserNode(UserNode):
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
-
     following_count = graphene.Int()
     follower_count = graphene.Int()
-
-    transfer_to = DjangoFilterConnectionField(
-        TransferNode,
-        filterset_class=TransferFilter,
-    )
-    transfer_from = DjangoFilterConnectionField(
-        TransferNode,
-        filterset_class=TransferFilter,
-    )
-    transfer_set = DjangoFilterConnectionField(
-        TransferNode,
-        filterset_class=TransferFilter,
-    )
-    bookmark_for = DjangoFilterConnectionField(
-        NewsNode,
-        filterset_class=NewsFilter,
-    )
-    rsvp_for = DjangoFilterConnectionField(
-        EventNode,
-        filterset_class=EventFilter,
-    )
 
     class Meta:
         model = models.IbisUser
@@ -1141,21 +1120,6 @@ class IbisUserNode(UserNode):
 
     def resolve_follower_count(self, *args, **kwargs):
         return self.follower.count()
-
-    def resolve_transfer_to(self, *args, **kwargs):
-        return models.Transfer.objects.filter(user=self)
-
-    def resolve_transfer_from(self, *args, **kwargs):
-        return models.Transfer.objects.filter(target=self)
-
-    def resolve_transfer_set(self, *args, **kwargs):
-        return models.Transfer.objects.filter(Q(user=self) | Q(target=self))
-
-    def resolve_news_set(self, *args, **kwargs):
-        return models.News.objects.filter(user=self)
-
-    def resolve_event_set(self, *args, **kwargs):
-        return models.Event.objects.filter(user=self)
 
 
 # --- Person ---------------------------------------------------------------- #
@@ -1588,7 +1552,7 @@ class FollowMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    ibisUser = graphene.Field(IbisUserNode)
+    followed = graphene.Boolean()
 
     @classmethod
     def mutate(cls, operation, user, target):
@@ -1596,7 +1560,8 @@ class FollowMutation(Mutation):
         target_obj = models.IbisUser.objects.get(pk=from_global_id(target)[1])
         getattr(user_obj.following, operation)(target_obj)
         user_obj.save()
-        return FollowMutation(ibisUser=user_obj)
+        return FollowMutation(
+            ibisUser=user_obj.follow.filter(id=target_obj.id).exists())
 
 
 class FollowCreate(FollowMutation):
@@ -1617,12 +1582,12 @@ class LikeMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    entry = graphene.Field(EntryNode)
+    state = graphene.Boolean()
 
     @classmethod
     def mutate(cls, operation, user, target):
-        entry_type, entry_id = from_global_id(target)
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        entry_type, entry_id = from_global_id(target)
 
         if entry_type == 'DonationNode':
             entry_obj = models.Donation.objects.get(pk=entry_id)
@@ -1633,12 +1598,12 @@ class LikeMutation(Mutation):
         elif entry_type == 'EventNode':
             entry_obj = models.Event.objects.get(pk=entry_id)
         else:
-            raise KeyError('Object has no "like" operation')
+            raise KeyError('Object is not likeable')
 
         getattr(entry_obj.like, operation)(user_obj)
         entry_obj.save()
         return LikeMutation(
-            entry=models.Entry.objects.get(pk=entry_obj.entry_ptr_id))
+            state=entry_obj.like.filter(id=user_obj.id).exists())
 
 
 class LikeCreate(LikeMutation):
@@ -1659,15 +1624,24 @@ class BookmarkMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    news = graphene.Field(NewsNode)
+    state = graphene.Boolean()
 
     @classmethod
     def mutate(cls, operation, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        news_obj = models.News.objects.get(pk=from_global_id(target)[1])
-        getattr(news_obj.bookmark, operation)(user_obj)
-        news_obj.save()
-        return BookmarkMutation(news=news_obj)
+        entry_type, entry_id = from_global_id(target)
+
+        if entry_type == 'NewsNode':
+            entry_obj = models.News.objects.get(pk=entry_id)
+        elif entry_type == 'PostNode':
+            entry_obj = models.Post.objects.get(pk=entry_id)
+        else:
+            raise KeyError('Object is not bookmarkable')
+
+        getattr(entry_obj.bookmark, operation)(user_obj)
+        entry_obj.save()
+        return BookmarkMutation(
+            state=entry_obj.bookmark.filter(id=user_obj.id).exists())
 
 
 class BookmarkCreate(BookmarkMutation):
@@ -1688,7 +1662,7 @@ class RsvpMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    event = graphene.Field(EventNode)
+    state = graphene.Boolean()
 
     @classmethod
     def mutate(cls, operation, user, target):
@@ -1696,7 +1670,8 @@ class RsvpMutation(Mutation):
         event_obj = models.Event.objects.get(pk=from_global_id(target)[1])
         getattr(event_obj.rsvp, operation)(user_obj)
         event_obj.save()
-        return RsvpMutation(event=event_obj)
+        return RsvpMutation(
+            state=event_obj.rsvp.filter(id=user_obj.id).exists())
 
 
 class RsvpCreate(RsvpMutation):
@@ -1718,7 +1693,7 @@ class VoteCreate(Mutation):
         target = graphene.ID(required=True)
         is_upvote = graphene.Boolean(required=True)
 
-    vote = graphene.Field(VoteNode)
+    state = graphene.Int()
 
     def mutate(self, info, user, target, is_upvote):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
@@ -1734,7 +1709,7 @@ class VoteCreate(Mutation):
                 is_upvote=is_upvote,
             )
         vote_obj.save()
-        return VoteCreate(vote=vote_obj)
+        return VoteCreate(state=1 if is_upvote else -1)
 
 
 class VoteDelete(Mutation):
@@ -1742,17 +1717,18 @@ class VoteDelete(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    status = graphene.Boolean()
+    state = graphene.Int()
 
     def mutate(self, info, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
         try:
-            vote_obj = models.Vote.objects.get(
+            models.Vote.objects.get(
                 user=user_obj, target=target_obj).delete()
-            return VoteDelete(status=True)
         except models.Vote.DoesNotExist:
-            return VoteDelete(status=False)
+            pass  # if we can't find it, then it may as well be neutral
+
+        return VoteDelete(state=0)
 
 
 # --------------------------------------------------------------------------- #
@@ -1788,11 +1764,11 @@ class Query(object):
     all_withdrawals = DjangoFilterConnectionField(WithdrawalNode)
     all_donations = DjangoFilterConnectionField(
         DonationNode,
-        filterset_class=TransferFilter,
+        filterset_class=DonationFilter,
     )
     all_transactions = DjangoFilterConnectionField(
         TransactionNode,
-        filterset_class=TransferFilter,
+        filterset_class=TransactionFilter,
     )
     all_news = DjangoFilterConnectionField(
         NewsNode,

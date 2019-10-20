@@ -10,7 +10,14 @@ TX_MAX_LEN = 160
 DESC_MAX_LEN = 320
 
 
-class IbisUser(User):
+class Scoreable(models.Model):
+    score = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        abstract = True
+
+
+class IbisUser(User, Scoreable):
     class Meta:
         verbose_name_plural = 'ibis user'
 
@@ -21,7 +28,6 @@ class IbisUser(User):
         blank=True,
     )
     avatar = models.TextField()
-    score = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -29,6 +35,46 @@ class IbisUser(User):
             ' ' if self.first_name and self.last_name else '',
             self.last_name,
         )
+
+
+class Valuable(models.Model):
+    amount = models.PositiveIntegerField()
+
+    class Meta:
+        abstract = True
+
+
+class Likeable(models.Model):
+    like = models.ManyToManyField(
+        IbisUser,
+        related_name='likes_%(class)s',
+        blank=True,
+    )
+
+    class Meta:
+        abstract = True
+
+
+class Bookmarkable(models.Model):
+    bookmark = models.ManyToManyField(
+        IbisUser,
+        related_name='bookmark_for_%(class)s',
+        blank=True,
+    )
+
+    class Meta:
+        abstract = True
+
+
+class Rsvpable(models.Model):
+    rsvp = models.ManyToManyField(
+        IbisUser,
+        related_name='rsvp_for_%(class)s',
+        blank=True,
+    )
+
+    class Meta:
+        abstract = True
 
 
 class NonprofitCategory(models.Model):
@@ -150,11 +196,15 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
         return self.title
 
 
-class Exchange(TimeStampedModel):
-    amount = models.PositiveIntegerField()
+class Entry(TimeStampedModel, SoftDeletableModel):
+    user = models.ForeignKey(
+        IbisUser,
+        on_delete=models.CASCADE,
+    )
+    description = models.TextField()
 
 
-class Deposit(Exchange):
+class Deposit(Valuable):
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
@@ -162,39 +212,21 @@ class Deposit(Exchange):
     payment_id = models.TextField(unique=True)
 
 
-class Withdrawal(Exchange):
+class Withdrawal(Valuable):
     user = models.ForeignKey(
         Nonprofit,
         on_delete=models.CASCADE,
     )
 
 
-class Entry(TimeStampedModel, SoftDeletableModel):
-    user = models.ForeignKey(
-        IbisUser,
-        on_delete=models.CASCADE,
-    )
-    description = models.TextField()
-    score = models.PositiveIntegerField(default=0)
-
-
-class Transfer(Entry):
-    amount = models.PositiveIntegerField()
-    like = models.ManyToManyField(
-        IbisUser,
-        related_name='likes_transfer',
-        blank=True,
-    )
-
-
-class Donation(Transfer):
+class Donation(Entry, Valuable, Likeable, Scoreable):
     target = models.ForeignKey(
         Nonprofit,
         on_delete=models.CASCADE,
     )
 
 
-class Transaction(Transfer):
+class Transaction(Entry, Valuable, Likeable, Scoreable):
     target = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
@@ -205,7 +237,7 @@ class Transaction(Transfer):
     )
 
 
-class News(Entry):
+class News(Entry, Likeable, Bookmarkable, Scoreable):
     class Meta:
         verbose_name_plural = 'news'
 
@@ -218,30 +250,15 @@ class News(Entry):
         related_name='bookmark_for',
         blank=True,
     )
-    like = models.ManyToManyField(
-        IbisUser,
-        related_name='likes_news',
-        blank=True,
-    )
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Event(Entry):
+class Event(Entry, Likeable, Rsvpable, Scoreable):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     image = models.TextField()
-    rsvp = models.ManyToManyField(
-        IbisUser,
-        related_name='rsvp_for',
-        blank=True,
-    )
-    like = models.ManyToManyField(
-        IbisUser,
-        related_name='likes_event',
-        blank=True,
-    )
     date = models.DateTimeField()
     address = models.TextField()
     latitude = models.FloatField()
@@ -251,6 +268,7 @@ class Event(Entry):
         return '{} ({})'.format(self.title, self.id)
 
 
+# Votable must be concrete b/c is must be explicyt referenced by Vote
 class Votable(Entry):
     vote = models.ManyToManyField(
         IbisUser,
@@ -259,12 +277,12 @@ class Votable(Entry):
     )
 
 
-class Post(Votable):
+class Post(Votable, Bookmarkable, Scoreable):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     body = models.TextField()
 
 
-class Comment(Votable):
+class Comment(Entry, Scoreable):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',
@@ -275,7 +293,7 @@ class Comment(Votable):
 class Vote(models.Model):
     user = models.ForeignKey(
         IbisUser,
-        related_name='vote_for',
+        related_name='vote_for_%(class)s',
         on_delete=models.CASCADE,
     )
     target = models.ForeignKey(

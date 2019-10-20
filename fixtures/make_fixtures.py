@@ -34,10 +34,8 @@ class Model:
         self.users = []
         self.people = []
         self.nonprofits = []
-        self.exchanges = []
         self.deposits = []
         self.entries = []
-        self.transfers = []
         self.donations = []
         self.transactions = []
         self.news = []
@@ -152,15 +150,6 @@ class Model:
             'fields': {
                 'user': person,
                 'description': description,
-                'score': score,
-            }
-        })
-        self.transfers.append({
-            'model': 'ibis.Transfer',
-            'pk': pk,
-            'fields': {
-                'amount': amount,
-                'like': [],
             }
         })
         self.donations.append({
@@ -168,6 +157,9 @@ class Model:
             'pk': pk,
             'fields': {
                 'target': nonprofit,
+                'amount': amount,
+                'like': [],
+                'score': score,
             }
         })
 
@@ -217,23 +209,18 @@ class Model:
             'fields': {
                 'user': source,
                 'description': description,
-                'score': score,
             }
         })
-        self.transfers.append({
-            'model': 'ibis.Transfer',
-            'pk': pk,
-            'fields': {
-                'amount': amount,
-                'like': [],
-            }
-        })
+
         self.transactions.append({
             'model': 'ibis.Transaction',
             'pk': pk,
             'fields': {
                 'target': target,
                 'category': category,
+                'amount': amount,
+                'like': [],
+                'score': score,
             }
         })
 
@@ -249,7 +236,6 @@ class Model:
             'fields': {
                 'user': nonprofit,
                 'description': description,
-                'score': score,
             }
         })
 
@@ -263,6 +249,7 @@ class Model:
                 'like': [],
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
+                'score': score,
             }
         })
 
@@ -288,7 +275,6 @@ class Model:
             'fields': {
                 'user': nonprofit,
                 'description': description,
-                'score': score,
             }
         })
 
@@ -305,6 +291,7 @@ class Model:
                 'address': address,
                 'latitude': latitude,
                 'longitude': longitude,
+                'score': score,
             }
         })
 
@@ -319,7 +306,6 @@ class Model:
             'fields': {
                 'user': user,
                 'description': description,
-                'score': score,
             }
         })
 
@@ -337,6 +323,7 @@ class Model:
             'fields': {
                 'title': title,
                 'body': body,
+                'score': score,
             }
         })
 
@@ -351,7 +338,6 @@ class Model:
             'fields': {
                 'user': user,
                 'description': description,
-                'score': score,
             }
         })
 
@@ -368,6 +354,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'parent': parent,
+                'score': score,
             }
         })
 
@@ -380,20 +367,13 @@ class Model:
         sha.update(str(pk).encode())
         payment_id = sha.hexdigest()
 
-        self.exchanges.append({
-            'model': 'ibis.Exchange',
-            'pk': pk,
-            'fields': {
-                'amount': amount,
-            }
-        })
-
         self.deposits.append({
             'model': 'ibis.Deposit',
             'pk': pk,
             'fields': {
                 'user': user,
                 'payment_id': payment_id,
+                'amount': amount,
             }
         })
 
@@ -414,7 +394,7 @@ class Model:
         news_obj['fields']['bookmark'].append(person)
 
     def add_like(self, person, entry):
-        likeable = self.transfers + self.news + self.events
+        likeable = self.donations + self.transactions + self.news + self.events
         entry_obj = next((x for x in likeable if x['pk'] == entry), None)
         entry_obj['fields']['like'].append(person)
 
@@ -438,10 +418,8 @@ class Model:
             self.ibisUsers + \
             self.people + \
             self.nonprofits + \
-            self.exchanges + \
             self.deposits + \
             self.entries + \
-            self.transfers + \
             self.donations + \
             self.transactions + \
             self.news + \
@@ -465,7 +443,7 @@ def run():
     with open('data/nonprofit_categories.json') as fd:
         np_cat_raw = json.load(fd)
 
-    with open('data/transfer_categories.json') as fd:
+    with open('data/transaction_categories.json') as fd:
         tx_cat_raw = json.load(fd)
 
     with open('data/nonprofits.json') as fd:
@@ -505,7 +483,7 @@ def run():
         model.add_nonprofit_category(x, np_cat_raw[x]) for x in np_cat_raw
     ]
 
-    # make transfer categories
+    # make transaction categories
     transaction_categories = [
         model.add_transaction_category(x, tx_cat_raw[x]) for x in tx_cat_raw
     ]
@@ -528,7 +506,7 @@ def run():
 
     # make deposit money for all users
     for person in people:
-        model.add_deposit(person, 10000)
+        model.add_deposit(person, 1000000)
 
     # make random donations
     donations = []
@@ -537,7 +515,7 @@ def run():
             model.add_donation(
                 random.choice(people),
                 random.choice(nonprofits),
-                random.randint(1, 100),
+                random.randint(1, 10000),
                 markov.generate_markov_text(),
                 random.randint(0, 100),
             ))
@@ -551,7 +529,7 @@ def run():
                 sample[0],
                 sample[1],
                 random.choice(transaction_categories),
-                random.randint(1, 100),
+                random.randint(1, 10000),
                 markov.generate_markov_text(),
                 random.randint(0, 100),
             ))
