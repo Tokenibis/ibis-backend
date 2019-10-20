@@ -207,7 +207,7 @@ class EventFilter(django_filters.FilterSet):
     def filter_rsvp_by(self, qs, name, value):
         return qs.filter(
             id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).rsvp_for.all())
+                id=from_global_id(value)[1]).rsvp_for_event.all())
 
     def filter_by_following(self, qs, name, value):
         return qs.filter(
