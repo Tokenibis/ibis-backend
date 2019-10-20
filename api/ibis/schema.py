@@ -1142,15 +1142,15 @@ class PersonNode(IbisUserNode, UserNode):
 
     def resolve_balance(self, *args, **kwargs):
         deposit = sum([ex.amount for ex in self.deposit_set.all()])
-        transfer_in = sum([
-            tx.transfer.amount
+        transaction_in = sum([
+            tx.transaction.amount
             for tx in models.Transaction.objects.filter(target=self)
         ])
-        transfer_out = sum([
-            tx.transfer.amount
+        transaction_out = sum([
+            tx.transaction.amount
             for tx in models.Transaction.objects.filter(user=self)
         ])
-        return (deposit) + (transfer_in - transfer_out)
+        return (deposit) + (transaction_in - transaction_out)
 
 
 class PersonCreate(Mutation):
@@ -1248,14 +1248,14 @@ class NonprofitNode(IbisUserNode):
         deposit = sum([ex.amount for ex in self.deposit_set.all()])
         withdrawal = sum([ex.amount for ex in self.withdrawal_set.all()])
         donation_in = sum([
-            tx.transfer.amount
+            tx.transaction.amount
             for tx in models.Donation.objects.filter(target=self)
         ])
-        transfer_out = sum([
-            tx.transfer.amount
+        transaction_out = sum([
+            tx.transaction.amount
             for tx in models.Transaction.objects.filter(user=self)
         ])
-        return (deposit - withdrawal) + (donation_in - transfer_out)
+        return (deposit - withdrawal) + (donation_in - transaction_out)
 
 
 class NonprofitCreate(Mutation):
