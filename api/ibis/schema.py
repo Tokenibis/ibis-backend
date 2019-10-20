@@ -153,7 +153,7 @@ class NewsFilter(django_filters.FilterSet):
     def filter_bookmark_by(self, qs, name, value):
         return qs.filter(
             id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).bookmark_for.all())
+                id=from_global_id(value)[1]).bookmark_for_news.all())
 
     def filter_by_following(self, qs, name, value):
         return qs.filter(
@@ -302,11 +302,17 @@ class VotableFilter(django_filters.FilterSet):
 
 
 class PostFilter(VotableFilter):
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
     search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
         model = models.Post
         fields = []
+
+    def filter_bookmark_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).bookmark_for_post.all())
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -1408,11 +1414,18 @@ class VotableNode(DjangoObjectType):
 
 
 class PostNode(VotableNode):
+    bookmark = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+
     class Meta:
         model = models.Post
         filter_fields = []
         interfaces = (relay.Node, )
 
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
 
 class PostCreate(Mutation):
     class Arguments:

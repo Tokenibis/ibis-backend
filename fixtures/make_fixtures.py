@@ -324,6 +324,7 @@ class Model:
                 'title': title,
                 'body': body,
                 'score': score,
+                'bookmark': [],
             }
         })
 
@@ -389,9 +390,10 @@ class Model:
         event_obj = next((x for x in self.events if x['pk'] == event), None)
         event_obj['fields']['rsvp'].append(person)
 
-    def add_bookmark(self, person, news):
-        news_obj = next((x for x in self.news if x['pk'] == news), None)
-        news_obj['fields']['bookmark'].append(person)
+    def add_bookmark(self, person, entry):
+        bookmarkable = self.news + self.posts
+        entry_obj = next((x for x in bookmarkable if x['pk'] == entry), None)
+        entry_obj['fields']['bookmark'].append(person)
 
     def add_like(self, person, entry):
         likeable = self.donations + self.transactions + self.news + self.events
@@ -645,8 +647,8 @@ def run():
     # add bookmarks
     for person in people:
         news_sample = random.sample(
-            news,
-            min(random.randint(0, 10), len(news)),
+            news + posts,
+            min(random.randint(0, 25), len(news + posts)),
         )
         for article in news_sample:
             model.add_bookmark(person, article)

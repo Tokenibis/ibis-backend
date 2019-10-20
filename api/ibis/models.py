@@ -245,11 +245,6 @@ class News(Entry, Likeable, Bookmarkable, Scoreable):
     link = models.TextField()
     image = models.TextField()
     body = models.TextField()
-    bookmark = models.ManyToManyField(
-        IbisUser,
-        related_name='bookmark_for',
-        blank=True,
-    )
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
