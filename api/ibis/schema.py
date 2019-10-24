@@ -1565,7 +1565,7 @@ class FollowMutation(Mutation):
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
 
-    followed = graphene.Boolean()
+    state = graphene.Boolean()
 
     @classmethod
     def mutate(cls, operation, user, target):
@@ -1574,7 +1574,7 @@ class FollowMutation(Mutation):
         getattr(user_obj.following, operation)(target_obj)
         user_obj.save()
         return FollowMutation(
-            ibisUser=user_obj.follow.filter(id=target_obj.id).exists())
+            state=user_obj.following.filter(id=target_obj.id).exists())
 
 
 class FollowCreate(FollowMutation):
