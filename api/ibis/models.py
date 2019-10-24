@@ -277,7 +277,7 @@ class Post(Votable, Bookmarkable, Scoreable):
     body = models.TextField()
 
 
-class Comment(Entry, Scoreable):
+class Comment(Votable, Scoreable):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',
