@@ -1,5 +1,7 @@
 from django.db import models
+from django.core.validators import MinLengthValidator
 from model_utils.models import TimeStampedModel, SoftDeletableModel
+
 
 from users.models import User
 
@@ -82,7 +84,10 @@ class NonprofitCategory(models.Model):
         verbose_name_plural = 'nonprofit categories'
 
     title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
-    description = models.CharField(max_length=DESC_MAX_LEN)
+    description = models.CharField(
+        max_length=DESC_MAX_LEN,
+        validators=[MinLengthValidator(1)],
+    )
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
