@@ -2,7 +2,6 @@ from django.db import models
 from django.core.validators import MinLengthValidator
 from model_utils.models import TimeStampedModel, SoftDeletableModel
 
-
 from users.models import User
 
 # TODO: best way to handle this? maybe in settings?

@@ -198,7 +198,15 @@ class Model:
 
         return pk
 
-    def add_transaction(self, source, target, category, amount, description, score):
+    def add_transaction(
+            self,
+            source,
+            target,
+            category,
+            amount,
+            description,
+            score,
+    ):
         assert source not in [x['pk'] for x in self.nonprofits]
         assert target not in [x['pk'] for x in self.nonprofits]
         pk = len(self.entries) + 1

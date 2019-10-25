@@ -1442,6 +1442,7 @@ class PostNode(VotableNode):
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
+
 class PostCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
@@ -1768,8 +1769,7 @@ class VoteDelete(Mutation):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
         try:
-            models.Vote.objects.get(
-                user=user_obj, target=target_obj).delete()
+            models.Vote.objects.get(user=user_obj, target=target_obj).delete()
         except models.Vote.DoesNotExist:
             pass  # if we can't find it, then it may as well be neutral
 
