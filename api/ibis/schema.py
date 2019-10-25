@@ -598,6 +598,7 @@ class EntryNode(DjangoObjectType):
         filterset_class=CommentFilter,
     )
     comment_count = graphene.Int()
+    comment_count_recursive = graphene.Int()
 
     class Meta:
         model = models.Entry
@@ -609,6 +610,18 @@ class EntryNode(DjangoObjectType):
 
     def resolve_comment_count(self, *args, **kwargs):
         return models.Comment.objects.filter(parent=self).count()
+
+    def resolve_comment_count_recursive(self, *args, **kwargs):
+
+        count = 0
+        current_level = models.Comment.objects.filter(parent=self)
+
+        while current_level.count() > 0:
+            count += current_level.count()
+            current_level = models.Comment.objects.filter(
+                parent__in=current_level)
+
+        return count
 
 
 # --- Donation -------------------------------------------------------------- #
