@@ -597,6 +597,7 @@ class EntryNode(DjangoObjectType):
         lambda: CommentNode,
         filterset_class=CommentFilter,
     )
+    comment_count = graphene.Int()
 
     class Meta:
         model = models.Entry
@@ -605,6 +606,9 @@ class EntryNode(DjangoObjectType):
 
     def resolve_comments(self, *args, **kwargs):
         return models.Comment.objects.filter(parent=self)
+
+    def resolve_comment_count(self, *args, **kwargs):
+        return models.Comment.objects.filter(parent=self).count()
 
 
 # --- Donation -------------------------------------------------------------- #
@@ -1418,6 +1422,11 @@ class PostNode(VotableNode):
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+    like_count = graphene.Int()
 
     class Meta:
         model = models.Post
@@ -1426,6 +1435,12 @@ class PostNode(VotableNode):
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
+
+    def resolve_like(self, *args, **kwargs):
+        return self.like
+
+    def resolve_like_count(self, *args, **kwargs):
+        return self.like.count()
 
 class PostCreate(Mutation):
     class Arguments:
@@ -1490,10 +1505,23 @@ class PostDelete(Mutation):
 
 
 class CommentNode(VotableNode):
+
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+    like_count = graphene.Int()
+
     class Meta:
         model = models.Comment
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_like(self, *args, **kwargs):
+        return self.like
+
+    def resolve_like_count(self, *args, **kwargs):
+        return self.like.count()
 
 
 class CommentCreate(Mutation):
@@ -1610,6 +1638,10 @@ class LikeMutation(Mutation):
             entry_obj = models.News.objects.get(pk=entry_id)
         elif entry_type == 'EventNode':
             entry_obj = models.Event.objects.get(pk=entry_id)
+        elif entry_type == 'PostNode':
+            entry_obj = models.Post.objects.get(pk=entry_id)
+        elif entry_type == 'CommentNode':
+            entry_obj = models.Comment.objects.get(pk=entry_id)
         else:
             raise KeyError('Object is not likeable')
 
