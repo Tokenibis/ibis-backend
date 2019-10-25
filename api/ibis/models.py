@@ -197,6 +197,10 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
 
 
 class Entry(TimeStampedModel, SoftDeletableModel):
+    class Meta:
+        verbose_name = "Entry"
+        verbose_name_plural = "Entries"
+
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
@@ -272,12 +276,12 @@ class Votable(Entry):
     )
 
 
-class Post(Votable, Bookmarkable, Scoreable):
+class Post(Votable, Likeable, Bookmarkable, Scoreable):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     body = models.TextField()
 
 
-class Comment(Votable, Scoreable):
+class Comment(Votable, Likeable, Scoreable):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',
