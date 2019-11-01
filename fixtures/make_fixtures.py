@@ -331,6 +331,7 @@ class Model:
             'fields': {
                 'title': title,
                 'body': body,
+                'like': [],
                 'score': score,
                 'bookmark': [],
             }
@@ -363,6 +364,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'parent': parent,
+                'like': [],
                 'score': score,
             }
         })
@@ -404,7 +406,8 @@ class Model:
         entry_obj['fields']['bookmark'].append(person)
 
     def add_like(self, person, entry):
-        likeable = self.donations + self.transactions + self.news + self.events
+        likeable = self.donations + self.transactions + self.news + self.events \
+                + self.posts + self.comments
         entry_obj = next((x for x in likeable if x['pk'] == entry), None)
         entry_obj['fields']['like'].append(person)
 
@@ -620,10 +623,10 @@ def run():
 
     # make fake comments
     comments = []
-    for i in range(400):
+    for i in range(10000):
         commentable = transactions + donations + news + events + posts + comments
         parent = random.choice(commentable)
-        description = markov.generate_markov_text(size=100)
+        description = markov.generate_markov_text(size=random.randint(25, 100))
         comments.append(
             model.add_comment(
                 random.choice(people),
@@ -661,25 +664,25 @@ def run():
         for article in news_sample:
             model.add_bookmark(person, article)
 
-    likeable = transactions + donations + news + events
+    likeable = transactions + donations + news + events + posts + comments
 
     # add likes
     for person in people:
         likeable_sample = random.sample(
             likeable,
-            min(random.randint(0, 100), len(likeable)),
+            min(random.randint(0, 200), len(likeable)),
         )
         for entry in likeable_sample:
             model.add_like(person, entry)
 
     # add votes
-    for person in people:
-        votable_sample = random.sample(
-            posts + comments,
-            min(random.randint(0, 50), len(posts + comments)),
-        )
-        for entry in votable_sample:
-            model.add_vote(person, entry, random.random() > 0.25)
+    # for person in people:
+    #    votable_sample = random.sample(
+    #        posts + comments,
+    #        min(random.randint(0, 100), len(posts + comments)),
+    #    )
+    #    for entry in votable_sample:
+    #        model.add_vote(person, entry, random.random() > 0.25)
 
     # save fixtures
     with open('fixtures.json', 'w') as fd:
