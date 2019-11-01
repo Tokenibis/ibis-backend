@@ -614,12 +614,12 @@ class EntryNode(DjangoObjectType):
     def resolve_comment_count_recursive(self, *args, **kwargs):
 
         count = 0
-        current_level = models.Comment.objects.filter(parent=self)
+        stack = list(models.Comment.objects.filter(parent=self))
 
-        while current_level.count() > 0:
-            count += current_level.count()
-            current_level = models.Comment.objects.filter(
-                parent__in=current_level)
+        while len(stack) > 0:
+            entry = stack.pop()
+            count += 1
+            stack += list(models.Comment.objects.filter(parent=entry))
 
         return count
 
@@ -1692,6 +1692,8 @@ class BookmarkMutation(Mutation):
 
         if entry_type == 'NewsNode':
             entry_obj = models.News.objects.get(pk=entry_id)
+        elif entry_type == 'EventNode':
+            entry_obj = models.Event.objects.get(pk=entry_id)
         elif entry_type == 'PostNode':
             entry_obj = models.Post.objects.get(pk=entry_id)
         else:
