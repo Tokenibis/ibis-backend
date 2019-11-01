@@ -258,7 +258,7 @@ class News(Entry, Likeable, Bookmarkable, Scoreable):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Event(Entry, Likeable, Rsvpable, Scoreable):
+class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
     title = models.CharField(max_length=TITLE_MAX_LEN)
     link = models.TextField()
     image = models.TextField()
