@@ -1,3 +1,6 @@
+import sys
+
+from django.contrib.auth import logout
 from rest_framework import generics, response, exceptions, serializers
 from users.models import User
 from allauth.socialaccount.models import SocialAccount
@@ -41,6 +44,20 @@ class LoginView(generics.GenericAPIView):
             'is_new_account':
             not exists,
         })
+
+
+class LogoutView(generics.GenericAPIView):
+    serializer_class = serializers.Serializer
+
+    def post(self, request, *args, **kwargs):
+        try:
+            logout(request)
+            return response.Response({
+                'success': True,
+            })
+        except Exception as e:
+            sys.stderr.write('Unexpected exception while logging out')
+            sys.stderr.write(e)
 
 
 class IdentifyView(generics.GenericAPIView):
