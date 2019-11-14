@@ -20,6 +20,8 @@ with open('../config.json') as fd:
 # Standard Django Settings
 # ------------------------------------------------------------ #
 
+ACCOUNT_UNIQUE_EMAIL = False
+
 # ALLOWED_HOSTS = ['localhost', 'api.tokenibis.org', 'app.tokenibis.org']
 ALLOWED_HOSTS = ['*']
 
