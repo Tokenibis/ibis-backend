@@ -11,6 +11,8 @@ from .serializers import PaymentSerializer
 from .payments import PayPalClient
 
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
+IBIS_AVATAR = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
+IBIS_AVATAR_LEN = 233
 
 
 class LoginView(generics.GenericAPIView):
@@ -20,7 +22,7 @@ class LoginView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
-        exists = IbisUser.objects.filter(id=request.user.id).exists()
+        exists = Person.objects.filter(id=request.user.id).exists()
         if not exists:
             social_accounts = SocialAccount.objects.filter(
                 user=request.user.id)
@@ -28,13 +30,16 @@ class LoginView(generics.GenericAPIView):
                     'New Ibis Users must be authenticated through social accounts'
 
             social_account = social_accounts[0]
-            assert social_account.provider == 'facebook', \
-                    'Only Facebook authentication is supported at this time'
-
             user = User.objects.get(id=request.user.id)
             person = Person(user_ptr_id=request.user.id)
             person.__dict__.update(user.__dict__)
-            person.avatar = FB_AVATAR.format(social_account.uid)
+
+            if social_account.provider == 'facebook':
+                person.avatar = FB_AVATAR.format(social_account.uid)
+            else:
+                person.avatar = IBIS_AVATAR.format(
+                    hash(str(request.user.id)) % IBIS_AVATAR_LEN)
+
             person.score = 0
             person.save()
 
@@ -61,11 +66,15 @@ class LogoutView(generics.GenericAPIView):
 
 
 class IdentifyView(generics.GenericAPIView):
+
     def get(self, request, *args, **kwargs):
+        if Person.objects.filter(id=request.user.id).exists():
+            user_id = to_global_id('PersonNode', str(request.user.id))
+        else:
+            user_id = ''
+
         return response.Response({
-            'user_id':
-            to_global_id('PersonNode', str(request.user.id))
-            if request.user.id else '',
+            'user_id': user_id
         })
 
 

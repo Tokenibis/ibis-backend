@@ -19,7 +19,7 @@ class GoogleOAuth2AdapterCustom(GoogleOAuth2Adapter):
     """
 
     def get_callback_url(self, request, app):
-        return settings.IBIS_APP_URL
+        return settings.REDIRECT_URL_GOOGLE
 
 
 class FacebookOAuth2AdapterCustom(FacebookOAuth2Adapter):
@@ -33,4 +33,4 @@ class FacebookOAuth2AdapterCustom(FacebookOAuth2Adapter):
     """
 
     def get_callback_url(self, request, app):
-        return settings.IBIS_APP_URL
+        return settings.REDIRECT_URL_FACEBOOK

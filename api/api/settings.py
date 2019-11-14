@@ -180,7 +180,9 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
 
-IBIS_APP_URL = 'https://app.tokenibis.org/'
+REDIRECT_URL_GOOGLE = 'https://app.tokenibis.org/redirect/google/'
+
+REDIRECT_URL_FACEBOOK = 'https://app.tokenibis.org/redirect/facebook/'
 
 PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
 
