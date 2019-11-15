@@ -3,7 +3,6 @@ from django.contrib import admin
 import ibis.models as models
 
 admin.site.register(models.NonprofitCategory)
-admin.site.register(models.TransactionCategory)
 admin.site.register(models.PrivacyPolicy)
 admin.site.register(models.NotificationReason)
 admin.site.register(models.Settings)

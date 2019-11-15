@@ -404,68 +404,6 @@ class NonprofitCategoryDelete(Mutation):
             return NonprofitCategoryDelete(status=False)
 
 
-# --- Transaction Category -------------------------------------------------- #
-
-
-class TransactionCategoryNode(DjangoObjectType):
-    class Meta:
-        model = models.TransactionCategory
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-
-class TransactionCategoryCreate(Mutation):
-    class Arguments:
-        title = graphene.String(required=True)
-        description = graphene.String(required=True)
-
-    transactionCategory = graphene.Field(TransactionCategoryNode)
-
-    def mutate(self, info, title, description):
-        transactionCategory = models.TransactionCategory.objects.create(
-            title=title,
-            description=description,
-        )
-        transactionCategory.save()
-        return TransactionCategoryCreate(
-            transactionCategory=transactionCategory)
-
-
-class TransactionCategoryUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        title = graphene.String()
-        description = graphene.String()
-
-    transactionCategory = graphene.Field(TransactionCategoryNode)
-
-    def mutate(self, info, id, title='', description=''):
-        transactionCategory = models.TransactionCategory.objects.get(
-            pk=from_global_id(id)[1])
-        if title:
-            transactionCategory.title = title
-        if description:
-            transactionCategory.description = description
-        transactionCategory.save()
-        return TransactionCategoryUpdate(
-            transactionCategory=transactionCategory)
-
-
-class TransactionCategoryDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        try:
-            models.TransactionCategory.objects.get(
-                pk=from_global_id(id)[1]).delete()
-            return TransactionCategoryDelete(status=True)
-        except models.TransactionCategory.DoesNotExist:
-            return TransactionCategoryDelete(status=False)
-
-
 # --- Deposit --------------------------------------------------------------- #
 
 
@@ -697,7 +635,6 @@ class DonationUpdate(Mutation):
             description='',
             target=None,
             amount=0,
-            category=None,
     ):
         donation = models.Donation.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -710,9 +647,6 @@ class DonationUpdate(Mutation):
                 pk=from_global_id(target)[1])
         if amount:
             donation.amount = amount
-        if category:
-            donation.category = models.TransactionCategory.objects.get(
-                pk=from_global_id(category)[1])
         donation.save()
         return DonationUpdate(donation=donation)
 
@@ -766,7 +700,6 @@ class TransactionCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        category = graphene.ID(required=True)
         score = graphene.Int()
 
     transaction = graphene.Field(TransactionNode)
@@ -777,15 +710,12 @@ class TransactionCreate(Mutation):
                description,
                target,
                amount,
-               category,
                score=0):
         transaction = models.Transaction.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
             target=models.Person.objects.get(pk=from_global_id(target)[1]),
             amount=amount,
-            category=models.TransactionCategory.objects.get(
-                pk=from_global_id(category)[1]),
             score=score,
         )
         transaction.save()
@@ -802,7 +732,6 @@ class TransactionUpdate(Mutation):
         description = graphene.String()
         target = graphene.ID()
         amount = graphene.Int()
-        category = graphene.ID()
 
     transaction = graphene.Field(TransactionNode)
 
@@ -827,9 +756,6 @@ class TransactionUpdate(Mutation):
                 pk=from_global_id(target)[1])
         if amount:
             transaction.amount = amount
-        if category:
-            transaction.category = models.TransactionCategory.objects.get(
-                pk=from_global_id(category)[1])
         transaction.save()
         return TransactionUpdate(transaction=transaction)
 
@@ -1808,8 +1734,6 @@ class Query(object):
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)
-    all_transaction_categories = DjangoFilterConnectionField(
-        TransactionCategoryNode)
     all_people = DjangoFilterConnectionField(
         PersonNode,
         filterset_class=IbisUserFilter,
@@ -1850,10 +1774,6 @@ class Mutation(graphene.ObjectType):
     create_nonprofit_category = NonprofitCategoryCreate.Field()
     update_nonprofit_category = NonprofitCategoryUpdate.Field()
     delete_nonprofit_category = NonprofitCategoryDelete.Field()
-
-    create_transaction_category = TransactionCategoryCreate.Field()
-    update_transaction_category = TransactionCategoryUpdate.Field()
-    delete_transaction_category = TransactionCategoryDelete.Field()
 
     create_person = PersonCreate.Field()
     update_person = PersonUpdate.Field()

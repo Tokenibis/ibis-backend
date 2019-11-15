@@ -29,7 +29,6 @@ BIRDS_LEN = 233
 class Model:
     def __init__(self):
         self.nonprofit_categories = []
-        self.transaction_categories = []
         self.ibisUsers = []
         self.users = []
         self.people = []
@@ -82,21 +81,6 @@ class Model:
 
         return pk
 
-    def add_transaction_category(self, title, description):
-        pk = len(self.transaction_categories) + 1
-
-        self.transaction_categories.append({
-            'model':
-            'ibis.TransactionCategory',
-            'pk':
-            pk,
-            'fields': {
-                'title': title,
-                'description': description,
-            },
-        })
-
-        return pk
 
     def add_nonprofit(self, title, description, category, score):
         pk = len(self.users) + 2
@@ -202,7 +186,6 @@ class Model:
             self,
             source,
             target,
-            category,
             amount,
             description,
             score,
@@ -225,7 +208,6 @@ class Model:
             'pk': pk,
             'fields': {
                 'target': target,
-                'category': category,
                 'amount': amount,
                 'like': [],
                 'score': score,
@@ -426,7 +408,6 @@ class Model:
 
     def get_model(self):
         return self.nonprofit_categories + \
-            self.transaction_categories + \
             self.users + \
             self.ibisUsers + \
             self.people + \
@@ -496,11 +477,6 @@ def run():
         model.add_nonprofit_category(x, np_cat_raw[x]) for x in np_cat_raw
     ]
 
-    # make transaction categories
-    transaction_categories = [
-        model.add_transaction_category(x, tx_cat_raw[x]) for x in tx_cat_raw
-    ]
-
     # make nonprofits from scraped list of real nonprofits
     nonprofits = [
         model.add_nonprofit(
@@ -541,7 +517,6 @@ def run():
             model.add_transaction(
                 sample[0],
                 sample[1],
-                random.choice(transaction_categories),
                 random.randint(1, 10000),
                 markov.generate_markov_text(),
                 random.randint(0, 100),

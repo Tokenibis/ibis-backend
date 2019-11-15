@@ -92,17 +92,6 @@ class NonprofitCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class TransactionCategory(models.Model):
-    class Meta:
-        verbose_name_plural = 'transaction categories'
-
-    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
-    description = models.CharField(max_length=DESC_MAX_LEN)
-
-    def __str__(self):
-        return '{} ({})'.format(self.title, self.id)
-
-
 class PrivacyPolicy(models.Model):
     class Meta:
         verbose_name_plural = 'privacy policies'
@@ -237,10 +226,6 @@ class Donation(Entry, Valuable, Likeable, Scoreable):
 class Transaction(Entry, Valuable, Likeable, Scoreable):
     target = models.ForeignKey(
         Person,
-        on_delete=models.CASCADE,
-    )
-    category = models.ForeignKey(
-        TransactionCategory,
         on_delete=models.CASCADE,
     )
 
