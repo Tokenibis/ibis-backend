@@ -3,6 +3,8 @@ import graphene
 
 from django.db.models import Q, Count, Value
 from django.db.models.functions import Concat
+from django.core.mail import send_mail
+from django.conf import settings
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -723,13 +725,27 @@ class TransactionCreate(Mutation):
         assert len(description) > 0
         assert amount > 0
 
+        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Person.objects.get(pk=from_global_id(target)[1])
+
         transaction = models.Transaction.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=user_obj,
             description=description,
-            target=models.Person.objects.get(pk=from_global_id(target)[1]),
+            target=target_obj,
             amount=amount,
             score=score,
         )
+    
+        title = '{} sent you ${:.2f}'.format(str(user_obj), amount/100)
+        subject = 'Yay!'  # this should much larger preformatted message
+        send_mail(
+            title,
+            subject,
+            'Token Ibis <{}>'.format(settings.EMAIL_HOST_USER),
+            [target_obj.email],
+            fail_silently=False,
+        )
+
         transaction.save()
         return TransactionCreate(transaction=transaction)
 

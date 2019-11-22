@@ -182,9 +182,13 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
 
-REDIRECT_URL_GOOGLE = 'https://app.tokenibis.org/redirect/google/'
+EMAIL_HOST = CONF['email']['host']
 
-REDIRECT_URL_FACEBOOK = 'https://app.tokenibis.org/redirect/facebook/'
+EMAIL_HOST_PASSWORD = CONF['email']['password']
+
+EMAIL_HOST_USER = CONF['email']['user']
+
+EMAIL_USE_TLS = True
 
 PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
 
@@ -195,3 +199,7 @@ PAYPAL_SANDBOX_SECRET_KEY = CONF['payment']['paypal']['sandbox']['secret_key']
 PAYPAL_LIVE_CLIENT_ID = CONF['payment']['paypal']['live']['client_id']
 
 PAYPAL_LIVE_SECRET_KEY = CONF['payment']['paypal']['live']['secret_key']
+
+REDIRECT_URL_GOOGLE = 'https://app.tokenibis.org/redirect/google/'
+
+REDIRECT_URL_FACEBOOK = 'https://app.tokenibis.org/redirect/facebook/'
