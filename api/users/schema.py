@@ -9,14 +9,14 @@ import users.models as models
 
 
 class UserNode(DjangoObjectType):
-    facebook_ID = graphene.String()
+    social_ID = graphene.String()
 
     class Meta:
         model = models.User
         filter_fields = ['id', 'username']
         interfaces = (relay.Node, )
 
-    def resolve_facebook_ID(self, *args, **kwargs):
+    def resolve_social_ID(self, *args, **kwargs):
         try:
             return SocialAccount.objects.get(user=self).uid
         except SocialAccount.DoesNotExist:
