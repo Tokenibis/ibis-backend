@@ -602,6 +602,10 @@ class DonationCreate(Mutation):
     donation = graphene.Field(DonationNode)
 
     def mutate(self, info, user, description, target, amount, score=0):
+
+        assert len(description) > 0
+        assert amount > 0
+
         donation = models.Donation.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
@@ -636,6 +640,10 @@ class DonationUpdate(Mutation):
             target=None,
             amount=0,
     ):
+
+        assert len(description) > 0
+        assert amount > 0
+
         donation = models.Donation.objects.get(pk=from_global_id(id)[1])
         if user:
             donation.user = models.IbisUser.objects.get(
@@ -711,6 +719,10 @@ class TransactionCreate(Mutation):
                target,
                amount,
                score=0):
+
+        assert len(description) > 0
+        assert amount > 0
+
         transaction = models.Transaction.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
@@ -743,8 +755,11 @@ class TransactionUpdate(Mutation):
             description='',
             target=None,
             amount=0,
-            category=None,
     ):
+
+        assert len(description) > 0
+        assert amount > 0
+
         transaction = models.Transaction.objects.get(pk=from_global_id(id)[1])
         if user:
             transaction.user = models.IbisUser.objects.get(
