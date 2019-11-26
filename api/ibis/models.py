@@ -92,71 +92,20 @@ class NonprofitCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class PrivacyPolicy(models.Model):
-    class Meta:
-        verbose_name_plural = 'privacy policies'
-
-    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
-    description = models.CharField(max_length=DESC_MAX_LEN)
-
-    def __str__(self):
-        return '{} ({})'.format(self.title, self.id)
-
-
-class NotificationReason(models.Model):
-    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
-    description = models.CharField(max_length=DESC_MAX_LEN)
-
-    def __str__(self):
-        return '{} ({})'.format(self.title, self.id)
-
-
-class Settings(models.Model):
-    class Meta:
-        verbose_name_plural = 'settings'
-
-    user = models.OneToOneField(
-        IbisUser,
-        on_delete=models.CASCADE,
-        primary_key=True,
-    )
-    follow_privacy = models.ForeignKey(
-        PrivacyPolicy,
-        related_name='follow_privacy_of',
-        on_delete=models.PROTECT,
-    )
-    transfer_privacy = models.ForeignKey(
-        PrivacyPolicy,
-        related_name='transfer_privacy_of',
-        on_delete=models.PROTECT,
-    )
-    blocked_users = models.ManyToManyField(
-        IbisUser,
-        related_name='blocked_user_of',
-        blank=True,
-    )
-    push_notifications = models.ManyToManyField(
-        NotificationReason,
-        related_name='push_policy_of',
-        blank=True,
-    )
-    email_notifications = models.ManyToManyField(
-        NotificationReason,
-        related_name='email_policy_of',
-        blank=True,
-    )
-
-    def __str__(self):
-        return 'settings {} ({})'.format(
-            self.user.username,
-            self.user.id,
-        )
-
-
 class Person(IbisUser):
     class Meta:
         verbose_name = "Person"
         verbose_name_plural = "People"
+
+    PUBLIC = 'PC'
+    FOLLOWING = 'FL'
+    PRIVATE = 'PR'
+
+    VISIBILITY_CHOICES = (
+        (PUBLIC, 'Public'),
+        (FOLLOWING, 'Following Only'),
+        (PRIVATE, 'Me Only'),
+    )
 
     transaction_to = models.ManyToManyField(
         IbisUser,
@@ -164,6 +113,28 @@ class Person(IbisUser):
         through='Transaction',
         symmetrical=False,
     )
+
+    visibility_follow = models.CharField(
+        max_length=2,
+        choices=VISIBILITY_CHOICES,
+        default=PUBLIC,
+    )
+
+    visibility_donation = models.CharField(
+        max_length=2,
+        choices=VISIBILITY_CHOICES,
+        default=PUBLIC,
+    )
+
+    visibility_transaction = models.CharField(
+        max_length=2,
+        choices=VISIBILITY_CHOICES,
+        default=PUBLIC,
+    )
+
+    notify_email_follow = models.BooleanField(default=True)
+    notify_email_transaction = models.BooleanField(default=True)
+    notify_email_like = models.BooleanField(default=False)
 
 
 class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
