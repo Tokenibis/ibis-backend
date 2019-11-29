@@ -714,13 +714,15 @@ class TransactionCreate(Mutation):
 
     transaction = graphene.Field(TransactionNode)
 
-    def mutate(self,
-               info,
-               user,
-               description,
-               target,
-               amount,
-               score=0):
+    def mutate(
+            self,
+            info,
+            user,
+            description,
+            target,
+            amount,
+            score=0,
+    ):
 
         assert len(description) > 0
         assert amount > 0
@@ -735,8 +737,8 @@ class TransactionCreate(Mutation):
             amount=amount,
             score=score,
         )
-    
-        title = '{} sent you ${:.2f}'.format(str(user_obj), amount/100)
+
+        title = '{} sent you ${:.2f}'.format(str(user_obj), amount / 100)
         subject = 'Yay!'  # this should much larger preformatted message
         send_mail(
             title,
@@ -1131,6 +1133,12 @@ class PersonCreate(Mutation):
         email = graphene.String(required=True)
         first_name = graphene.String(required=True)
         last_name = graphene.String(required=True)
+        visibility_follow = graphene.String()
+        visibility_donation = graphene.String()
+        visibility_transaction = graphene.String()
+        notify_email_follow = graphene.Boolean()
+        notify_email_transaction = graphene.Boolean()
+        notify_email_like = graphene.Boolean()
         score = graphene.Int()
 
     person = graphene.Field(PersonNode)
@@ -1142,13 +1150,42 @@ class PersonCreate(Mutation):
             email,
             first_name,
             last_name,
+            visibility_follow=models.Person.PUBLIC,
+            visibility_donation=models.Person.PUBLIC,
+            visibility_transaction=models.Person.PUBLIC,
+            notify_email_follow=True,
+            notify_email_transaction=True,
+            notify_email_like=False,
             score=0,
     ):
+
+        if visibility_follow:
+            assert visibility_follow in [
+                models.Person.PUBLIC, models.Person.FOLLOWING,
+                models.Person.PRIVATE
+            ]
+        if visibility_donation:
+            assert visibility_donation in [
+                models.Person.PUBLIC, models.Person.FOLLOWING,
+                models.Person.PRIVATE
+            ]
+        if visibility_transaction:
+            assert visibility_transaction in [
+                models.Person.PUBLIC, models.Person.FOLLOWING,
+                models.Person.PRIVATE
+            ]
+
         person = models.Person.objects.create(
             username=username,
             email=email,
             first_name=first_name,
             last_name=last_name,
+            visibility_follow=visibility_follow,
+            visibility_donation=visibility_donation,
+            visibility_transaction=visibility_transaction,
+            notify_email_follow=notify_email_follow,
+            notify_email_transaction=notify_email_transaction,
+            notify_email_like=notify_email_like,
             score=score,
         )
         person.save()
@@ -1162,6 +1199,13 @@ class PersonUpdate(Mutation):
         email = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
+        visibility_follow = graphene.String()
+        visibility_donation = graphene.String()
+        visibility_transaction = graphene.String()
+        notify_email_follow = graphene.Boolean()
+        notify_email_transaction = graphene.Boolean()
+        notify_email_like = graphene.Boolean()
+        score = graphene.Int()
 
     person = graphene.Field(PersonNode)
 
@@ -1173,8 +1217,15 @@ class PersonUpdate(Mutation):
             email='',
             first_name='',
             last_name='',
+            visibility_follow='',
+            visibility_donation='',
+            visibility_transaction='',
+            notify_email_follow='',
+            notify_email_transaction='',
+            notify_email_like='',
             score=None,
     ):
+
         person = models.Person.objects.get(pk=from_global_id(id)[1])
         if username:
             person.username = username
@@ -1184,6 +1235,30 @@ class PersonUpdate(Mutation):
             person.first_name = first_name
         if last_name:
             person.first_name = last_name
+        if visibility_follow:
+            assert visibility_follow in [
+                models.Person.PUBLIC, models.Person.FOLLOWING,
+                models.Person.PRIVATE
+            ]
+            person.visibility_follow = visibility_follow
+        if visibility_donation:
+            assert visibility_donation in [
+                models.Person.PUBLIC, models.Person.FOLLOWING,
+                models.Person.PRIVATE
+            ]
+            person.visibility_donation = visibility_donation
+        if visibility_transaction:
+            assert visibility_transaction in [
+                models.Person.PUBLIC, models.Person.FOLLOWING,
+                models.Person.PRIVATE
+            ]
+            person.visibility_transaction = visibility_transaction
+        if type(notify_email_follow) == bool:
+            person.notify_email_follow = notify_email_follow
+        if type(notify_email_transaction) == bool:
+            person.notify_email_transaction = notify_email_transaction
+        if type(notify_email_like) == bool:
+            person.notify_email_like = notify_email_like
         if type(score) == int:
             person.score = score
         person.save()
@@ -1414,14 +1489,16 @@ class PostNode(VotableNode):
 class PostCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
+        title = graphene.String(required=True)
         description = graphene.String(required=True)
         body = graphene.String(required=True)
 
     post = graphene.Field(PostNode)
 
-    def mutate(self, info, user, description, body):
+    def mutate(self, info, user, title, description, body):
         post = models.Post.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            title=title,
             description=description,
             body=body,
         )
@@ -1433,6 +1510,7 @@ class PostUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         user = graphene.ID()
+        title = graphene.String()
         description = graphene.String()
         body = graphene.String()
 
@@ -1442,12 +1520,15 @@ class PostUpdate(Mutation):
             self,
             info,
             user=None,
+            title='',
             description='',
-            body=None,
+            body='',
     ):
         post = models.Post.objects.get(pk=from_global_id(id)[1])
         if user:
             post.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        if title:
+            post.title = title
         if description:
             post.description = description
         if body:

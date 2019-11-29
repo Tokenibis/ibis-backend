@@ -55,17 +55,30 @@ class Model:
             }
         }]
 
-        self.socialApplications = [{
-            'model': 'socialaccount.SocialApp',
-            'pk': 1,
-            'fields': {
-                'name': 'facebook',
-                'provider': 'facebook',
-                'client_id': app['facebook']['client_id'],
-                'secret': app['facebook']['secret_key'],
-                'sites': [1],
-            }
-        }]
+        self.socialApplications = [
+            {
+                'model': 'socialaccount.SocialApp',
+                'pk': 1,
+                'fields': {
+                    'name': 'facebook',
+                    'provider': 'facebook',
+                    'client_id': app['facebook']['client_id'],
+                    'secret': app['facebook']['secret_key'],
+                    'sites': [1],
+                }
+            },
+            {
+                'model': 'socialaccount.SocialApp',
+                'pk': 2,
+                'fields': {
+                    'name': 'google',
+                    'provider': 'google',
+                    'client_id': app['google']['client_id'],
+                    'secret': app['google']['secret_key'],
+                    'sites': [1],
+                }
+            },
+        ]
 
     def add_nonprofit_category(self, title, description):
         pk = len(self.nonprofit_categories) + 1
@@ -80,7 +93,6 @@ class Model:
         })
 
         return pk
-
 
     def add_nonprofit(self, title, description, category, score):
         pk = len(self.users) + 2
