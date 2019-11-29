@@ -228,7 +228,7 @@ class Model:
 
         return pk
 
-    def add_news(self, nonprofit, title, description, body, score):
+    def add_news(self, nonprofit, title, description, score):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
         pk = len(self.entries) + 1
 
@@ -247,7 +247,6 @@ class Model:
             'fields': {
                 'title': title,
                 'bookmark': [],
-                'body': body,
                 'like': [],
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
@@ -299,7 +298,7 @@ class Model:
 
         return pk
 
-    def add_post(self, user, title, description, body, score):
+    def add_post(self, user, title, description, score):
         pk = len(self.entries) + 1
 
         self.entries.append({
@@ -324,7 +323,6 @@ class Model:
             'pk': pk,
             'fields': {
                 'title': title,
-                'body': body,
                 'like': [],
                 'score': score,
                 'bookmark': [],
@@ -543,7 +541,6 @@ def run():
             random.choice(nouns),
         )
         raw = markov.generate_markov_text(size=600).strip()
-        description = raw[:300]
         sentences = raw.split('.')
         sentences[0] = '[{}](https://tokenibis.org)\n'.format(sentences[0])
         sentences.insert(
@@ -554,13 +551,12 @@ def run():
                 markov.generate_markov_text(size=3)))
         for i in range(2, 5):
             sentences[-i] = '\n* {}\n'.format(sentences[-i])
-        body = '.'.join(sentences)
+        description = '.'.join(sentences)
         news.append(
             model.add_news(
                 random.choice(nonprofits),
                 title,
                 description,
-                body,
                 random.randint(0, 100),
             ))
 
@@ -597,14 +593,12 @@ def run():
             random.choice(nouns).lower(),
             random.choice(nouns).lower(),
         )
-        description = markov.generate_markov_text(size=60)
-        body = markov.generate_markov_text(size=200)
+        description = markov.generate_markov_text(size=200)
         posts.append(
             model.add_post(
                 random.choice(people),
                 title,
                 description,
-                body,
                 random.randint(0, 100),
             ))
 

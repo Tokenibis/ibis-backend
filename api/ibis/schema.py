@@ -843,7 +843,6 @@ class NewsCreate(Mutation):
         title = graphene.String(required=True)
         link = graphene.String(required=True)
         image = graphene.String(required=True)
-        body = graphene.String(required=True)
         score = graphene.Int()
 
     news = graphene.Field(NewsNode)
@@ -856,7 +855,6 @@ class NewsCreate(Mutation):
             title,
             link,
             image,
-            body,
             score=0,
     ):
         news = models.News.objects.create(
@@ -865,7 +863,6 @@ class NewsCreate(Mutation):
             title=title,
             link=link,
             image=image,
-            body=body,
             score=score,
         )
         news.save()
@@ -880,7 +877,6 @@ class NewsUpdate(Mutation):
         title = graphene.String()
         link = graphene.String()
         image = graphene.String()
-        body = graphene.String()
         score = graphene.Int()
 
     news = graphene.Field(NewsNode)
@@ -894,7 +890,6 @@ class NewsUpdate(Mutation):
             title='',
             link='',
             image='',
-            body='',
             score=0,
     ):
         news = models.News.objects.get(pk=from_global_id(id)[1])
@@ -908,8 +903,6 @@ class NewsUpdate(Mutation):
             news.link = link
         if image:
             news.image = image
-        if body:
-            news.body = body
         if score:
             news.score = score
         news.save()
@@ -1491,16 +1484,14 @@ class PostCreate(Mutation):
         user = graphene.ID(required=True)
         title = graphene.String(required=True)
         description = graphene.String(required=True)
-        body = graphene.String(required=True)
 
     post = graphene.Field(PostNode)
 
-    def mutate(self, info, user, title, description, body):
+    def mutate(self, info, user, title, description):
         post = models.Post.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             title=title,
             description=description,
-            body=body,
         )
         post.save()
         return PostCreate(post=post)
@@ -1512,7 +1503,6 @@ class PostUpdate(Mutation):
         user = graphene.ID()
         title = graphene.String()
         description = graphene.String()
-        body = graphene.String()
 
     post = graphene.Field(PostNode)
 
@@ -1522,7 +1512,6 @@ class PostUpdate(Mutation):
             user=None,
             title='',
             description='',
-            body='',
     ):
         post = models.Post.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1531,8 +1520,6 @@ class PostUpdate(Mutation):
             post.title = title
         if description:
             post.description = description
-        if body:
-            post.body = body
         post.save()
         return PostUpdate(post=post)
 

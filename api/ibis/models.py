@@ -200,7 +200,6 @@ class News(Entry, Likeable, Bookmarkable, Scoreable):
     title = models.TextField(validators=[MinLengthValidator(1)])
     link = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
-    body = models.TextField(validators=[MinLengthValidator(1)])
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -230,7 +229,6 @@ class Votable(Entry):
 
 class Post(Votable, Likeable, Bookmarkable, Scoreable):
     title = models.TextField(validators=[MinLengthValidator(1)])
-    body = models.TextField(validators=[MinLengthValidator(1)])
 
 
 class Comment(Votable, Likeable, Scoreable):
