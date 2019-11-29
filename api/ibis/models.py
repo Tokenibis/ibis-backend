@@ -4,12 +4,6 @@ from model_utils.models import TimeStampedModel, SoftDeletableModel
 
 from users.models import User
 
-# TODO: best way to handle this? maybe in settings?
-CAT_MAX_LEN = 10
-TITLE_MAX_LEN = 50
-TX_MAX_LEN = 160
-DESC_MAX_LEN = 320
-
 
 class Scoreable(models.Model):
     score = models.PositiveIntegerField(default=0)
@@ -28,7 +22,7 @@ class IbisUser(User, Scoreable):
         symmetrical=False,
         blank=True,
     )
-    avatar = models.TextField()
+    avatar = models.TextField(validators=[MinLengthValidator(1)])
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -82,11 +76,8 @@ class NonprofitCategory(models.Model):
     class Meta:
         verbose_name_plural = 'nonprofit categories'
 
-    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
-    description = models.CharField(
-        max_length=DESC_MAX_LEN,
-        validators=[MinLengthValidator(1)],
-    )
+    title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
+    description = models.TextField(validators=[MinLengthValidator(1)])
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -141,13 +132,13 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
     class Meta:
         verbose_name = "Nonprofit"
 
-    title = models.CharField(max_length=TITLE_MAX_LEN, unique=True)
+    title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
     category = models.ForeignKey(
         NonprofitCategory,
         on_delete=models.CASCADE,
     )
-    description = models.TextField()
-    link = models.TextField()
+    description = models.TextField(validators=[MinLengthValidator(1)])
+    link = models.TextField(validators=[MinLengthValidator(1)])
 
     donation_to = models.ManyToManyField(
         IbisUser,
@@ -169,7 +160,7 @@ class Entry(TimeStampedModel, SoftDeletableModel):
         IbisUser,
         on_delete=models.CASCADE,
     )
-    description = models.TextField()
+    description = models.TextField(validators=[MinLengthValidator(1)])
 
 
 class Deposit(Valuable):
@@ -177,7 +168,8 @@ class Deposit(Valuable):
         IbisUser,
         on_delete=models.CASCADE,
     )
-    payment_id = models.TextField(unique=True)
+    payment_id = models.TextField(
+        unique=True, validators=[MinLengthValidator(1)])
 
 
 class Withdrawal(Valuable):
@@ -205,21 +197,21 @@ class News(Entry, Likeable, Bookmarkable, Scoreable):
     class Meta:
         verbose_name_plural = 'news'
 
-    title = models.CharField(max_length=TITLE_MAX_LEN)
-    link = models.TextField()
-    image = models.TextField()
-    body = models.TextField()
+    title = models.TextField(validators=[MinLengthValidator(1)])
+    link = models.TextField(validators=[MinLengthValidator(1)])
+    image = models.TextField(validators=[MinLengthValidator(1)])
+    body = models.TextField(validators=[MinLengthValidator(1)])
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
 
 
 class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
-    title = models.CharField(max_length=TITLE_MAX_LEN)
-    link = models.TextField()
-    image = models.TextField()
+    title = models.TextField(validators=[MinLengthValidator(1)])
+    link = models.TextField(validators=[MinLengthValidator(1)])
+    image = models.TextField(validators=[MinLengthValidator(1)])
+    address = models.TextField(validators=[MinLengthValidator(1)])
     date = models.DateTimeField()
-    address = models.TextField()
     latitude = models.FloatField()
     longitude = models.FloatField()
 
@@ -237,8 +229,8 @@ class Votable(Entry):
 
 
 class Post(Votable, Likeable, Bookmarkable, Scoreable):
-    title = models.CharField(max_length=TITLE_MAX_LEN)
-    body = models.TextField()
+    title = models.TextField(validators=[MinLengthValidator(1)])
+    body = models.TextField(validators=[MinLengthValidator(1)])
 
 
 class Comment(Votable, Likeable, Scoreable):
