@@ -1489,14 +1489,16 @@ class PostNode(VotableNode):
 class PostCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
+        title = graphene.String(required=True)
         description = graphene.String(required=True)
         body = graphene.String(required=True)
 
     post = graphene.Field(PostNode)
 
-    def mutate(self, info, user, description, body):
+    def mutate(self, info, user, title, description, body):
         post = models.Post.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            title=title,
             description=description,
             body=body,
         )
@@ -1508,6 +1510,7 @@ class PostUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         user = graphene.ID()
+        title = graphene.String()
         description = graphene.String()
         body = graphene.String()
 
@@ -1517,12 +1520,15 @@ class PostUpdate(Mutation):
             self,
             info,
             user=None,
+            title='',
             description='',
-            body=None,
+            body='',
     ):
         post = models.Post.objects.get(pk=from_global_id(id)[1])
         if user:
             post.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        if title:
+            post.title = title
         if description:
             post.description = description
         if body:
