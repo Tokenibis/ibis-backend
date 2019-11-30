@@ -6,6 +6,7 @@ Pipfile.lock
 api/db.sqlite3
 api/ibis/migrations
 api/users/migrations
+api/tracker/migrations
 
 fixtures/fixtures.json
 fixtures/data/social_apps.json
