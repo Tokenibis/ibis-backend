@@ -1131,6 +1131,7 @@ class PersonCreate(Mutation):
         visibility_transaction = graphene.String()
         notify_email_follow = graphene.Boolean()
         notify_email_transaction = graphene.Boolean()
+        notify_email_comment = graphene.Boolean()
         notify_email_like = graphene.Boolean()
         score = graphene.Int()
 
@@ -1148,6 +1149,7 @@ class PersonCreate(Mutation):
             visibility_transaction=models.Person.PUBLIC,
             notify_email_follow=True,
             notify_email_transaction=True,
+            notify_email_comment=True,
             notify_email_like=False,
             score=0,
     ):
@@ -1178,6 +1180,7 @@ class PersonCreate(Mutation):
             visibility_transaction=visibility_transaction,
             notify_email_follow=notify_email_follow,
             notify_email_transaction=notify_email_transaction,
+            notify_email_comment=notify_email_comment,
             notify_email_like=notify_email_like,
             score=score,
         )
@@ -1197,6 +1200,7 @@ class PersonUpdate(Mutation):
         visibility_transaction = graphene.String()
         notify_email_follow = graphene.Boolean()
         notify_email_transaction = graphene.Boolean()
+        notify_email_comment = graphene.Boolean()
         notify_email_like = graphene.Boolean()
         score = graphene.Int()
 
@@ -1215,6 +1219,7 @@ class PersonUpdate(Mutation):
             visibility_transaction='',
             notify_email_follow='',
             notify_email_transaction='',
+            notify_email_comment='',
             notify_email_like='',
             score=None,
     ):
@@ -1250,6 +1255,8 @@ class PersonUpdate(Mutation):
             person.notify_email_follow = notify_email_follow
         if type(notify_email_transaction) == bool:
             person.notify_email_transaction = notify_email_transaction
+        if type(notify_email_comment) == bool:
+            person.notify_email_comment = notify_email_comment
         if type(notify_email_like) == bool:
             person.notify_email_like = notify_email_like
         if type(score) == int:
