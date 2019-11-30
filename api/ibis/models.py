@@ -141,9 +141,9 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
     description = models.TextField(validators=[MinLengthValidator(1)])
     link = models.TextField(validators=[MinLengthValidator(1)])
 
-    donation_to = models.ManyToManyField(
+    donation_from = models.ManyToManyField(
         IbisUser,
-        related_name='donation_from',
+        related_name='donation_to',
         through='Donation',
         symmetrical=False,
     )
