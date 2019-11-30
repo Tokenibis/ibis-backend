@@ -202,6 +202,8 @@ EMAIL_HOST_PASSWORD = CONF['email']['password']
 
 EMAIL_HOST_USER = CONF['email']['user']
 
+EMAIL_PORT = CONF['email']['port']
+
 EMAIL_USE_TLS = True
 
 PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
