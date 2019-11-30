@@ -160,11 +160,23 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'pwa-standalone',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
-#CORS_ORIGIN_WHITELIST = (
-#    'https://app.tokenibis.org',
-#)
+CORS_ORIGIN_WHITELIST = (
+    'https://app.tokenibis.org',
+    'http://localhost:3000',
+)
 
 CSRF_TRUSTED_ORIGINS = ['api.tokenibis.org', 'app.tokenibis.org']
 

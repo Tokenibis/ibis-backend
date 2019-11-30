@@ -14,4 +14,5 @@ class Log(TimeStampedModel):
     response_code = models.TextField(blank=True, null=True)
     graphql_operation = models.TextField(blank=True, null=True)
     graphql_variables = models.TextField(blank=True, null=True)
-    environ_useragent = models.TextField(blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    pwa_standalone = models.NullBooleanField(blank=True, null=True)
