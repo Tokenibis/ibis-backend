@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'graphene_django',
     'users',
     'ibis',
+    'tracker',
 ]
 
 LANGUAGE_CODE = 'en-us'
@@ -97,6 +98,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'tracker.middleware.TrackerMiddleware',
 ]
 
 ROOT_URLCONF = 'api.urls'
