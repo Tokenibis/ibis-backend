@@ -5,6 +5,7 @@ from django.db.models import Q, Count, Value
 from django.db.models.functions import Concat
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -1612,19 +1613,14 @@ class LikeMutation(Mutation):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         entry_type, entry_id = from_global_id(target)
 
-        if entry_type == 'DonationNode':
-            entry_obj = models.Donation.objects.get(pk=entry_id)
-        elif entry_type == 'TransactionNode':
-            entry_obj = models.Transaction.objects.get(pk=entry_id)
-        elif entry_type == 'NewsNode':
-            entry_obj = models.News.objects.get(pk=entry_id)
-        elif entry_type == 'EventNode':
-            entry_obj = models.Event.objects.get(pk=entry_id)
-        elif entry_type == 'PostNode':
-            entry_obj = models.Post.objects.get(pk=entry_id)
-        elif entry_type == 'CommentNode':
-            entry_obj = models.Comment.objects.get(pk=entry_id)
-        else:
+        submodels = {
+            '{}Node'.format(x.__name__): x
+            for x in models.Likeable.__subclasses__()
+        }
+
+        try:
+            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
+        except (KeyError, ObjectDoesNotExist):
             raise KeyError('Object is not likeable')
 
         getattr(entry_obj.like, operation)(user_obj)
@@ -1658,13 +1654,16 @@ class BookmarkMutation(Mutation):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         entry_type, entry_id = from_global_id(target)
 
-        if entry_type == 'NewsNode':
-            entry_obj = models.News.objects.get(pk=entry_id)
-        elif entry_type == 'EventNode':
-            entry_obj = models.Event.objects.get(pk=entry_id)
-        elif entry_type == 'PostNode':
-            entry_obj = models.Post.objects.get(pk=entry_id)
-        else:
+        submodels = {
+            '{}Node'.format(x.__name__): x
+            for x in models.Bookmarkable.__subclasses__()
+        }
+        print(submodels)
+        print(entry_type)
+
+        try:
+            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
+        except (KeyError, ObjectDoesNotExist):
             raise KeyError('Object is not bookmarkable')
 
         getattr(entry_obj.bookmark, operation)(user_obj)
