@@ -219,39 +219,13 @@ class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
         return '{} ({})'.format(self.title, self.id)
 
 
-# Votable must be concrete b/c is must be explicyt referenced by Vote
-class Votable(Entry):
-    vote = models.ManyToManyField(
-        IbisUser,
-        through='Vote',
-        blank=True,
-    )
-
-
-class Post(Votable, Likeable, Bookmarkable, Scoreable):
+class Post(Entry, Likeable, Bookmarkable, Scoreable):
     title = models.TextField(validators=[MinLengthValidator(1)])
 
 
-class Comment(Votable, Likeable, Scoreable):
+class Comment(Entry, Likeable, Scoreable):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',
         on_delete=models.CASCADE,
     )
-
-
-class Vote(models.Model):
-    user = models.ForeignKey(
-        IbisUser,
-        related_name='vote_for_%(class)s',
-        on_delete=models.CASCADE,
-    )
-    target = models.ForeignKey(
-        Votable,
-        related_name='vote_from',
-        on_delete=models.CASCADE,
-    )
-    is_upvote = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = ('user', 'target')

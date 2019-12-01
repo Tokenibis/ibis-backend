@@ -231,67 +231,35 @@ class EventFilter(django_filters.FilterSet):
                                  | Q(title__icontains=value))
 
 
-class VoteFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-
-    class Meta:
-        model = models.Vote
-        fields = []
-
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(user_id=from_global_id(value)[1])
-
-
-class VotableOrderingFilter(django_filters.OrderingFilter):
+class PostOrderingFilter(django_filters.OrderingFilter):
     def __init__(self, *args, **kwargs):
-        super(VotableOrderingFilter, self).__init__(*args, **kwargs)
+        super(PostOrderingFilter, self).__init__(*args, **kwargs)
 
     def filter(self, qs, value):
         if value:
-
-            for v in ['vote_difference', '-vote_difference']:
+            for v in ['like_count', '-like_count']:
                 if v in value:
-                    qs = qs.annotate(
-                        vote_difference=Count(
-                            'vote_from', filter=Q(vote_from__is_upvote=True)) -
-                        Count(
-                            'vote_from', filter=Q(
-                                vote_from__is_upvote=False))).order_by(v)
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
                     value.remove(v)
 
-            for v in ['upvote_count', '-upvote_count']:
-                if v in value:
-                    qs = qs.annotate(
-                        upvote_count=Count(
-                            'vote_from', filter=Q(
-                                vote_from__is_upvote=True))).order_by(v)
-                    value.remove(v)
-
-            for v in ['downvote_count', '-downvote_count']:
-                if v in value:
-                    qs = qs.annotate(
-                        downvote_count=Count(
-                            'vote_from', filter=Q(
-                                vote_from__is_upvote=False))).order_by(v)
-                    value.remove(v)
-
-        return super(VotableOrderingFilter, self).filter(qs, value)
+        return super(PostOrderingFilter, self).filter(qs, value)
 
 
-class VotableFilter(django_filters.FilterSet):
+class PostFilter(django_filters.FilterSet):
     by_user = django_filters.CharFilter(method='filter_by_user')
     by_following = django_filters.CharFilter(method='filter_by_following')
-    order_by = VotableOrderingFilter(
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
+    search = django_filters.CharFilter(method='filter_search')
+
+    order_by = PostOrderingFilter(
         fields=(
             ('score', 'score'),
             ('created', 'created'),
-            ('vote_difference', 'vote_difference'),
-            ('upvote_count', 'upvote_count'),
-            ('downvote_count', 'downvote_count'),
+            ('like_count', 'like_count'),
         ))
 
     class Meta:
-        model = models.Votable
+        model = models.Post
         fields = []
 
     def filter_by_user(self, qs, name, value):
@@ -301,15 +269,6 @@ class VotableFilter(django_filters.FilterSet):
         return qs.filter(
             user_id__in=models.IbisUser.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
-
-
-class PostFilter(VotableFilter):
-    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
-    search = django_filters.CharFilter(method='filter_search')
-
-    class Meta:
-        model = models.Post
-        fields = []
 
     def filter_bookmark_by(self, qs, name, value):
         return qs.filter(
@@ -325,13 +284,44 @@ class PostFilter(VotableFilter):
                                  | Q(title__icontains=value))
 
 
-class CommentFilter(VotableFilter):
+class CommentOrderingFilter(django_filters.OrderingFilter):
+    def __init__(self, *args, **kwargs):
+        super(CommentOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['like_count', '-like_count']:
+                if v in value:
+                    qs = qs.annotate(like_count=Count('like')).order_by(v)
+                    value.remove(v)
+
+        return super(CommentOrderingFilter, self).filter(qs, value)
+
+
+class CommentFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    by_following = django_filters.CharFilter(method='filter_by_following')
     has_parent = django_filters.CharFilter(method='filter_has_parent')
     search = django_filters.CharFilter(method='filter_search')
+
+    order_by = PostOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('like_count', 'like_count'),
+        ))
 
     class Meta:
         model = models.Comment
         fields = []
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_by_following(self, qs, name, value):
+        return qs.filter(
+            user_id__in=models.IbisUser.objects.get(
+                id=int(from_global_id(value)[1])).following.all())
 
     def filter_has_parent(self, qs, name, value):
         return qs.filter(parent_id=from_global_id(value)[1])
@@ -1405,62 +1395,11 @@ class NonprofitDelete(Mutation):
             return NonprofitDelete(status=False)
 
 
-# --- Votable --------------------------------------------------------------- #
-
-
-class VoteNode(DjangoObjectType):
-
-    target = lambda: VotableNode
-
-    class Meta:
-        model = models.Vote
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-    def resolve_target(self, *args, **kwargs):
-        return self.target.votable_ptr
-
-
-class VotableNode(DjangoObjectType):
-    vote_difference = graphene.Int()
-    upvote_count = graphene.Int()
-    downvote_count = graphene.Int()
-    upvote = DjangoFilterConnectionField(
-        VoteNode,
-        filterset_class=VoteFilter,
-    )
-    downvote = DjangoFilterConnectionField(
-        VoteNode,
-        filterset_class=VoteFilter,
-    )
-
-    class Meta:
-        model = models.Votable
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-    def resolve_vote_difference(self, *args, **kwargs):
-        return self.vote_from.filter(
-            is_upvote=True).count() - self.vote_from.filter(
-                is_upvote=False).count()
-
-    def resolve_upvote_count(self, *args, **kwargs):
-        return self.vote_from.filter(is_upvote=True).count()
-
-    def resolve_downvote_count(self, *args, **kwargs):
-        return self.vote_from.filter(is_upvote=False).count()
-
-    def resolve_upvote(self, *args, **kwargs):
-        return self.vote_from.filter(is_upvote=True)
-
-    def resolve_downvote(self, *args, **kwargs):
-        return self.vote_from.filter(is_upvote=False)
-
-
 # --- Post ------------------------------------------------------------------ #
 
 
-class PostNode(VotableNode):
+class PostNode(EntryNode):
+
     bookmark = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -1548,8 +1487,7 @@ class PostDelete(Mutation):
 # --- Comment --------------------------------------------------------------- #
 
 
-class CommentNode(VotableNode):
-
+class CommentNode(EntryNode):
     like = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -1775,52 +1713,6 @@ class RsvpDelete(RsvpMutation):
         return RsvpMutation.mutate('remove', **kwargs)
 
 
-# --- Vote ------------------------------------------------------------------ #
-
-
-class VoteCreate(Mutation):
-    class Arguments:
-        user = graphene.ID(required=True)
-        target = graphene.ID(required=True)
-        is_upvote = graphene.Boolean(required=True)
-
-    state = graphene.Int()
-
-    def mutate(self, info, user, target, is_upvote):
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
-        try:
-            vote_obj = models.Vote.objects.get(
-                user=user_obj, target=target_obj)
-            vote_obj.is_upvote = is_upvote
-        except models.Vote.DoesNotExist:
-            vote_obj = models.Vote.objects.create(
-                user=user_obj,
-                target=target_obj,
-                is_upvote=is_upvote,
-            )
-        vote_obj.save()
-        return VoteCreate(state=1 if is_upvote else -1)
-
-
-class VoteDelete(Mutation):
-    class Arguments:
-        user = graphene.ID(required=True)
-        target = graphene.ID(required=True)
-
-    state = graphene.Int()
-
-    def mutate(self, info, user, target):
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        target_obj = models.Votable.objects.get(pk=from_global_id(target)[1])
-        try:
-            models.Vote.objects.get(user=user_obj, target=target_obj).delete()
-        except models.Vote.DoesNotExist:
-            pass  # if we can't find it, then it may as well be neutral
-
-        return VoteDelete(state=0)
-
-
 # --------------------------------------------------------------------------- #
 
 
@@ -1926,9 +1818,6 @@ class Mutation(graphene.ObjectType):
 
     create_like = LikeCreate.Field()
     delete_like = LikeDelete.Field()
-
-    create_vote = VoteCreate.Field()
-    delete_vote = VoteDelete.Field()
 
     create_bookmark = BookmarkCreate.Field()
     delete_bookmark = BookmarkDelete.Field()

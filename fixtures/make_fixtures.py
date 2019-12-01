@@ -39,10 +39,8 @@ class Model:
         self.transactions = []
         self.news = []
         self.events = []
-        self.votable = []
         self.posts = []
         self.comments = []
-        self.votes = []
 
         with open('../config.json') as fd:
             app = json.load(fd)['social']
@@ -310,14 +308,6 @@ class Model:
             }
         })
 
-        self.votable.append({
-            'model': 'ibis.Votable',
-            'pk': pk,
-            'fields': {
-                'vote': [],
-            }
-        })
-
         self.posts.append({
             'model': 'ibis.Post',
             'pk': pk,
@@ -340,14 +330,6 @@ class Model:
             'fields': {
                 'user': user,
                 'description': description,
-            }
-        })
-
-        self.votable.append({
-            'model': 'ibis.Votable',
-            'pk': pk,
-            'fields': {
-                'vote': [],
             }
         })
 
@@ -403,19 +385,6 @@ class Model:
         entry_obj = next((x for x in likeable if x['pk'] == entry), None)
         entry_obj['fields']['like'].append(person)
 
-    def add_vote(self, person, target, is_upvote):
-        pk = len(self.votes) + 1
-
-        self.votes.append({
-            'model': 'ibis.Vote',
-            'pk': pk,
-            'fields': {
-                'user': person,
-                'target': target,
-                'is_upvote': is_upvote,
-            }
-        })
-
     def get_model(self):
         return self.nonprofit_categories + \
             self.users + \
@@ -428,10 +397,8 @@ class Model:
             self.transactions + \
             self.news + \
             self.events + \
-            self.votable + \
             self.posts + \
             self.comments + \
-            self.votes + \
             self.sites + \
             self.socialApplications
 
@@ -655,15 +622,6 @@ def run():
         )
         for entry in likeable_sample:
             model.add_like(person, entry)
-
-    # add votes
-    # for person in people:
-    #    votable_sample = random.sample(
-    #        posts + comments,
-    #        min(random.randint(0, 100), len(posts + comments)),
-    #    )
-    #    for entry in votable_sample:
-    #        model.add_vote(person, entry, random.random() > 0.25)
 
     # save fixtures
     with open('fixtures.json', 'w') as fd:
