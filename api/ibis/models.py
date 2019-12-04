@@ -123,11 +123,6 @@ class Person(IbisUser):
         default=PUBLIC,
     )
 
-    notify_email_follow = models.BooleanField(default=True)
-    notify_email_transaction = models.BooleanField(default=True)
-    notify_email_comment = models.BooleanField(default=True)
-    notify_email_like = models.BooleanField(default=False)
-
 
 class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
     class Meta:

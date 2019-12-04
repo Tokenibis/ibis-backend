@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django_extensions',
+    'annoying',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
@@ -84,6 +85,7 @@ INSTALLED_APPS = [
     'graphene_django',
     'users',
     'ibis',
+    'notifications',
     'tracker',
 ]
 
@@ -98,6 +100,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'notifications.middleware.NotificationMiddleware',
     'tracker.middleware.TrackerMiddleware',
 ]
 

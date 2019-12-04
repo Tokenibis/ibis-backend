@@ -7,6 +7,7 @@ django-rest-auth[with_social]
 django-rest-framework
 django-rest-swagger
 django-extensions
+django-annoying
 graphene_django
 python-dateutil
 paypal-checkout-serversdk

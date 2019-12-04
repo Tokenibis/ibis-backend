@@ -13,12 +13,15 @@ rm db.sqlite3
 rm ibis/migrations/ -rf
 rm users/migrations -rf
 rm tracker/migrations -rf
+rm notifications/migrations -rf
 python3 manage.py makemigrations users
 python3 manage.py makemigrations ibis
 python3 manage.py makemigrations tracker
+python3 manage.py makemigrations notifications
 python3 manage.py migrate users
 python3 manage.py migrate ibis
 python3 manage.py migrate tracker
+python3 manage.py migrate notifications
 python3 manage.py migrate
 python3 manage.py createsuperuser --username dummy --email 'admin@admin.com' --noinput
 python3 manage.py loaddata $DIR/fixtures.json

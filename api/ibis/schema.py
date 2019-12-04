@@ -3,8 +3,6 @@ import graphene
 
 from django.db.models import Q, Count, Value
 from django.db.models.functions import Concat
-from django.core.mail import send_mail
-from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
@@ -729,16 +727,6 @@ class TransactionCreate(Mutation):
             score=score,
         )
 
-        title = '{} sent you ${:.2f}'.format(str(user_obj), amount / 100)
-        subject = 'Yay!'  # this should much larger preformatted message
-        send_mail(
-            title,
-            subject,
-            'Token Ibis <{}>'.format(settings.EMAIL_HOST_USER),
-            [target_obj.email],
-            fail_silently=False,
-        )
-
         transaction.save()
         return TransactionCreate(transaction=transaction)
 
@@ -1120,10 +1108,6 @@ class PersonCreate(Mutation):
         visibility_follow = graphene.String()
         visibility_donation = graphene.String()
         visibility_transaction = graphene.String()
-        notify_email_follow = graphene.Boolean()
-        notify_email_transaction = graphene.Boolean()
-        notify_email_comment = graphene.Boolean()
-        notify_email_like = graphene.Boolean()
         score = graphene.Int()
 
     person = graphene.Field(PersonNode)
@@ -1138,10 +1122,6 @@ class PersonCreate(Mutation):
             visibility_follow=models.Person.PUBLIC,
             visibility_donation=models.Person.PUBLIC,
             visibility_transaction=models.Person.PUBLIC,
-            notify_email_follow=True,
-            notify_email_transaction=True,
-            notify_email_comment=True,
-            notify_email_like=False,
             score=0,
     ):
 
@@ -1169,10 +1149,6 @@ class PersonCreate(Mutation):
             visibility_follow=visibility_follow,
             visibility_donation=visibility_donation,
             visibility_transaction=visibility_transaction,
-            notify_email_follow=notify_email_follow,
-            notify_email_transaction=notify_email_transaction,
-            notify_email_comment=notify_email_comment,
-            notify_email_like=notify_email_like,
             score=score,
         )
         person.save()
@@ -1189,10 +1165,6 @@ class PersonUpdate(Mutation):
         visibility_follow = graphene.String()
         visibility_donation = graphene.String()
         visibility_transaction = graphene.String()
-        notify_email_follow = graphene.Boolean()
-        notify_email_transaction = graphene.Boolean()
-        notify_email_comment = graphene.Boolean()
-        notify_email_like = graphene.Boolean()
         score = graphene.Int()
 
     person = graphene.Field(PersonNode)
@@ -1208,10 +1180,6 @@ class PersonUpdate(Mutation):
             visibility_follow='',
             visibility_donation='',
             visibility_transaction='',
-            notify_email_follow='',
-            notify_email_transaction='',
-            notify_email_comment='',
-            notify_email_like='',
             score=None,
     ):
 
@@ -1242,14 +1210,6 @@ class PersonUpdate(Mutation):
                 models.Person.PRIVATE
             ]
             person.visibility_transaction = visibility_transaction
-        if type(notify_email_follow) == bool:
-            person.notify_email_follow = notify_email_follow
-        if type(notify_email_transaction) == bool:
-            person.notify_email_transaction = notify_email_transaction
-        if type(notify_email_comment) == bool:
-            person.notify_email_comment = notify_email_comment
-        if type(notify_email_like) == bool:
-            person.notify_email_like = notify_email_like
         if type(score) == int:
             person.score = score
         person.save()

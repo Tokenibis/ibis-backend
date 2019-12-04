@@ -7,6 +7,7 @@ api/db.sqlite3
 api/ibis/migrations
 api/users/migrations
 api/tracker/migrations
+api/notifications/migrations
 
 fixtures/fixtures.json
 fixtures/data/social_apps.json
