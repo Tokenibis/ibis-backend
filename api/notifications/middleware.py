@@ -92,20 +92,21 @@ def handleCommentCreate(variables, data):
         parent = current.comment.parent
         if hasattr(parent.user, 'person'):
             notifier = parent.user.person.notifier
-            notification = Notification.objects.create(
-                notifier=notifier,
-                category=Notification.RECEIVED_COMMENT,
-                description=description,
-            )
-            notifications.append(notification)
-            if notifier.email_comment:
-                email = Email.objects.create(
-                    notification=notification,
-                    subject=description,
-                    body='TODO',
-                    schedule=datetime.now(),
+            if notifier not in [x.notifier for x in notifications]:
+                notification = Notification.objects.create(
+                    notifier=notifier,
+                    category=Notification.RECEIVED_COMMENT,
+                    description=description,
                 )
-                email.save()
+                notifications.append(notification)
+                if notifier.email_comment:
+                    email = Email.objects.create(
+                        notification=notification,
+                        subject=description,
+                        body='TODO',
+                        schedule=datetime.now(),
+                    )
+                    email.save()
         current = parent
 
     for Subclass in ibis.Entry.__subclasses__():
