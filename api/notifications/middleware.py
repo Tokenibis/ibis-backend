@@ -127,9 +127,7 @@ def handleLikeCreate(variables, data):
         user = ibis.Person.objects.get(pk=from_global_id(variables['user'])[1])
         notifier = ibis.Entry.objects.get(
             pk=from_global_id(variables['target'])[1]).user.person.notifier
-    except ObjectDoesNotExist:
-        print('ERROR: notification received a bad input')
-    except AttributeError:
+    except (ObjectDoesNotExist, AttributeError):
         # target of like is probably a nonprofit; just drop silently
         return
 
