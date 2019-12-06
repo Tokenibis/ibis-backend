@@ -111,10 +111,8 @@ def handleCommentCreate(variables, data):
 
     for Subclass in ibis.Entry.__subclasses__():
         if Subclass.objects.filter(pk=current.id).exists():
-            print(Subclass.__name__)
-            print(current.id)
             ref_type = Subclass.__name__
-            ref_id = to_global_id('{}Node'.format(ref_type), parent.id)
+            ref_id = to_global_id('{}Node'.format(ref_type), current.id)
             break
 
     for notification in notifications:
@@ -125,21 +123,28 @@ def handleCommentCreate(variables, data):
 def handleLikeCreate(variables, data):
     try:
         user = ibis.Person.objects.get(pk=from_global_id(variables['user'])[1])
-        notifier = ibis.Entry.objects.get(
-            pk=from_global_id(variables['target'])[1]).user.person.notifier
+        current = ibis.Entry.objects.get(
+            pk=from_global_id(variables['target'])[1])
+        notifier = current.user.person.notifier
     except (ObjectDoesNotExist, AttributeError):
         # target of like is probably a nonprofit; just drop silently
         return
 
     description = '{} liked your activity'.format(str(user))
 
+    while hasattr(current, 'comment'):
+        current = current.comment.parent
+
+    for Subclass in ibis.Entry.__subclasses__():
+        if Subclass.objects.filter(pk=current.id).exists():
+            ref_type = Subclass.__name__
+            ref_id = to_global_id('{}Node'.format(ref_type), current.id)
+            break
+
     notification = Notification.objects.create(
         notifier=notifier,
         category=Notification.RECEIVED_LIKE,
-        reference='{}:{}'.format(
-            ibis.Person.__name__,
-            variables['target'],
-        ),
+        reference='{}:{}'.format(ref_type, ref_id),
         description=description,
     )
     notification.save()
@@ -186,7 +191,8 @@ def handleNewsCreate(variables, data):
 
 def handleEventCreate(variables, data):
     try:
-        user = ibis.Nonprofit.objects.get(pk=from_global_id(variables['user'])[1])
+        user = ibis.Nonprofit.objects.get(
+            pk=from_global_id(variables['user'])[1])
     except ObjectDoesNotExist:
         print('ERROR: notification received a bad input')
         return
