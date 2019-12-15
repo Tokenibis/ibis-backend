@@ -68,6 +68,14 @@ class IbisUserFilter(django_filters.FilterSet):
                 Q(name__icontains=value) | Q(username__icontains=value))
 
 
+class DepositFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(Q(user_id=from_global_id(value)[1]))
+
+
 class TransferFilter(django_filters.FilterSet):
     by_user = django_filters.CharFilter(method='filter_by_user')
     by_following = django_filters.CharFilter(method='filter_by_following')
@@ -1699,7 +1707,10 @@ class Query(object):
         NonprofitNode,
         filterset_class=IbisUserFilter,
     )
-    all_deposits = DjangoFilterConnectionField(DepositNode)
+    all_deposits = DjangoFilterConnectionField(
+        DepositNode,
+        filterset_class=DepositFilter,
+    )
     all_withdrawals = DjangoFilterConnectionField(WithdrawalNode)
     all_donations = DjangoFilterConnectionField(
         DonationNode,
