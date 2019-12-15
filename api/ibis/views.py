@@ -1,4 +1,6 @@
 import sys
+import json
+import requests
 
 from django.contrib.auth import logout
 from rest_framework import generics, response, exceptions, serializers
@@ -10,9 +12,22 @@ from .models import IbisUser, Person, Deposit
 from .serializers import PaymentSerializer
 from .payments import PayPalClient
 
+QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
 IBIS_AVATAR = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 IBIS_AVATAR_LEN = 233
+
+
+class QuoteView(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        result = requests.get(QUOTE_URL)
+        obj = json.loads(result.text.replace('\\\'', '\'')[2:-1])
+        return response.Response({
+            'quote':
+            obj['quoteText'],
+            'author':
+            obj['quoteAuthor'] if obj['quoteAuthor'] else 'Unknown',
+        })
 
 
 class LoginView(generics.GenericAPIView):
