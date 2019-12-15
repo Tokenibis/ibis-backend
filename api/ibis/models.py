@@ -159,7 +159,7 @@ class Entry(TimeStampedModel, SoftDeletableModel):
     description = models.TextField(validators=[MinLengthValidator(1)])
 
 
-class Deposit(Valuable):
+class Deposit(TimeStampedModel, Valuable):
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,

@@ -350,7 +350,7 @@ class Model:
 
         sha = hashlib.sha256()
         sha.update(str(pk).encode())
-        payment_id = sha.hexdigest()
+        payment_id = 'ubp:{}'.format(sha.hexdigest())
 
         self.deposits.append({
             'model': 'ibis.Deposit',
