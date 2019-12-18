@@ -1,4 +1,6 @@
+import os
 import sys
+import random
 import json
 import requests
 
@@ -27,6 +29,21 @@ class QuoteView(generics.GenericAPIView):
             obj['quoteText'],
             'author':
             obj['quoteAuthor'] if obj['quoteAuthor'] else 'Unknown',
+        })
+
+
+class PriceView(generics.GenericAPIView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        with open(os.path.join(script_path, 'data/prices.json')) as fd:
+            self.prices = json.load(fd)
+
+    def get(self, request, *args, **kwargs):
+        item = random.choice(list(self.prices.keys()))
+        return response.Response({
+            'item': item,
+            'price': round(self.prices[item] * 100),
         })
 
 

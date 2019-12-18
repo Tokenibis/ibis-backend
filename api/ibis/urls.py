@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import QuoteView, LoginView, LogoutView, IdentifyView, PaymentView
+from .views import *
 
 urlpatterns = [
+    path('price/', PriceView.as_view(), name='quote'),
     path('quote/', QuoteView.as_view(), name='quote'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
