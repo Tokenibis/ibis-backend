@@ -31,6 +31,9 @@ class IbisUser(User, Scoreable):
             self.last_name,
         )
 
+    def balance(self):
+        raise NotImplementedError
+
 
 class Valuable(models.Model):
     amount = models.PositiveIntegerField()
@@ -123,6 +126,18 @@ class Person(IbisUser):
         default=PUBLIC,
     )
 
+    def balance(self):
+        deposit = sum([ex.amount for ex in self.deposit_set.all()])
+        donation = sum([x.amount for x in Donation.objects.filter(user=self)])
+        transaction_in = sum(
+            [x.amount for x in Transaction.objects.filter(target=self)])
+        transaction_out = sum(
+            [x.amount for x in Transaction.objects.filter(user=self)])
+        return (deposit) + (transaction_in - transaction_out) - (donation)
+
+    def donated(self):
+        return sum([x.amount for x in Donation.objects.filter(user=self)])
+
 
 class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
     class Meta:
@@ -145,6 +160,18 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
 
     def __str__(self):
         return self.title
+
+    def balance(self):
+        deposit = sum([ex.amount for ex in self.deposit_set.all()])
+        withdrawal = sum([ex.amount for ex in self.withdrawal_set.all()])
+        donation_in = sum(
+            [x.amount for x in Donation.objects.filter(target=self)])
+        transaction_out = sum(
+            [x.amount for x in Transaction.objects.filter(user=self)])
+        return (deposit - withdrawal) + (donation_in - transaction_out)
+
+    def fundraised(self):
+        return sum([x.amount for x in Donation.objects.filter(target=self)])
 
 
 class Entry(TimeStampedModel, SoftDeletableModel):

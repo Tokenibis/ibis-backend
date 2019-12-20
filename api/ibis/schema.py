@@ -1090,6 +1090,7 @@ class IbisUserNode(UserNode):
 class PersonNode(IbisUserNode, UserNode):
 
     balance = graphene.Int()
+    donated = graphene.Int()
 
     class Meta:
         model = models.Person
@@ -1097,14 +1098,10 @@ class PersonNode(IbisUserNode, UserNode):
         interfaces = (relay.Node, )
 
     def resolve_balance(self, *args, **kwargs):
-        deposit = sum([ex.amount for ex in self.deposit_set.all()])
-        donation = sum(
-            [x.amount for x in models.Donation.objects.filter(user=self)])
-        transaction_in = sum(
-            [x.amount for x in models.Transaction.objects.filter(target=self)])
-        transaction_out = sum(
-            [x.amount for x in models.Transaction.objects.filter(user=self)])
-        return (deposit) + (transaction_in - transaction_out) - (donation)
+        return self.balance()
+
+    def resolve_donated(self, *args, **kwargs):
+        return self.donated()
 
 
 class PersonCreate(Mutation):
@@ -1244,6 +1241,7 @@ class PersonDelete(Mutation):
 class NonprofitNode(IbisUserNode):
 
     balance = graphene.Int()
+    fundraised = graphene.Int()
 
     class Meta:
         model = models.Nonprofit
@@ -1251,17 +1249,10 @@ class NonprofitNode(IbisUserNode):
         interfaces = (relay.Node, )
 
     def resolve_balance(self, *args, **kwargs):
-        deposit = sum([ex.amount for ex in self.deposit_set.all()])
-        withdrawal = sum([ex.amount for ex in self.withdrawal_set.all()])
-        donation_in = sum([
-            tx.transaction.amount
-            for tx in models.Donation.objects.filter(target=self)
-        ])
-        transaction_out = sum([
-            tx.transaction.amount
-            for tx in models.Transaction.objects.filter(user=self)
-        ])
-        return (deposit - withdrawal) + (donation_in - transaction_out)
+        return self.balance()
+
+    def resolve_fundraised(self, *args, **kwargs):
+        return self.fundraised()
 
 
 class NonprofitCreate(Mutation):
