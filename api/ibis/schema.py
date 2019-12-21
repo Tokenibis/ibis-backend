@@ -350,6 +350,12 @@ class NonprofitCategoryNode(DjangoObjectType):
         filter_fields = []
         interfaces = (relay.Node, )
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_authenticated:
+            return queryset
+        return queryset.none()
+
 
 class NonprofitCategoryCreate(Mutation):
     class Arguments:
@@ -360,6 +366,9 @@ class NonprofitCategoryCreate(Mutation):
     nonprofitCategory = graphene.Field(NonprofitCategoryNode)
 
     def mutate(self, info, title, description):
+        if not info.context.user.is_staff:
+            return
+
         nonprofitCategory = models.NonprofitCategory.objects.create(
             title=title,
             description=description,
@@ -377,6 +386,9 @@ class NonprofitCategoryUpdate(Mutation):
     nonprofitCategory = graphene.Field(NonprofitCategoryNode)
 
     def mutate(self, info, id, title='', description=''):
+        if not info.context.user.is_staff:
+            return
+
         nonprofitCategory = models.NonprofitCategory.objects.get(
             pk=from_global_id(id)[1])
         if title:
@@ -395,6 +407,9 @@ class NonprofitCategoryDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.NonprofitCategory.objects.get(
                 pk=from_global_id(id)[1]).delete()
@@ -412,6 +427,12 @@ class DepositNode(DjangoObjectType):
         filter_fields = []
         interfaces = (relay.Node, )
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_staff:
+            return queryset
+        return queryset.filter(user=info.context.user)
+
 
 class DepositCreate(Mutation):
     class Arguments:
@@ -422,6 +443,10 @@ class DepositCreate(Mutation):
     deposit = graphene.Field(DepositNode)
 
     def mutate(self, info, user, amount, payment_id=''):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
+
         deposit = models.Deposit.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             amount=amount,
@@ -441,6 +466,9 @@ class DepositUpdate(Mutation):
     deposit = graphene.Field(DepositNode)
 
     def mutate(self, info, id, user=None, amount='', payment_id=''):
+        if not info.context.user.is_staff:
+            return
+
         deposit = models.Deposit.objects.get(pk=from_global_id(id)[1])
         if user:
             deposit.user = models.IbisUser.objects.get(
@@ -460,6 +488,9 @@ class DepositDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Deposit.objects.get(pk=from_global_id(id)[1]).delete()
             return DepositDelete(status=True)
@@ -476,6 +507,12 @@ class WithdrawalNode(DjangoObjectType):
         filter_fields = []
         interfaces = (relay.Node, )
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_staff:
+            return queryset
+        return queryset.filter(user=info.context.user)
+
 
 class WithdrawalCreate(Mutation):
     class Arguments:
@@ -485,6 +522,9 @@ class WithdrawalCreate(Mutation):
     withdrawal = graphene.Field(WithdrawalNode)
 
     def mutate(self, info, user, amount):
+        if not info.context.user.is_staff:
+            return
+
         withdrawal = models.Withdrawal.objects.create(
             user=models.Nonprofit.objects.get(pk=from_global_id(user)[1]),
             amount=amount,
@@ -502,6 +542,9 @@ class WithdrawalUpdate(Mutation):
     withdrawal = graphene.Field(WithdrawalNode)
 
     def mutate(self, info, id, user=None, amount=''):
+        if not info.context.user.is_staff:
+            return
+
         withdrawal = models.Withdrawal.objects.get(pk=from_global_id(id)[1])
         if user:
             withdrawal.user = models.Nonprofit.objects.get(
@@ -519,6 +562,9 @@ class WithdrawalDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Withdrawal.objects.get(pk=from_global_id(id)[1]).delete()
             return WithdrawalDelete(status=True)
@@ -586,6 +632,17 @@ class DonationNode(EntryNode):
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_staff:
+            return queryset
+
+        return queryset.filter(
+            Q(user__person__visibility_donation=models.Person.PUBLIC)
+            | (Q(user__person__visibility_donation=models.Person.FOLLOWING)
+               & Q(user__person__following__id__exact=info.context.user.id))
+            | Q(user_id=info.context.user.id)).distinct()
+
 
 class DonationCreate(Mutation):
     class Meta:
@@ -601,14 +658,23 @@ class DonationCreate(Mutation):
     donation = graphene.Field(DonationNode)
 
     def mutate(self, info, user, description, target, amount, score=0):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
 
         assert len(description) > 0
         assert amount > 0
 
+        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Nonprofit.objects.get(pk=from_global_id(target)[1])
+
+        assert hasattr(user_obj, 'person')
+        assert user_obj.person.balance() - amount >= 0
+
         donation = models.Donation.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=user_obj,
             description=description,
-            target=models.Nonprofit.objects.get(pk=from_global_id(target)[1]),
+            target=target_obj,
             amount=amount,
             score=score,
         )
@@ -639,6 +705,8 @@ class DonationUpdate(Mutation):
             target=None,
             amount=0,
     ):
+        if not info.context.user.is_staff:
+            return
 
         assert len(description) > 0
         assert amount > 0
@@ -665,6 +733,9 @@ class DonationDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Donation.objects.get(pk=from_global_id(id)[1]).delete()
             return DonationDelete(status=True)
@@ -697,6 +768,17 @@ class TransactionNode(EntryNode):
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_staff:
+            return queryset
+
+        return queryset.filter(
+            Q(user__person__visibility_transaction=models.Person.PUBLIC)
+            | (Q(user__person__visibility_transaction=models.Person.FOLLOWING)
+               & Q(user__person__following__id__exact=info.context.user.id))
+            | Q(user_id=info.context.user.id)).distinct()
+
 
 class TransactionCreate(Mutation):
     class Meta:
@@ -720,12 +802,18 @@ class TransactionCreate(Mutation):
             amount,
             score=0,
     ):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
 
         assert len(description) > 0
         assert amount > 0
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Person.objects.get(pk=from_global_id(target)[1])
+
+        assert hasattr(user_obj, 'person')
+        assert user_obj.person.balance() - amount >= 0
 
         transaction = models.Transaction.objects.create(
             user=user_obj,
@@ -761,6 +849,8 @@ class TransactionUpdate(Mutation):
             target=None,
             amount=0,
     ):
+        if not info.context.user.is_staff:
+            return
 
         assert len(description) > 0
         assert amount > 0
@@ -787,6 +877,9 @@ class TransactionDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Transaction.objects.get(pk=from_global_id(id)[1]).delete()
             return TransactionDelete(status=True)
@@ -822,6 +915,12 @@ class NewsNode(EntryNode):
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_authenticated:
+            return queryset
+        return queryset.none()
+
 
 class NewsCreate(Mutation):
     class Arguments:
@@ -844,6 +943,9 @@ class NewsCreate(Mutation):
             image,
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
+
         news = models.News.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
@@ -879,6 +981,9 @@ class NewsUpdate(Mutation):
             image='',
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
+
         news = models.News.objects.get(pk=from_global_id(id)[1])
         if user:
             news.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
@@ -903,6 +1008,9 @@ class NewsDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.News.objects.get(pk=from_global_id(id)[1]).delete()
             return NewsDelete(status=True)
@@ -938,6 +1046,12 @@ class EventNode(EntryNode):
     def resolve_rsvp(self, *args, **kwargs):
         return self.rsvp
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_authenticated:
+            return queryset
+        return queryset.none()
+
 
 class EventCreate(Mutation):
     class Arguments:
@@ -968,6 +1082,9 @@ class EventCreate(Mutation):
             longitude,
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
+
         event = models.Event.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
@@ -1015,6 +1132,9 @@ class EventUpdate(Mutation):
             longitude=None,
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
+
         event = models.Event.objects.get(pk=from_global_id(id)[1])
         if user:
             event.user = models.IbisUser.objects.get(
@@ -1046,6 +1166,9 @@ class EventDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Event.objects.get(pk=from_global_id(id)[1]).delete()
             return EventDelete(status=True)
@@ -1083,6 +1206,12 @@ class IbisUserNode(UserNode):
     def resolve_follower_count(self, *args, **kwargs):
         return self.follower.count()
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_authenticated:
+            return queryset
+        return queryset.none()
+
 
 # --- Person ---------------------------------------------------------------- #
 
@@ -1096,6 +1225,15 @@ class PersonNode(IbisUserNode, UserNode):
         model = models.Person
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_following(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff or info.context.user.id == self.id
+                or (self.following.filter(pk=info.context.user.id).exists()
+                    and self.visibility_follow == models.Person.FOLLOWING)
+                or self.visibility_follow == models.Person.PUBLIC):
+            return self.following.none()
+
+        return self.following
 
     def resolve_balance(self, *args, **kwargs):
         return self.balance()
@@ -1129,6 +1267,8 @@ class PersonCreate(Mutation):
             visibility_transaction=models.Person.PUBLIC,
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
 
         if visibility_follow:
             assert visibility_follow in [
@@ -1187,6 +1327,9 @@ class PersonUpdate(Mutation):
             visibility_transaction='',
             score=None,
     ):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(id)[1])):
+            return
 
         person = models.Person.objects.get(pk=from_global_id(id)[1])
         if username:
@@ -1228,6 +1371,9 @@ class PersonDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
             return PersonDelete(status=True)
@@ -1278,6 +1424,9 @@ class NonprofitCreate(Mutation):
             link,
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
+
         nonprofit = models.Nonprofit.objects.create(
             username=username,
             email=email,
@@ -1319,6 +1468,9 @@ class NonprofitUpdate(Mutation):
             link='',
             score=0,
     ):
+        if not info.context.user.is_staff:
+            return
+
         nonprofit = models.Nonprofit.objects.get(pk=from_global_id(id)[1])
         if username:
             nonprofit.username = username
@@ -1348,6 +1500,9 @@ class NonprofitDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
             return NonprofitDelete(status=True)
@@ -1384,6 +1539,12 @@ class PostNode(EntryNode):
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_authenticated:
+            return queryset
+        return queryset.none()
+
 
 class PostCreate(Mutation):
     class Arguments:
@@ -1394,6 +1555,10 @@ class PostCreate(Mutation):
     post = graphene.Field(PostNode)
 
     def mutate(self, info, user, title, description):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
+
         post = models.Post.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             title=title,
@@ -1419,6 +1584,9 @@ class PostUpdate(Mutation):
             title='',
             description='',
     ):
+        if not info.context.user.is_staff:
+            return
+
         post = models.Post.objects.get(pk=from_global_id(id)[1])
         if user:
             post.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
@@ -1437,6 +1605,9 @@ class PostDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Post.objects.get(pk=from_global_id(id)[1]).delete()
             return PostDelete(status=True)
@@ -1465,6 +1636,12 @@ class CommentNode(EntryNode):
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_authenticated:
+            return queryset
+        return queryset.none()
+
 
 class CommentCreate(Mutation):
     class Arguments:
@@ -1475,10 +1652,17 @@ class CommentCreate(Mutation):
     comment = graphene.Field(CommentNode)
 
     def mutate(self, info, user, description, parent):
+        parent_obj = models.Entry.objects.get(pk=from_global_id(parent)[1])
+
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1])
+                 and info.context.user.ibisuser.can_see(parent_obj))):
+            return
+
         comment = models.Comment.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
-            parent=models.Entry.objects.get(pk=from_global_id(parent)[1]),
+            parent=parent_obj,
         )
         comment.save()
         return CommentCreate(comment=comment)
@@ -1500,6 +1684,10 @@ class CommentUpdate(Mutation):
             description='',
             parent=None,
     ):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
+
         comment = models.Comment.objects.get(pk=from_global_id(id)[1])
         if user:
             comment.user = models.IbisUser.objects.get(
@@ -1520,6 +1708,9 @@ class CommentDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            return
+
         try:
             models.Comment.objects.get(pk=from_global_id(id)[1]).delete()
             return CommentDelete(status=True)
@@ -1538,7 +1729,11 @@ class FollowMutation(Mutation):
     state = graphene.Boolean()
 
     @classmethod
-    def mutate(cls, operation, user, target):
+    def mutate(cls, info, operation, user, target):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
+
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.IbisUser.objects.get(pk=from_global_id(target)[1])
         getattr(user_obj.following, operation)(target_obj)
@@ -1549,12 +1744,12 @@ class FollowMutation(Mutation):
 
 class FollowCreate(FollowMutation):
     def mutate(self, info, **kwargs):
-        return FollowMutation.mutate('add', **kwargs)
+        return FollowMutation.mutate(info, 'add', **kwargs)
 
 
 class FollowDelete(FollowMutation):
     def mutate(self, info, **kwargs):
-        return FollowMutation.mutate('remove', **kwargs)
+        return FollowMutation.mutate(info, 'remove', **kwargs)
 
 
 # --- Likes ----------------------------------------------------------------- #
@@ -1568,7 +1763,7 @@ class LikeMutation(Mutation):
     state = graphene.Boolean()
 
     @classmethod
-    def mutate(cls, operation, user, target):
+    def mutate(cls, info, operation, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         entry_type, entry_id = from_global_id(target)
 
@@ -1582,6 +1777,12 @@ class LikeMutation(Mutation):
         except (KeyError, ObjectDoesNotExist):
             raise KeyError('Object is not likeable')
 
+        print(sorted(info.context.user.__dir__()))
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1])
+                 and info.context.user.ibisuser.can_see(entry_obj))):
+            return
+
         getattr(entry_obj.like, operation)(user_obj)
         entry_obj.save()
         return LikeMutation(
@@ -1590,12 +1791,12 @@ class LikeMutation(Mutation):
 
 class LikeCreate(LikeMutation):
     def mutate(self, info, **kwargs):
-        return LikeMutation.mutate('add', **kwargs)
+        return LikeMutation.mutate(info, 'add', **kwargs)
 
 
 class LikeDelete(LikeMutation):
     def mutate(self, info, **kwargs):
-        return LikeMutation.mutate('remove', **kwargs)
+        return LikeMutation.mutate(info, 'remove', **kwargs)
 
 
 # --- Bookmarks ----------------------------------------------------------------- #
@@ -1609,7 +1810,11 @@ class BookmarkMutation(Mutation):
     state = graphene.Boolean()
 
     @classmethod
-    def mutate(cls, operation, user, target):
+    def mutate(cls, info, operation, user, target):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
+
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         entry_type, entry_id = from_global_id(target)
 
@@ -1633,12 +1838,12 @@ class BookmarkMutation(Mutation):
 
 class BookmarkCreate(BookmarkMutation):
     def mutate(self, info, **kwargs):
-        return BookmarkMutation.mutate('add', **kwargs)
+        return BookmarkMutation.mutate(info, 'add', **kwargs)
 
 
 class BookmarkDelete(BookmarkMutation):
     def mutate(self, info, **kwargs):
-        return BookmarkMutation.mutate('remove', **kwargs)
+        return BookmarkMutation.mutate(info, 'remove', **kwargs)
 
 
 # --- RSVPs ----------------------------------------------------------------- #
@@ -1652,7 +1857,11 @@ class RsvpMutation(Mutation):
     state = graphene.Boolean()
 
     @classmethod
-    def mutate(cls, operation, user, target):
+    def mutate(cls, info, operation, user, target):
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(user)[1])):
+            return
+
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         event_obj = models.Event.objects.get(pk=from_global_id(target)[1])
         getattr(event_obj.rsvp, operation)(user_obj)
@@ -1663,12 +1872,12 @@ class RsvpMutation(Mutation):
 
 class RsvpCreate(RsvpMutation):
     def mutate(self, info, **kwargs):
-        return RsvpMutation.mutate('add', **kwargs)
+        return RsvpMutation.mutate(info, 'add', **kwargs)
 
 
 class RsvpDelete(RsvpMutation):
     def mutate(self, info, **kwargs):
-        return RsvpMutation.mutate('remove', **kwargs)
+        return RsvpMutation.mutate(info, 'remove', **kwargs)
 
 
 # --------------------------------------------------------------------------- #

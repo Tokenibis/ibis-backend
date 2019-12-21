@@ -34,6 +34,27 @@ class IbisUser(User, Scoreable):
     def balance(self):
         raise NotImplementedError
 
+    def can_see(self, entry):
+        if hasattr(entry, 'comment'):
+            entry = entry.get_root()
+
+        if hasattr(entry, 'donation') and hasattr(entry.user, 'person'):
+            permission = entry.user.person.is_visible_donation
+            if permission == models.Person.PRIVATE:
+                return self == entry.user.person
+            if permission == models.Person.FOLLOWING:
+                return entry.user.following.filter(pk=self.id).exists()
+
+        if hasattr(entry, 'transaction') and hasattr(entry.self, 'person'):
+            permission = entry.self.person.is_visible_transaction
+            if permission == models.Person.PRIVATE:
+                return self == entry.user.person
+            if permission == models.Person.FOLLOWING:
+                return entry.self.following.filter(pk=self.id).exists()
+
+        return True
+
+
 
 class Valuable(models.Model):
     amount = models.PositiveIntegerField()
@@ -251,3 +272,9 @@ class Comment(Entry, Likeable, Scoreable):
         related_name='parent_of',
         on_delete=models.CASCADE,
     )
+
+    def get_root(self):
+        current = Entry.objects.get(pk=self.pk)
+        while hasattr(current, 'comment'):
+            current = current.comment.parent
+        return current
