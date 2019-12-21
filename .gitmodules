@@ -1,0 +1,3 @@
+[submodule "api/api/test/graphql"]
+	path = api/api/test/graphql
+	url = git@github.com:Tokenibis/graphql.git

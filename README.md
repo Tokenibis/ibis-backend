@@ -14,6 +14,10 @@ This is the application backend for the Token Ibis application. It is implemente
 
 Please ensure that your environment is set up to run python 3
 
+`$ git submodule init`
+
+`$ git submodule update`
+
 `$ virtualenv ibis-backend`
 
 `$ cd ibis-backend`
