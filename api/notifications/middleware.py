@@ -167,7 +167,7 @@ def handleNewsCreate(variables, data):
         print('ERROR: notification received a bad input')
         return
 
-    for target in user.followers:
+    for target in user.follower.all():
         try:
             notifier = target.person.notifier
         except ObjectDoesNotExist:
@@ -197,7 +197,7 @@ def handleEventCreate(variables, data):
         print('ERROR: notification received a bad input')
         return
 
-    for target in user.followers:
+    for target in user.follower.all():
         try:
             notifier = target.person.notifier
         except ObjectDoesNotExist:
@@ -226,7 +226,7 @@ def handlePostCreate(variables, data):
         print('ERROR: notification received a bad input')
         return
 
-    for target in user.followers:
+    for target in user.follower.all():
         try:
             notifier = target.person.notifier
         except ObjectDoesNotExist:
