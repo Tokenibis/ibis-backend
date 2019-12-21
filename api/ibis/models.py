@@ -36,24 +36,23 @@ class IbisUser(User, Scoreable):
 
     def can_see(self, entry):
         if hasattr(entry, 'comment'):
-            entry = entry.get_root()
+            entry = entry.comment.get_root()
 
         if hasattr(entry, 'donation') and hasattr(entry.user, 'person'):
-            permission = entry.user.person.is_visible_donation
-            if permission == models.Person.PRIVATE:
+            permission = entry.user.person.visibility_donation
+            if permission == Person.PRIVATE:
                 return self == entry.user.person
-            if permission == models.Person.FOLLOWING:
+            if permission == Person.FOLLOWING:
                 return entry.user.following.filter(pk=self.id).exists()
 
         if hasattr(entry, 'transaction') and hasattr(entry.self, 'person'):
-            permission = entry.self.person.is_visible_transaction
-            if permission == models.Person.PRIVATE:
+            permission = entry.self.person.visibility_transaction
+            if permission == Person.PRIVATE:
                 return self == entry.user.person
-            if permission == models.Person.FOLLOWING:
+            if permission == Person.FOLLOWING:
                 return entry.self.following.filter(pk=self.id).exists()
 
         return True
-
 
 
 class Valuable(models.Model):

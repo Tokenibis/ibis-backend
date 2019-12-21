@@ -1654,6 +1654,7 @@ class CommentCreate(Mutation):
     def mutate(self, info, user, description, parent):
         parent_obj = models.Entry.objects.get(pk=from_global_id(parent)[1])
 
+        print(info.context.user.ibisuser.can_see(parent_obj))
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])
                  and info.context.user.ibisuser.can_see(parent_obj))):
@@ -1777,7 +1778,6 @@ class LikeMutation(Mutation):
         except (KeyError, ObjectDoesNotExist):
             raise KeyError('Object is not likeable')
 
-        print(sorted(info.context.user.__dir__()))
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])
                  and info.context.user.ibisuser.can_see(entry_obj))):
