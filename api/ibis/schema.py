@@ -4,6 +4,7 @@ import graphene
 from django.db.models import Q, Count, Value
 from django.db.models.functions import Concat
 from django.core.exceptions import ObjectDoesNotExist
+from graphql import GraphQLError
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
@@ -352,9 +353,9 @@ class NonprofitCategoryNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_authenticated:
-            return queryset
-        return queryset.none()
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
 
 
 class NonprofitCategoryCreate(Mutation):
@@ -367,7 +368,7 @@ class NonprofitCategoryCreate(Mutation):
 
     def mutate(self, info, title, description):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         nonprofitCategory = models.NonprofitCategory.objects.create(
             title=title,
@@ -387,7 +388,7 @@ class NonprofitCategoryUpdate(Mutation):
 
     def mutate(self, info, id, title='', description=''):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         nonprofitCategory = models.NonprofitCategory.objects.get(
             pk=from_global_id(id)[1])
@@ -408,7 +409,7 @@ class NonprofitCategoryDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.NonprofitCategory.objects.get(
@@ -445,7 +446,7 @@ class DepositCreate(Mutation):
     def mutate(self, info, user, amount, payment_id=''):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         deposit = models.Deposit.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -467,7 +468,7 @@ class DepositUpdate(Mutation):
 
     def mutate(self, info, id, user=None, amount='', payment_id=''):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         deposit = models.Deposit.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -489,7 +490,7 @@ class DepositDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Deposit.objects.get(pk=from_global_id(id)[1]).delete()
@@ -523,7 +524,7 @@ class WithdrawalCreate(Mutation):
 
     def mutate(self, info, user, amount):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         withdrawal = models.Withdrawal.objects.create(
             user=models.Nonprofit.objects.get(pk=from_global_id(user)[1]),
@@ -543,7 +544,7 @@ class WithdrawalUpdate(Mutation):
 
     def mutate(self, info, id, user=None, amount=''):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         withdrawal = models.Withdrawal.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -563,7 +564,7 @@ class WithdrawalDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Withdrawal.objects.get(pk=from_global_id(id)[1]).delete()
@@ -634,6 +635,9 @@ class DonationNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+
         if info.context.user.is_staff:
             return queryset
 
@@ -660,7 +664,7 @@ class DonationCreate(Mutation):
     def mutate(self, info, user, description, target, amount, score=0):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         assert len(description) > 0
         assert amount > 0
@@ -734,7 +738,7 @@ class DonationDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Donation.objects.get(pk=from_global_id(id)[1]).delete()
@@ -770,6 +774,9 @@ class TransactionNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+
         if info.context.user.is_staff:
             return queryset
 
@@ -804,7 +811,7 @@ class TransactionCreate(Mutation):
     ):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         assert len(description) > 0
         assert amount > 0
@@ -850,7 +857,7 @@ class TransactionUpdate(Mutation):
             amount=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         assert len(description) > 0
         assert amount > 0
@@ -878,7 +885,7 @@ class TransactionDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Transaction.objects.get(pk=from_global_id(id)[1]).delete()
@@ -917,9 +924,9 @@ class NewsNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_authenticated:
-            return queryset
-        return queryset.none()
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
 
 
 class NewsCreate(Mutation):
@@ -944,7 +951,7 @@ class NewsCreate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         news = models.News.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -982,7 +989,7 @@ class NewsUpdate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         news = models.News.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1009,7 +1016,7 @@ class NewsDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.News.objects.get(pk=from_global_id(id)[1]).delete()
@@ -1048,9 +1055,9 @@ class EventNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_authenticated:
-            return queryset
-        return queryset.none()
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
 
 
 class EventCreate(Mutation):
@@ -1083,7 +1090,7 @@ class EventCreate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         event = models.Event.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -1133,7 +1140,7 @@ class EventUpdate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         event = models.Event.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1167,7 +1174,7 @@ class EventDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Event.objects.get(pk=from_global_id(id)[1]).delete()
@@ -1208,9 +1215,9 @@ class IbisUserNode(UserNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_authenticated:
-            return queryset
-        return queryset.none()
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
 
 
 # --- Person ---------------------------------------------------------------- #
@@ -1231,7 +1238,7 @@ class PersonNode(IbisUserNode, UserNode):
                 or (self.following.filter(pk=info.context.user.id).exists()
                     and self.visibility_follow == models.Person.FOLLOWING)
                 or self.visibility_follow == models.Person.PUBLIC):
-            return self.following.none()
+            raise GraphQLError('You do not have sufficient permission')
 
         return self.following
 
@@ -1268,7 +1275,7 @@ class PersonCreate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         if visibility_follow:
             assert visibility_follow in [
@@ -1329,7 +1336,7 @@ class PersonUpdate(Mutation):
     ):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(id)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         person = models.Person.objects.get(pk=from_global_id(id)[1])
         if username:
@@ -1372,7 +1379,7 @@ class PersonDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
@@ -1425,7 +1432,7 @@ class NonprofitCreate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         nonprofit = models.Nonprofit.objects.create(
             username=username,
@@ -1469,7 +1476,7 @@ class NonprofitUpdate(Mutation):
             score=0,
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         nonprofit = models.Nonprofit.objects.get(pk=from_global_id(id)[1])
         if username:
@@ -1501,7 +1508,7 @@ class NonprofitDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
@@ -1541,9 +1548,9 @@ class PostNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_authenticated:
-            return queryset
-        return queryset.none()
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
 
 
 class PostCreate(Mutation):
@@ -1557,7 +1564,7 @@ class PostCreate(Mutation):
     def mutate(self, info, user, title, description):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         post = models.Post.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -1585,7 +1592,7 @@ class PostUpdate(Mutation):
             description='',
     ):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         post = models.Post.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1606,7 +1613,7 @@ class PostDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Post.objects.get(pk=from_global_id(id)[1]).delete()
@@ -1638,9 +1645,9 @@ class CommentNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_authenticated:
-            return queryset
-        return queryset.none()
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
 
 
 class CommentCreate(Mutation):
@@ -1658,7 +1665,7 @@ class CommentCreate(Mutation):
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])
                  and info.context.user.ibisuser.can_see(parent_obj))):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         comment = models.Comment.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -1685,9 +1692,8 @@ class CommentUpdate(Mutation):
             description='',
             parent=None,
     ):
-        if not (info.context.user.is_staff
-                or info.context.user.id == int(from_global_id(user)[1])):
-            return
+        if not info.context.user.is_staff:
+            raise GraphQLError('You are not a staff member')
 
         comment = models.Comment.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1710,7 +1716,7 @@ class CommentDelete(Mutation):
 
     def mutate(self, info, id):
         if not info.context.user.is_staff:
-            return
+            raise GraphQLError('You are not a staff member')
 
         try:
             models.Comment.objects.get(pk=from_global_id(id)[1]).delete()
@@ -1733,7 +1739,7 @@ class FollowMutation(Mutation):
     def mutate(cls, info, operation, user, target):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.IbisUser.objects.get(pk=from_global_id(target)[1])
@@ -1781,7 +1787,7 @@ class LikeMutation(Mutation):
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])
                  and info.context.user.ibisuser.can_see(entry_obj))):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         getattr(entry_obj.like, operation)(user_obj)
         entry_obj.save()
@@ -1813,7 +1819,7 @@ class BookmarkMutation(Mutation):
     def mutate(cls, info, operation, user, target):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         entry_type, entry_id = from_global_id(target)
@@ -1860,7 +1866,7 @@ class RsvpMutation(Mutation):
     def mutate(cls, info, operation, user, target):
         if not (info.context.user.is_staff
                 or info.context.user.id == int(from_global_id(user)[1])):
-            return
+            raise GraphQLError('You do not have sufficient permission')
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         event_obj = models.Event.objects.get(pk=from_global_id(target)[1])
