@@ -1228,6 +1228,10 @@ class PersonNode(IbisUserNode, UserNode):
     balance = graphene.Int()
     donated = graphene.Int()
 
+    visibility_follow = graphene.String()
+    visibility_donation = graphene.String()
+    visibility_transaction = graphene.String()
+
     class Meta:
         model = models.Person
         filter_fields = []
@@ -1247,6 +1251,21 @@ class PersonNode(IbisUserNode, UserNode):
 
     def resolve_donated(self, *args, **kwargs):
         return self.donated()
+
+    def resolve_visibility_following(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff or info.context.user.id == self.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.visibility_following
+
+    def resolve_visibility_donation(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff or info.context.user.id == self.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.visibility_donation
+
+    def resolve_visibility_transaction(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff or info.context.user.id == self.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.visibility_transaction
 
 
 class PersonCreate(Mutation):

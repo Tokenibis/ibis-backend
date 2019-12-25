@@ -12,10 +12,40 @@ import notifications.models as models
 
 
 class NotifierNode(DjangoObjectType):
+
+    email_follow = graphene.Boolean()
+    email_donation = graphene.Boolean()
+    email_transaction = graphene.Boolean()
+    email_like = graphene.Boolean()
+
     class Meta:
         model = models.Notifier
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_email_following(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_following
+
+    def resolve_email_donation(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_donation
+
+    def resolve_email_transaction(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_transaction
+
+    def resolve_email_like(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_like
 
     @classmethod
     def get_queryset(cls, queryset, info):
