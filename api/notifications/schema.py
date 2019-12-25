@@ -1,5 +1,6 @@
 import django_filters
 import graphene
+from graphql import GraphQLError
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphql_relay.node.node import from_global_id
@@ -15,6 +16,12 @@ class NotifierNode(DjangoObjectType):
         model = models.Notifier
         filter_fields = []
         interfaces = (relay.Node, )
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_staff:
+            return queryset
+        return queryset.filter(user=info.context.user)
 
 
 class NotifierUpdate(Mutation):
@@ -43,6 +50,11 @@ class NotifierUpdate(Mutation):
     ):
 
         notifier = models.Notifier.objects.get(pk=from_global_id(id)[1])
+
+        if not (info.context.user.is_staff
+                or info.context.user.id == notifier.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+
         if type(email_follow) == bool:
             notifier.email_follow = email_follow
         if type(email_transaction) == bool:
@@ -82,6 +94,15 @@ class NotificationNode(DjangoObjectType):
         filter_fields = []
         interfaces = (relay.Node, )
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_staff:
+            return queryset
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+
+        return queryset.filter(notifier__user=info.context.user)
+
 
 class NotificationUpdate(Mutation):
     class Meta:
@@ -107,22 +128,37 @@ class NotificationUpdate(Mutation):
             reference='',
             description='',
     ):
-
         notification = models.Notification.objects.get(
             pk=from_global_id(id)[1])
+
+        if type(clicked) == bool:
+            if not (info.context.user.is_staff
+                    or info.context.user.id == notification.notifier.user.id):
+                raise GraphQLError('You do not have sufficient permission')
+            notification.clicked = clicked
+
         if notifier:
+            if not info.context.user.is_staff:
+                raise GraphQLError('You are not a staff member')
             notification.notifier = models.Notifier.objects.get(
                 pk=from_global_id(notifier)[1])
+
         if category:
+            if not info.context.user.is_staff:
+                raise GraphQLError('You are not a staff member')
             assert category in [
                 x[0] for x in models.Notification.NOTIFICATION_CATEGORY
             ]
             notification.category = category
-        if type(clicked) == bool:
-            notification.clicked = clicked
+
         if reference:
+            if not info.context.user.is_staff:
+                raise GraphQLError('You are not a staff member')
             notification.reference = reference
+
         if description:
+            if not info.context.user.is_staff:
+                raise GraphQLError('You are not a staff member')
             notification.description = description
 
         notification.save()

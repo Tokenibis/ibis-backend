@@ -20,14 +20,15 @@ def TrackerMiddleware(get_response):
                 log.graphql_operation = body['operationName']
             if 'variables' in body:
                 log.graphql_variables = body['variables']
-            if 'User-Agent' in request.headers:
-                log.user_agent = request.headers['User-Agent']
-            if 'Pwa-Standalone' in request.headers:
-                log.pwa_standalone = True if request.headers[
-                    'Pwa-Standalone'] == 'true' else False
+            if hasattr(request, 'headers'):
+                if 'User-Agent' in request.headers:
+                    log.user_agent = request.headers['User-Agent']
+                if 'Pwa-Standalone' in request.headers:
+                    log.pwa_standalone = True if request.headers[
+                        'Pwa-Standalone'] == 'true' else False
 
-            log.response_code = response.status_code
-            log.save()
+                log.response_code = response.status_code
+                log.save()
 
         return response
 

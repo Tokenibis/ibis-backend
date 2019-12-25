@@ -267,9 +267,10 @@ def NotificationMiddleware(get_response):
             request_content = json.loads(request.body.decode())
             response_content = json.loads(response.content.decode())
 
-            if 'operationName' in request_content and \
+            if response.status_code == 200 and \
+               'operationName' in request_content and \
                request_content['operationName'] in switcher and \
-               response.status_code == 200:
+               'errors' not in response_content:
                 switcher[request_content['operationName']](
                     request_content['variables'],
                     response_content['data'],

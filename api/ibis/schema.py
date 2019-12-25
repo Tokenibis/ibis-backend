@@ -1661,9 +1661,9 @@ class CommentCreate(Mutation):
     def mutate(self, info, user, description, parent):
         parent_obj = models.Entry.objects.get(pk=from_global_id(parent)[1])
 
-        print(info.context.user.ibisuser.can_see(parent_obj))
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])
+                 and hasattr(info.context.user, 'ibisuser')
                  and info.context.user.ibisuser.can_see(parent_obj))):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -1786,6 +1786,7 @@ class LikeMutation(Mutation):
 
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])
+                 and hasattr(info.context.user, 'ibisuser')
                  and info.context.user.ibisuser.can_see(entry_obj))):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -1828,8 +1829,6 @@ class BookmarkMutation(Mutation):
             '{}Node'.format(x.__name__): x
             for x in models.Bookmarkable.__subclasses__()
         }
-        print(submodels)
-        print(entry_type)
 
         try:
             entry_obj = submodels[entry_type].objects.get(pk=entry_id)
