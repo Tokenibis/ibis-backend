@@ -53,7 +53,6 @@ def handleTransactionCreate(variables, data):
         variables['amount'] / 100,
     )
 
-    print(data)
     notification = Notification.objects.create(
         notifier=notifier,
         category=Notification.RECEIVED_TRANSACTION,
