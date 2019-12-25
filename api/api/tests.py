@@ -1,11 +1,24 @@
+import os
+import json
+import logging
 from django.test import TestCase
 from django.core.management import call_command
-from graphene.test import Client
+from django.contrib import auth
+from django.test import Client as DjangoClient
+from graphene.test import Client as GraphQLClient
+from graphene_django.utils.testing import GraphQLTestCase
+from graphql_relay.node.node import to_global_id
+from datetime import datetime, timedelta
 
 import users.models
+import notifications.models
+import tracker.models
 import ibis.models as models
-import api.schema.schema
+import api.schema
 
+logging.disable(logging.CRITICAL)
+
+DIR = os.path.dirname(os.path.realpath(__file__))
 
 NUM_PERSON = 10
 NUM_DONATION = 100
@@ -35,11 +48,77 @@ call_command(
 )
 
 
-class GraphQLTestCase(TestCase):
-    fixtures = ['fixtures.json']
+class WSGI_Sim:
+    def __init__(self, user):
+        self.user = user
 
-    # update model state to assume new ground truth
-    def set_checkpoint(self):
+
+class APITestCase(GraphQLTestCase):
+    fixtures = ['fixtures.json']
+    operations = [
+        'BookmarkCreate',
+        'BookmarkDelete',
+        'CommentCreate',
+        'CommentTree',
+        'DepositList',
+        'Donation',
+        'DonationCreate',
+        'DonationForm',
+        'DonationList',
+        'Event',
+        'EventList',
+        'EventListFilter',
+        'FollowCreate',
+        'FollowDelete',
+        'Home',
+        'LikeCreate',
+        'LikeDelete',
+        'News',
+        'NewsList',
+        'Nonprofit',
+        'NonprofitList',
+        'NotificationClicked',
+        'NotificationList',
+        'Notifier',
+        'NotifierSeen',
+        'NotifierSettingsUpdate',
+        'Person',
+        'PersonList',
+        'PersonSettingsUpdate',
+        'Post',
+        'PostCreate',
+        'PostList',
+        'RsvpCreate',
+        'RsvpDelete',
+        'Settings',
+        'SideMenu',
+        'Transaction',
+        'TransactionCreate',
+        'TransactionForm',
+        'TransactionList',
+    ]
+
+    GRAPHQL_SCHEMA = api.schema.schema
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.gql = {}
+        gql_dir = 'test/graphql/operations'
+        for filename in os.listdir(os.path.join(DIR, gql_dir)):
+            if filename.split('.')[-1] == 'gql':
+                with open(os.path.join(DIR, gql_dir, filename)) as fd:
+                    cls.gql[filename.split('.')[0]] = fd.read()
+
+    def setUp(self):
+        self.assertCountEqual(self.gql.keys(), self.operations)
+        assert len(models.Person.objects.all()) == NUM_PERSON
+        assert len(models.Donation.objects.all()) == NUM_DONATION
+        assert len(models.Transaction.objects.all()) == NUM_TRANSACTION
+        assert len(models.News.objects.all()) == NUM_NEWS
+        assert len(models.Event.objects.all()) == NUM_EVENT
+        assert len(models.Post.objects.all()) == NUM_POST
+        assert len(models.Comment.objects.all()) == NUM_COMMENT
+
         self.person_state = {}
         for x in models.Person.objects.all():
             self.person_state[x] = {
@@ -64,74 +143,577 @@ class GraphQLTestCase(TestCase):
                 'fundraised': x.fundraised(),
             }
 
-    def setUp(self):
-        self.staff = users.models.User.objects.create(
+        self.me = models.Person.objects.create(
+            username='user',
+            password='password',
+            first_name='User',
+            last_name='McUserFace',
+            email='user@example.com',
+        )
+
+        models.Deposit.objects.create(
+            user=self.me,
+            amount=300,
+            payment_id='unique',
+        )
+
+        self.nonprofit = models.Nonprofit.objects.all().first()
+        self.person = models.Person.objects.all().first()
+        self.donation = models.Donation.objects.all().first()
+        self.transaction = models.Transaction.objects.all().first()
+        self.news = models.News.objects.all().first()
+        self.event = models.Event.objects.all().first()
+        self.post = models.Post.objects.all().first()
+
+        self.me.gid = to_global_id('PersonNode', self.me.id)
+        self.nonprofit.gid = to_global_id('NonprofitNode', self.nonprofit.id)
+        self.person.gid = to_global_id('PersonNode', self.person.id)
+        self.donation.gid = to_global_id('DonationNode', self.donation.id)
+        self.transaction.gid = to_global_id('TransactionNode',
+                                            self.transaction.id)
+        self.news.gid = to_global_id('NewsNode', self.news.id)
+        self.event.gid = to_global_id('EventNode', self.event.id)
+        self.post.gid = to_global_id('PostNode', self.post.id)
+
+        # make sure that self.me and self.person both have one notification
+        donation_me = models.Donation.objects.create(
+            user=self.me,
+            target=self.nonprofit,
+            amount=100,
+            description='My donation',
+        )
+        donation_person = models.Donation.objects.create(
+            user=self.person,
+            target=self.nonprofit,
+            amount=100,
+            description='Person\'s donation',
+        )
+        self._client.force_login(self.person)
+        self.query(
+            self.gql['LikeCreate'],
+            op_name='LikeCreate',
+            variables={
+                'user': self.person.gid,
+                'target': to_global_id('DonationNode', donation_me.id),
+            },
+        )
+        self._client.logout()
+        self._client.force_login(self.me)
+        self.query(
+            self.gql['LikeCreate'],
+            op_name='LikeCreate',
+            variables={
+                'user': self.me.gid,
+                'target': to_global_id('DonationNode', donation_person.id),
+            },
+        )
+        self._client.logout()
+
+        self.notification = self.me.notifier.notification_set.first()
+
+    def query(self, query, op_name=None, variables=None):
+        body = {"query": query}
+        if op_name:
+            body["operationName"] = op_name
+        if variables:
+            body["variables"] = variables
+        resp = self._client.post(
+            self.GRAPHQL_URL,
+            json.dumps(body),
+            content_type="application/json")
+        return resp
+
+    # staff can do everything
+    def run_all(self, person):
+        success = {}
+        init_tracker_len = len(tracker.models.Log.objects.all())
+
+        success['DonationCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['DonationCreate'],
+                op_name='DonationCreate',
+                variables={
+                    'user': person.gid,
+                    'target': self.nonprofit.gid,
+                    'amount': 100,
+                    'description': 'This is a donation',
+                },
+            ).content)
+
+        success['TransactionCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['TransactionCreate'],
+                op_name='TransactionCreate',
+                variables={
+                    'user': person.gid,
+                    'target': self.person.gid,
+                    'amount': 100,
+                    'description': 'This is a transaction',
+                },
+            ).content)
+
+        success['PostCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['PostCreate'],
+                op_name='PostCreate',
+                variables={
+                    'user': person.gid,
+                    'title': 'This is a title',
+                    'description': 'This is a description',
+                },
+            ).content)
+
+        success['CommentCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['CommentCreate'],
+                op_name='CommentCreate',
+                variables={
+                    'user': person.gid,
+                    'parent': self.donation.gid,
+                    'description': 'This is a description',
+                    'self': person.gid,
+                },
+            ).content)
+
+        success['FollowCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['FollowCreate'],
+                op_name='FollowCreate',
+                variables={
+                    'user': person.gid,
+                    'target': self.person.gid,
+                },
+            ).content)
+
+        success['LikeCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['LikeCreate'],
+                op_name='LikeCreate',
+                variables={
+                    'user': person.gid,
+                    'target': self.donation.gid,
+                },
+            ).content)
+
+        success['BookmarkCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['BookmarkCreate'],
+                op_name='BookmarkCreate',
+                variables={
+                    'user': person.gid,
+                    'target': self.news.gid,
+                },
+            ).content)
+
+        success['RsvpCreate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['RsvpCreate'],
+                op_name='RsvpCreate',
+                variables={
+                    'user': person.gid,
+                    'target': self.event.gid,
+                },
+            ).content)
+
+        success['Nonprofit'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Nonprofit'],
+                op_name='Nonprofit',
+                variables={
+                    'id': self.nonprofit.gid,
+                },
+            ).content)
+
+        success['Person'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Person'],
+                op_name='Person',
+                variables={
+                    'id': person.gid,
+                },
+            ).content)
+
+        success['Donation'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Donation'],
+                op_name='Donation',
+                variables={
+                    'id': self.donation.gid,
+                },
+            ).content)
+
+        success['Transaction'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Transaction'],
+                op_name='Transaction',
+                variables={
+                    'id': self.transaction.gid,
+                },
+            ).content)
+
+        success['News'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['News'],
+                op_name='News',
+                variables={
+                    'id': self.news.gid,
+                },
+            ).content)
+
+        success['Event'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Event'],
+                op_name='Event',
+                variables={
+                    'id': self.event.gid,
+                },
+            ).content)
+
+        success['Post'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Post'],
+                op_name='Post',
+                variables={
+                    'id': self.post.gid,
+                },
+            ).content)
+
+        success['Home'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Home'],
+                op_name='Home',
+                variables={
+                    'id': person.gid,
+                },
+            ).content)
+
+        success['SideMenu'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['SideMenu'],
+                op_name='SideMenu',
+                variables={
+                    'id': person.gid,
+                },
+            ).content)
+
+        success['Settings'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Settings'],
+                op_name='Settings',
+                variables={
+                    'id': person.gid,
+                },
+            ).content)
+
+        success['Notifier'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['Notifier'],
+                op_name='Notifier',
+                variables={
+                    'id': person.gid,
+                },
+            ).content)
+
+        success['NonprofitList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['NonprofitList'],
+                op_name='NonprofitList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'followedBy': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['PersonList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['PersonList'],
+                op_name='PersonList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'followedBy': person.gid,
+                    'followerOf': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['DonationList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['DonationList'],
+                op_name='DonationList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'byUser': person.gid,
+                    'byFollowing': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['TransactionList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['TransactionList'],
+                op_name='TransactionList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'byUser': person.gid,
+                    'byFollowing': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['PostList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['PostList'],
+                op_name='PostList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'byUser': person.gid,
+                    'byFollowing': person.gid,
+                    'bookmarkBy': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['NewsList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['NewsList'],
+                op_name='NewsList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'byUser': person.gid,
+                    'byFollowing': person.gid,
+                    'bookmarkBy': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['EventList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['EventList'],
+                op_name='EventList',
+                variables={
+                    'self': person.gid,
+                    'search': 'a',
+                    'byUser': person.gid,
+                    'byFollowing': person.gid,
+                    'rsvpBy': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['EventListFilter'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['EventListFilter'],
+                op_name='EventListFilter',
+                variables={
+                    'beginDate': str(datetime.now() - timedelta(minutes=30)),
+                    'endDate': str(datetime.now() + timedelta(minutes=30)),
+                },
+            ).content)
+
+        success['CommentTree'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['CommentTree'],
+                op_name='CommentTree',
+                variables={
+                    'hasParent': self.donation.gid,
+                    'self': person.gid,
+                },
+            ).content)
+
+        success['DepositList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['DepositList'],
+                op_name='DepositList',
+                variables={
+                    'byUser': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['NotificationList'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['NotificationList'],
+                op_name='NotificationList',
+                variables={
+                    'forUser': person.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+
+        success['LikeDelete'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['LikeDelete'],
+                op_name='LikeDelete',
+                variables={
+                    'user': person.gid,
+                    'target': self.donation.gid,
+                },
+            ).content)
+
+        success['FollowDelete'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['FollowDelete'],
+                op_name='FollowDelete',
+                variables={
+                    'user': person.gid,
+                    'target': self.person.gid,
+                },
+            ).content)
+
+        success['BookmarkDelete'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['BookmarkDelete'],
+                op_name='BookmarkDelete',
+                variables={
+                    'user': person.gid,
+                    'target': self.news.gid,
+                },
+            ).content)
+
+        success['RsvpDelete'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['RsvpDelete'],
+                op_name='RsvpDelete',
+                variables={
+                    'user': person.gid,
+                    'target': self.event.gid,
+                },
+            ).content)
+
+        success['DonationForm'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['DonationForm'],
+                op_name='DonationForm',
+                variables={
+                    'id': person.gid,
+                    'target': self.nonprofit.gid,
+                },
+            ).content)
+
+        success['TransactionForm'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['TransactionForm'],
+                op_name='TransactionForm',
+                variables={
+                    'id': person.gid,
+                    'target': self.person.gid,
+                },
+            ).content)
+
+        success['PersonSettingsUpdate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['PersonSettingsUpdate'],
+                op_name='PersonSettingsUpdate',
+                variables={
+                    'id': person.gid,
+                    'visibilityFollow': models.Person.PUBLIC,
+                    'visibilityDonation': models.Person.PUBLIC,
+                    'visibilityTransaction': models.Person.PUBLIC,
+                },
+            ).content)
+
+        success['NotifierSettingsUpdate'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['NotifierSettingsUpdate'],
+                op_name='NotifierSettingsUpdate',
+                variables={
+                    'id': person.gid,
+                    'emailFollow': True,
+                    'emailDonation': True,
+                    'emailTransaction': True,
+                },
+            ).content)
+
+        success['NotifierSeen'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['NotifierSeen'],
+                op_name='NotifierSeen',
+                variables={
+                    'id': to_global_id('NotifierNode', person.id),
+                    'lastSeen': str(datetime.now()),
+                },
+            ).content)
+
+        notification = person.notifier.notification_set.first()
+
+        success['NotificationClicked'] = 'errors' not in json.loads(
+            self.query(
+                self.gql['NotificationClicked'],
+                op_name='NotificationClicked',
+                variables={
+                    'id': to_global_id('NotificationNode', notification.id),
+                    'lastSeen': str(datetime.now()),
+                },
+            ).content)
+
+        assert len(tracker.models.Log.objects.all()) - init_tracker_len == len(
+            success)
+
+        return success
+
+    # --- Permissions ------------------------------------------------------- #
+
+    # staff can do everything
+    def test_staff(self):
+        staff = users.models.User.objects.create(
             username='staff',
             first_name='Staffy',
             last_name='McStaffface',
             email='staff@example.come',
             is_staff=True,
         )
-        self.set_checkpoint()
-        self.client = Client(api.schema.schema)
+        self._client.force_login(staff)
+        assert all(self.run_all(self.me).values())
 
-    def test_setup(self):
-        assert len(models.Person.objects.all()) == NUM_PERSON
-        assert len(models.Donation.objects.all()) == NUM_DONATION
-        assert len(models.Transaction.objects.all()) == NUM_TRANSACTION
-        assert len(models.News.objects.all()) == NUM_NEWS
-        assert len(models.Event.objects.all()) == NUM_EVENT
-        assert len(models.Post.objects.all()) == NUM_POST
-        assert len(models.Comment.objects.all()) == NUM_COMMENT
+    # anonymous users can't do anything
+    def test_anonymous(self):
+        assert not any(self.run_all(self.me).values())
 
-    # --- Positive ---------------------------------------------------------- #
+    # logged in users can see all of their own information
+    def test_self(self):
+        self._client.force_login(self.me)
+        assert all(self.run_all(self.me).values())
 
-    # staff can do everything
-    def test_staff(self):
-        pass
+    # logged in users can see some of other people's information
+    def test_other_public(self):
+        self._client.force_login(self.me)
+        assert all(self.run_all(self.me).values())
 
-    # single object queries for users
-    def test_query_single(self):
-        pass
+    # logged in users can see some of other people's information
+    def test_other_following(self):
+        self._client.force_login(self.me)
+        assert all(self.run_all(self.me).values())
 
-    # list queries including sorting for users
-    def test_user_query_lists(self):
-        pass
-
-    # send money around and verify balances
-    def test_money(self):
-        pass
-
-    # follow, like, rsvp, and bookmark, monitor sorting effects, and reverse
-    def test_edge_mutations(self):
-        pass
-
-    # comment and posts
-    def test_engagement_mutations(self):
-        pass
-
-    # --- Negative ---------------------------------------------------------- #
-
-    # that unauthenticated queries can do nothing
-    def test_public(self):
-        pass
-
-    # actions using bad model types
-    def test_type_constraints(self):
-        pass
-
-    # actions that use bad arguments (e.g. uniqueness of blankness)
-    def test_arg_constraints(self):
-        pass
+    # logged in users can see some of other people's information
+    def test_other_private(self):
+        self._client.force_login(self.me)
+        assert all(self.run_all(self.me).values())
 
     # balances below zero and integer overflow
     def test_money_invalid(self):
-        pass
-
-    # attempt to access other user's private info
-    def test_queries_unauthorized(self):
-        pass
-
-    # mutations that users should not allowed to do
-    def test_mutations_unauthorized(self):
         pass
