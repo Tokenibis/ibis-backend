@@ -228,7 +228,7 @@ class APITestCase(GraphQLTestCase):
         success = {}
         init_tracker_len = len(tracker.models.Log.objects.all())
 
-        success['DonationCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
@@ -239,8 +239,10 @@ class APITestCase(GraphQLTestCase):
                     'description': 'This is a donation',
                 },
             ).content)
+        success['DonationCreate'] = 'errors' not in result and result['data'][
+            'createDonation']['donation']['id']
 
-        success['TransactionCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['TransactionCreate'],
                 op_name='TransactionCreate',
@@ -251,8 +253,10 @@ class APITestCase(GraphQLTestCase):
                     'description': 'This is a transaction',
                 },
             ).content)
+        success['TransactionCreate'] = 'errors' not in result and result[
+            'data']['createTransaction']['transaction']['id']
 
-        success['PostCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['PostCreate'],
                 op_name='PostCreate',
@@ -262,8 +266,10 @@ class APITestCase(GraphQLTestCase):
                     'description': 'This is a description',
                 },
             ).content)
+        success['PostCreate'] = 'errors' not in result and result['data'][
+            'createPost']['post']['id']
 
-        success['CommentCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['CommentCreate'],
                 op_name='CommentCreate',
@@ -274,8 +280,10 @@ class APITestCase(GraphQLTestCase):
                     'self': person.gid,
                 },
             ).content)
+        success['CommentCreate'] = 'errors' not in result and result['data'][
+            'createComment']['comment']['id']
 
-        success['FollowCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['FollowCreate'],
                 op_name='FollowCreate',
@@ -284,8 +292,9 @@ class APITestCase(GraphQLTestCase):
                     'target': self.person.gid,
                 },
             ).content)
+        success['FollowCreate'] = 'errors' not in result and len(result) > 0
 
-        success['LikeCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['LikeCreate'],
                 op_name='LikeCreate',
@@ -294,8 +303,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.donation.gid,
                 },
             ).content)
+        success['LikeCreate'] = 'errors' not in result and result['data'][
+            'createLike']['state']
 
-        success['BookmarkCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['BookmarkCreate'],
                 op_name='BookmarkCreate',
@@ -304,8 +315,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.news.gid,
                 },
             ).content)
+        success['BookmarkCreate'] = 'errors' not in result and result['data'][
+            'createBookmark']['state']
 
-        success['RsvpCreate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['RsvpCreate'],
                 op_name='RsvpCreate',
@@ -315,7 +328,10 @@ class APITestCase(GraphQLTestCase):
                 },
             ).content)
 
-        success['Nonprofit'] = 'errors' not in json.loads(
+        success['RsvpCreate'] = 'errors' not in result and result['data'][
+            'createRsvp']['state']
+
+        result = json.loads(
             self.query(
                 self.gql['Nonprofit'],
                 op_name='Nonprofit',
@@ -323,8 +339,9 @@ class APITestCase(GraphQLTestCase):
                     'id': self.nonprofit.gid,
                 },
             ).content)
+        success['Nonprofit'] = 'errors' not in result and len(result) > 0
 
-        success['Person'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Person'],
                 op_name='Person',
@@ -332,8 +349,10 @@ class APITestCase(GraphQLTestCase):
                     'id': person.gid,
                 },
             ).content)
+        success['Person'] = 'errors' not in result and bool(
+            result['data']['person']['id'])
 
-        success['Donation'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Donation'],
                 op_name='Donation',
@@ -341,8 +360,10 @@ class APITestCase(GraphQLTestCase):
                     'id': self.donation.gid,
                 },
             ).content)
+        success['Donation'] = 'errors' not in result and bool(
+            result['data']['donation']['id'])
 
-        success['Transaction'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Transaction'],
                 op_name='Transaction',
@@ -350,8 +371,10 @@ class APITestCase(GraphQLTestCase):
                     'id': self.transaction.gid,
                 },
             ).content)
+        success['Transaction'] = 'errors' not in result and bool(
+            result['data']['transaction']['id'])
 
-        success['News'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['News'],
                 op_name='News',
@@ -359,8 +382,10 @@ class APITestCase(GraphQLTestCase):
                     'id': self.news.gid,
                 },
             ).content)
+        success['News'] = 'errors' not in result and bool(
+            result['data']['news']['id'])
 
-        success['Event'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Event'],
                 op_name='Event',
@@ -368,8 +393,10 @@ class APITestCase(GraphQLTestCase):
                     'id': self.event.gid,
                 },
             ).content)
+        success['Event'] = 'errors' not in result and bool(
+            result['data']['event']['id'])
 
-        success['Post'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Post'],
                 op_name='Post',
@@ -377,8 +404,10 @@ class APITestCase(GraphQLTestCase):
                     'id': self.post.gid,
                 },
             ).content)
+        success['Post'] = 'errors' not in result and bool(
+            result['data']['post']['id'])
 
-        success['Home'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Home'],
                 op_name='Home',
@@ -386,8 +415,10 @@ class APITestCase(GraphQLTestCase):
                     'id': person.gid,
                 },
             ).content)
+        success['Home'] = 'errors' not in result and bool(
+            result['data']['person']['id'])
 
-        success['SideMenu'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['SideMenu'],
                 op_name='SideMenu',
@@ -395,8 +426,10 @@ class APITestCase(GraphQLTestCase):
                     'id': person.gid,
                 },
             ).content)
+        success['SideMenu'] = 'errors' not in result and bool(
+            result['data']['person']['id'])
 
-        success['Settings'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Settings'],
                 op_name='Settings',
@@ -404,8 +437,10 @@ class APITestCase(GraphQLTestCase):
                     'id': person.gid,
                 },
             ).content)
+        success['Settings'] = 'errors' not in result and bool(
+            result['data']['person']['notifier']['id'])
 
-        success['Notifier'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['Notifier'],
                 op_name='Notifier',
@@ -413,125 +448,121 @@ class APITestCase(GraphQLTestCase):
                     'id': person.gid,
                 },
             ).content)
+        success['Notifier'] = 'errors' not in result and (
+            result['data']['person']['notifier']['id'] == to_global_id(
+                'NotifierNode', person.id))
 
-        success['NonprofitList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['NonprofitList'],
                 op_name='NonprofitList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'followedBy': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['NonprofitList'] = 'errors' not in result and len(
+            result['data']['allNonprofits']['edges']) > 0
 
-        success['PersonList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['PersonList'],
                 op_name='PersonList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'followedBy': person.gid,
-                    'followerOf': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['PersonList'] = 'errors' not in result and len(
+            result['data']['allPeople']['edges']) > 0
 
-        success['DonationList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['DonationList'],
                 op_name='DonationList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'byUser': person.gid,
-                    'byFollowing': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['DonationList'] = 'errors' not in result and len(
+            result['data']['allDonations']['edges']) > 0
 
-        success['TransactionList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['TransactionList'],
                 op_name='TransactionList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'byUser': person.gid,
-                    'byFollowing': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['TransactionList'] = 'errors' not in result and len(
+            result['data']['allTransactions']['edges']) > 0
 
-        success['PostList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['PostList'],
                 op_name='PostList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'byUser': person.gid,
-                    'byFollowing': person.gid,
-                    'bookmarkBy': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['PostList'] = 'errors' not in result and len(
+            result['data']['allPosts']['edges']) > 0
 
-        success['NewsList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['NewsList'],
                 op_name='NewsList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'byUser': person.gid,
-                    'byFollowing': person.gid,
-                    'bookmarkBy': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['NewsList'] = 'errors' not in result and len(
+            result['data']['allNews']['edges']) > 0
 
-        success['EventList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['EventList'],
                 op_name='EventList',
                 variables={
                     'self': person.gid,
-                    'search': 'a',
-                    'byUser': person.gid,
-                    'byFollowing': person.gid,
-                    'rsvpBy': person.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
+        success['EventList'] = 'errors' not in result and len(
+            result['data']['allEvents']['edges']) > 0
 
-        success['EventListFilter'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['EventListFilter'],
                 op_name='EventListFilter',
                 variables={
-                    'beginDate': str(now() - timedelta(minutes=30)),
-                    'endDate': str(now() + timedelta(minutes=30)),
+                    'beginDate': str(now()),
+                    'endDate': str(now() + timedelta(hours=24 * 365)),
                 },
             ).content)
+        success['EventListFilter'] = 'errors' not in result and len(
+            result['data']['allEvents']['edges']) > 0
 
-        success['CommentTree'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['CommentTree'],
                 op_name='CommentTree',
@@ -540,8 +571,9 @@ class APITestCase(GraphQLTestCase):
                     'self': person.gid,
                 },
             ).content)
+        success['CommentTree'] = 'errors' not in result and len(result) > 0
 
-        success['DepositList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['DepositList'],
                 op_name='DepositList',
@@ -552,8 +584,10 @@ class APITestCase(GraphQLTestCase):
                     'after': 1,
                 },
             ).content)
+        success['DepositList'] = 'errors' not in result and bool(
+            len(result['data']['allDeposits']['edges']) > 0)
 
-        success['NotificationList'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['NotificationList'],
                 op_name='NotificationList',
@@ -564,8 +598,10 @@ class APITestCase(GraphQLTestCase):
                     'after': 1,
                 },
             ).content)
+        success['NotificationList'] = 'errors' not in result and bool(
+            len(result['data']['allNotifications']['edges']) > 0)
 
-        success['LikeDelete'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['LikeDelete'],
                 op_name='LikeDelete',
@@ -574,8 +610,9 @@ class APITestCase(GraphQLTestCase):
                     'target': self.donation.gid,
                 },
             ).content)
+        success['LikeDelete'] = 'errors' not in result and len(result) > 0
 
-        success['FollowDelete'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['FollowDelete'],
                 op_name='FollowDelete',
@@ -584,8 +621,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.person.gid,
                 },
             ).content)
+        success['FollowDelete'] = 'errors' not in result and not result[
+            'data']['deleteFollow']['state']
 
-        success['BookmarkDelete'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['BookmarkDelete'],
                 op_name='BookmarkDelete',
@@ -594,8 +633,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.news.gid,
                 },
             ).content)
+        success['BookmarkDelete'] = 'errors' not in result and not result[
+            'data']['deleteBookmark']['state']
 
-        success['RsvpDelete'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['RsvpDelete'],
                 op_name='RsvpDelete',
@@ -604,8 +645,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.event.gid,
                 },
             ).content)
+        success['RsvpDelete'] = 'errors' not in result and not result['data'][
+            'deleteRsvp']['state']
 
-        success['DonationForm'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['DonationForm'],
                 op_name='DonationForm',
@@ -614,8 +657,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.nonprofit.gid,
                 },
             ).content)
+        success['DonationForm'] = 'errors' not in result and bool(
+            result['data']['user']['id'])
 
-        success['TransactionForm'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['TransactionForm'],
                 op_name='TransactionForm',
@@ -624,8 +669,10 @@ class APITestCase(GraphQLTestCase):
                     'target': self.person.gid,
                 },
             ).content)
+        success['TransactionForm'] = 'errors' not in result and bool(
+            result['data']['user']['id'])
 
-        success['PersonSettingsUpdate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['PersonSettingsUpdate'],
                 op_name='PersonSettingsUpdate',
@@ -636,8 +683,10 @@ class APITestCase(GraphQLTestCase):
                     'visibilityTransaction': models.Person.PUBLIC,
                 },
             ).content)
+        success['PersonSettingsUpdate'] = 'errors' not in result and result[
+            'data']['updatePerson']['person']['id']
 
-        success['NotifierSettingsUpdate'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['NotifierSettingsUpdate'],
                 op_name='NotifierSettingsUpdate',
@@ -648,8 +697,10 @@ class APITestCase(GraphQLTestCase):
                     'emailTransaction': True,
                 },
             ).content)
+        success['NotifierSettingsUpdate'] = 'errors' not in result and result[
+            'data']['updateNotifier']['notifier']['id']
 
-        success['NotifierSeen'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['NotifierSeen'],
                 op_name='NotifierSeen',
@@ -658,10 +709,12 @@ class APITestCase(GraphQLTestCase):
                     'lastSeen': str(now()),
                 },
             ).content)
+        success['NotifierSeen'] = 'errors' not in result and result['data'][
+            'updateNotifier']['notifier']['id']
 
         notification = person.notifier.notification_set.first()
 
-        success['NotificationClicked'] = 'errors' not in json.loads(
+        result = json.loads(
             self.query(
                 self.gql['NotificationClicked'],
                 op_name='NotificationClicked',
@@ -670,6 +723,8 @@ class APITestCase(GraphQLTestCase):
                     'lastSeen': str(now()),
                 },
             ).content)
+        success['NotificationClicked'] = 'errors' not in result and result[
+            'data']['updateNotification']['notification']['id']
 
         assert len(tracker.models.Log.objects.all()) - init_tracker_len == len(
             success)
@@ -702,17 +757,58 @@ class APITestCase(GraphQLTestCase):
     # logged in users can see some of other people's information
     def test_other_public(self):
         self._client.force_login(self.me)
-        assert all(self.run_all(self.me).values())
+        expected = {
+            'BookmarkCreate': False,
+            'BookmarkDelete': False,
+            'CommentCreate': False,
+            'CommentTree': True,
+            'DepositList': False,
+            'Donation': True,
+            'DonationCreate': False,
+            'DonationForm': True,
+            'DonationList': True,
+            'Event': True,
+            'EventList': True,
+            'EventListFilter': True,
+            'FollowCreate': False,
+            'FollowDelete': False,
+            'Home': True,
+            'LikeCreate': False,
+            'LikeDelete': False,
+            'News': True,
+            'NewsList': True,
+            'Nonprofit': True,
+            'NonprofitList': True,
+            'NotificationClicked': False,
+            'NotificationList': False,
+            'Notifier': False,
+            'NotifierSeen': False,
+            'NotifierSettingsUpdate': False,
+            'Person': True,
+            'PersonList': True,
+            'PersonSettingsUpdate': False,
+            'Post': True,
+            'PostCreate': False,
+            'PostList': True,
+            'RsvpCreate': False,
+            'RsvpDelete': False,
+            'Settings': False,
+            'SideMenu': True,
+            'Transaction': True,
+            'TransactionCreate': False,
+            'TransactionForm': True,
+            'TransactionList': True,
+        }
+        result = self.run_all(self.person)
+        assert(result[x] == expected[x] for x in result)
 
     # logged in users can see some of other people's information
     def test_other_following(self):
-        self._client.force_login(self.me)
-        assert all(self.run_all(self.me).values())
+        pass
 
     # logged in users can see some of other people's information
     def test_other_private(self):
-        self._client.force_login(self.me)
-        assert all(self.run_all(self.me).values())
+        pass
 
     # balances below zero and integer overflow
     def test_money_invalid(self):
