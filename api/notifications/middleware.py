@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from django.utils.timezone import now
 from graphql_relay.node.node import from_global_id, to_global_id
 from notifications.models import Notification, Email
 from django.core.exceptions import ObjectDoesNotExist
@@ -34,7 +34,7 @@ def handleFollowCreate(variables, data):
             notification=notification,
             subject=description,
             body='TODO',
-            schedule=datetime.now(),
+            schedule=now(),
         )
         email.save()
 
@@ -70,7 +70,7 @@ def handleTransactionCreate(variables, data):
             notification=notification,
             subject=description,
             body='TODO',
-            schedule=datetime.now(),
+            schedule=now(),
         )
         email.save()
 
@@ -104,7 +104,7 @@ def handleCommentCreate(variables, data):
                         notification=notification,
                         subject=description,
                         body='TODO',
-                        schedule=datetime.now(),
+                        schedule=now(),
                     )
                     email.save()
         current = parent
@@ -154,7 +154,7 @@ def handleLikeCreate(variables, data):
             notification=notification,
             subject=description,
             body='TODO',
-            schedule=datetime.now(),
+            schedule=now(),
         )
         email.save()
 

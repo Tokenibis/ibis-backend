@@ -1,6 +1,6 @@
-from datetime import datetime
 from django.db import models
 from django.core.validators import MinLengthValidator
+from django.utils.timezone import localtime, now
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 from ibis.models import Person
@@ -18,7 +18,16 @@ class Notifier(models.Model):
     email_comment = models.BooleanField(default=True)
     email_like = models.BooleanField(default=False)
 
-    last_seen = models.DateTimeField(default=datetime.utcfromtimestamp(0))
+    last_seen = models.DateTimeField(
+        default=localtime(now().replace(
+            year=2019,
+            month=4,
+            day=5,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )))
 
 
 class Notification(TimeStampedModel):

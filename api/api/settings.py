@@ -127,7 +127,7 @@ TEMPLATES = [
     },
 ]
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'MST'
 
 USE_I18N = True
 

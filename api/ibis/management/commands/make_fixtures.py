@@ -10,7 +10,7 @@ import random
 import json
 import hashlib
 
-from datetime import datetime, timedelta
+from django.utils.timezone import now, timedelta
 
 from django.core.management.base import BaseCommand
 
@@ -627,7 +627,7 @@ class Command(BaseCommand):
 
         # make fake events
         events = []
-        date_next = datetime.now()
+        date_next = now()
         for i in range(num_event):
             title = 'The {} {} {}'.format(
                 random.choice(adjectives),

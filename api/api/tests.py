@@ -8,7 +8,7 @@ from django.test import Client as DjangoClient
 from graphene.test import Client as GraphQLClient
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
-from datetime import datetime, timedelta
+from django.utils.timezone import now, timedelta
 
 import users.models
 import notifications.models
@@ -526,8 +526,8 @@ class APITestCase(GraphQLTestCase):
                 self.gql['EventListFilter'],
                 op_name='EventListFilter',
                 variables={
-                    'beginDate': str(datetime.now() - timedelta(minutes=30)),
-                    'endDate': str(datetime.now() + timedelta(minutes=30)),
+                    'beginDate': str(now() - timedelta(minutes=30)),
+                    'endDate': str(now() + timedelta(minutes=30)),
                 },
             ).content)
 
@@ -655,7 +655,7 @@ class APITestCase(GraphQLTestCase):
                 op_name='NotifierSeen',
                 variables={
                     'id': to_global_id('NotifierNode', person.id),
-                    'lastSeen': str(datetime.now()),
+                    'lastSeen': str(now()),
                 },
             ).content)
 
@@ -667,7 +667,7 @@ class APITestCase(GraphQLTestCase):
                 op_name='NotificationClicked',
                 variables={
                     'id': to_global_id('NotificationNode', notification.id),
-                    'lastSeen': str(datetime.now()),
+                    'lastSeen': str(now()),
                 },
             ).content)
 
