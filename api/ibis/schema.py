@@ -444,9 +444,8 @@ class DepositCreate(Mutation):
     deposit = graphene.Field(DepositNode)
 
     def mutate(self, info, user, amount, payment_id=''):
-        if not (info.context.user.is_staff
-                or info.context.user.id == int(from_global_id(user)[1])):
-            raise GraphQLError('You do not have sufficient permission')
+        if not info.context.user.is_staff:
+            raise GraphQLError('You are not a staff member')
 
         deposit = models.Deposit.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -645,7 +644,8 @@ class DonationNode(EntryNode):
             Q(user__person__visibility_donation=models.Person.PUBLIC)
             | (Q(user__person__visibility_donation=models.Person.FOLLOWING)
                & Q(user__person__following__id__exact=info.context.user.id))
-            | Q(user_id=info.context.user.id)).distinct()
+            | (Q(user_id=info.context.user.id)
+               | Q(target_id=info.context.user.id))).distinct()
 
 
 class DonationCreate(Mutation):
@@ -784,7 +784,8 @@ class TransactionNode(EntryNode):
             Q(user__person__visibility_transaction=models.Person.PUBLIC)
             | (Q(user__person__visibility_transaction=models.Person.FOLLOWING)
                & Q(user__person__following__id__exact=info.context.user.id))
-            | Q(user_id=info.context.user.id)).distinct()
+            | (Q(user_id=info.context.user.id)
+               | Q(target_id=info.context.user.id))).distinct()
 
 
 class TransactionCreate(Mutation):

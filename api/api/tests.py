@@ -144,7 +144,7 @@ class APITestCase(GraphQLTestCase):
         models.Deposit.objects.create(
             user=self.me,
             amount=300,
-            payment_id='unique',
+            payment_id='unique_1',
         )
 
         self.nonprofit = models.Nonprofit.objects.all().first()
@@ -201,7 +201,29 @@ class APITestCase(GraphQLTestCase):
 
         self.notification = self.me.notifier.notification_set.first()
 
-    def query(self, query, op_name=None, variables=None):
+        # make sure that self.person has things to hide for later
+
+        models.Deposit.objects.create(
+            user=self.me,
+            amount=200,
+            payment_id='unique_2',
+        )
+
+        models.Donation.objects.create(
+            user=self.person,
+            target=self.nonprofit,
+            amount=100,
+            description='External donation',
+        )
+
+        models.Transaction.objects.create(
+            user=self.person,
+            target=models.Person.objects.exclude(pk=self.person.id).first(),
+            amount=100,
+            description='External transaction',
+        )
+
+    def query(self, query, op_name, variables):
         body = {"query": query}
         if op_name:
             body["operationName"] = op_name
@@ -720,8 +742,6 @@ class APITestCase(GraphQLTestCase):
 
         return success
 
-    # --- Permissions ------------------------------------------------------- #
-
     # staff can do everything
     def test_staff(self):
         staff = users.models.User.objects.create(
@@ -745,7 +765,6 @@ class APITestCase(GraphQLTestCase):
 
     # logged in users can see some of other people's information
     def test_other_public(self):
-        self._client.force_login(self.me)
         expected = {
             'BookmarkCreate': False,
             'BookmarkDelete': False,
@@ -788,5 +807,76 @@ class APITestCase(GraphQLTestCase):
             'TransactionForm': True,
             'TransactionList': True,
         }
+
+        self.person.visibility_donation = models.Person.PUBLIC
+        self.person.visibility_transaction = models.Person.PUBLIC
+        self.person.save()
+
+        self._client.force_login(self.me)
         result = self.run_all(self.person)
-        assert(result[x] == expected[x] for x in result)
+        assert (result[x] == expected[x] for x in result)
+
+    def run_privacy(self, person):
+        success = {}
+
+        result = json.loads(
+            self.query(
+                self.gql['DonationList'],
+                op_name='DonationList',
+                variables={
+                    'byUser': person.gid,
+                    'orderBy': '-created',
+                    'first': 2,
+                },
+            ).content)
+        success['DonationList'] = 'errors' not in result and any(
+            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
+            for x in result['data']['allDonations']['edges'])
+
+        result = json.loads(
+            self.query(
+                self.gql['TransactionList'],
+                op_name='TransactionList',
+                variables={
+                    'byUser': person.gid,
+                    'orderBy': '-created',
+                },
+            ).content)
+        success['TransactionList'] = 'errors' not in result and any(
+            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
+            for x in result['data']['allTransactions']['edges'])
+
+        return success
+
+    def test_privacy_public(self):
+        self.person.visibility_donation = models.Person.PUBLIC
+        self.person.visibility_transaction = models.Person.PUBLIC
+        self.person.save()
+
+        self._client.force_login(self.me)
+        assert all(self.run_privacy(self.person).values())
+
+    def test_privacy_private(self):
+        self.person.visibility_donation = models.Person.PRIVATE
+        self.person.visibility_transaction = models.Person.PRIVATE
+        self.person.save()
+
+        self._client.force_login(self.me)
+        assert not any(self.run_privacy(self.person).values())
+
+    def test_privacy_following_yes(self):
+        self.person.visibility_donation = models.Person.FOLLOWING
+        self.person.visibility_transaction = models.Person.FOLLOWING
+        self.person.following.add(self.me)
+        self.person.save()
+
+        self._client.force_login(self.me)
+        assert all(self.run_privacy(self.person).values())
+
+    def test_privacy_following_no(self):
+        self.person.visibility_donation = models.Person.FOLLOWING
+        self.person.visibility_transaction = models.Person.FOLLOWING
+        self.person.save()
+
+        self._client.force_login(self.me)
+        assert not any(self.run_privacy(self.person).values())
