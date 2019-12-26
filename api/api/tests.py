@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import random
 from django.core.management import call_command
 from django.conf import settings
 from graphene_django.utils.testing import GraphQLTestCase
@@ -101,6 +102,8 @@ class APITestCase(GraphQLTestCase):
                     cls.gql[filename.split('.')[0]] = fd.read()
 
     def setUp(self):
+        random.seed(0)
+
         self.assertCountEqual(self.gql.keys(), self.operations)
         assert len(models.Person.objects.all()) == NUM_PERSON
         assert len(models.Donation.objects.all()) == NUM_DONATION
@@ -110,29 +113,13 @@ class APITestCase(GraphQLTestCase):
         assert len(models.Post.objects.all()) == NUM_POST
         assert len(models.Comment.objects.all()) == NUM_COMMENT
 
-        self.person_state = {}
-        for x in models.Person.objects.all():
-            self.person_state[x] = {
-                'balance': x.balance(),
-                'donated': x.donated(),
-                'following': list(x.following.all()),
-                'bookmark_for_news': list(x.bookmark_for_news.all()),
-                'bookmark_for_post': list(x.bookmark_for_post.all()),
-                'rsvp_for_event': list(x.rsvp_for_event.all()),
-                'likes_donation': list(x.following.all()),
-                'likes_transaction': list(x.likes_transaction.all()),
-                'likes_news': list(x.likes_news.all()),
-                'likes_event': list(x.likes_event.all()),
-                'likes_post': list(x.likes_post.all()),
-                'likes_comment': list(x.likes_comment.all()),
-            }
-
-        self.nonprofit_state = {}
-        for x in models.Nonprofit.objects.all():
-            self.person_state[x] = {
-                'balance': x.balance(),
-                'fundraised': x.fundraised(),
-            }
+        self.staff = users.models.User.objects.create(
+            username='staff',
+            first_name='Staffy',
+            last_name='McStaffface',
+            email='staff@example.come',
+            is_staff=True,
+        )
 
         self.me = models.Person.objects.create(
             username='user',
@@ -745,14 +732,7 @@ class APITestCase(GraphQLTestCase):
 
     # staff can do everything
     def test_staff(self):
-        staff = users.models.User.objects.create(
-            username='staff',
-            first_name='Staffy',
-            last_name='McStaffface',
-            email='staff@example.come',
-            is_staff=True,
-        )
-        self._client.force_login(staff)
+        self._client.force_login(self.staff)
         assert all(self.run_all(self.me).values())
 
     # anonymous users can't do anything
@@ -927,3 +907,164 @@ class APITestCase(GraphQLTestCase):
                             settings.MAX_TRANSFER + 1)
         assert transfer('TransactionCreate', self.person,
                         settings.MAX_TRANSFER)
+        assert transfer('TransactionCreate', self.person, self.me.balance())
+        assert not transfer('TransactionCreate', self.person, 1)
+
+    # send money around randomly and make sure that balances agree at the end
+    def test_money_dynamic(self):
+        def deposit(user, amount):
+            self._client.force_login(self.staff)
+            result = json.loads(
+                self.query(
+                    '''
+                    mutation DepositCreate($user: ID! $amount: Int! $paymentId: String!) {
+                        createDeposit(user: $user amount: $amount paymentId: $paymentId) {
+                            deposit {
+                                id
+                            }
+                        }
+                    }
+                    ''',
+                    op_name='DepositCreate',
+                    variables={
+                        'user':
+                        to_global_id('PersonNode', user.id),
+                        'amount':
+                        amount,
+                        'paymentId':
+                        'unique_{}_{}'.format(
+                            user.username,
+                            len(user.deposit_set.all()),
+                        ),
+                    },
+                ).content)
+            self._client.logout()
+            return result
+
+        def donate(user, target, amount):
+            self._client.force_login(user)
+            result = json.loads(
+                self.query(
+                    self.gql['DonationCreate'],
+                    op_name='DonationCreate',
+                    variables={
+                        'user': to_global_id('PersonNode', user.id),
+                        'target': to_global_id('NonprofitNode', target.id),
+                        'amount': amount,
+                        'description': 'This is a donation',
+                    },
+                ).content)
+            self._client.logout()
+            return result
+
+        def transact(user, target, amount):
+            self._client.force_login(user)
+            result = json.loads(
+                self.query(
+                    self.gql['TransactionCreate'],
+                    op_name='TransactionCreate',
+                    variables={
+                        'user': to_global_id('PersonNode', user.id),
+                        'target': to_global_id('PersonNode', target.id),
+                        'amount': amount,
+                        'description': 'This is a transaction',
+                    },
+                ).content)
+            self._client.logout()
+            return result
+
+        def withdraw(user, amount):
+            self._client.force_login(self.staff)
+            result = json.loads(
+                self.query(
+                    '''
+                    mutation WithdrawalCreate($user: ID! $amount: Int!) {
+                        createWithdrawal(user: $user amount: $amount) {
+                            withdrawal {
+                                id
+                            }
+                        }
+                    }
+                    ''',
+                    op_name='WithdrawalCreate',
+                    variables={
+                        'user': to_global_id('NonprofitNode', user.id),
+                        'amount': amount,
+                    },
+                ).content)
+            self._client.logout()
+            return result
+
+        person_state = {
+            x: {
+                'balance': x.balance(),
+                'donated': x.donated(),
+            }
+            for x in models.Person.objects.all()
+        }
+
+        nonprofit_state = {
+            x: {
+                'balance': x.balance(),
+                'fundraised': x.fundraised(),
+            }
+            for x in models.Nonprofit.objects.all()
+        }
+
+        step = sum(person_state[x]['balance']
+                   for x in person_state) / len(person_state) / 10
+
+        for _ in range(200):
+            choice = random.choice([deposit, donate, transact, withdraw])
+            amount = random.randint(1, min(step * 2 - 1,
+                                           settings.MAX_TRANSFER))
+
+            if choice == deposit:
+                user = random.choice(list(person_state.keys()))
+                assert 'errors' not in deposit(user, amount)
+
+                person_state[user]['balance'] += amount
+
+            elif choice == donate:
+                user = random.choice(list(person_state.keys()))
+                target = random.choice(list(nonprofit_state.keys()))
+                result = donate(user, target, amount)
+
+                if person_state[user]['balance'] - amount >= 0:
+                    assert 'errors' not in result
+                    person_state[user]['balance'] -= amount
+                    person_state[user]['donated'] += amount
+                    nonprofit_state[target]['balance'] += amount
+                    nonprofit_state[target]['fundraised'] += amount
+                else:
+                    assert 'errors' in result
+
+            elif choice == transact:
+                user = random.choice(list(person_state.keys()))
+                target = random.choice(list(person_state.keys()))
+                result = transact(user, target, amount)
+
+                if person_state[user]['balance'] - amount >= 0:
+                    assert 'errors' not in result
+                    person_state[user]['balance'] -= amount
+                    person_state[target]['balance'] += amount
+                else:
+                    assert 'errors' in result
+
+            if choice == withdraw:
+                user = random.choice(list(nonprofit_state.keys()))
+                result = withdraw(user, amount)
+
+                if nonprofit_state[user]['balance'] - amount >= 0:
+                    assert 'errors' not in result
+                    nonprofit_state[user]['balance'] -= amount
+                else:
+                    assert 'errors' in result
+
+        for x in person_state:
+            assert person_state[x]['balance'] == x.balance()
+            assert person_state[x]['donated'] == x.donated()
+
+        for x in nonprofit_state:
+            assert nonprofit_state[x]['balance'] == x.balance()
+            assert nonprofit_state[x]['fundraised'] == x.fundraised()

@@ -439,7 +439,7 @@ class DepositNode(DjangoObjectType):
 class DepositCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        amount = graphene.String(required=True)
+        amount = graphene.Int(required=True)
         payment_id = graphene.String()
 
     deposit = graphene.Field(DepositNode)
@@ -448,8 +448,16 @@ class DepositCreate(Mutation):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
+        try:
+            assert amount > 0
+            assert amount <= settings.MAX_EXCHANGE
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
+
+        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+
         deposit = models.Deposit.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=user_obj,
             amount=amount,
             payment_id=payment_id,
         )
@@ -461,7 +469,7 @@ class DepositUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         user = graphene.ID()
-        amount = graphene.String()
+        amount = graphene.Int()
         payment_id = graphene.String()
 
     deposit = graphene.Field(DepositNode)
@@ -470,11 +478,22 @@ class DepositUpdate(Mutation):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
+        try:
+            assert amount > 0
+            assert amount <= settings.MAX_EXCHANGE
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
+
         deposit = models.Deposit.objects.get(pk=from_global_id(id)[1])
         if user:
             deposit.user = models.IbisUser.objects.get(
                 pk=from_global_id(user)[1])
         if amount:
+            try:
+                assert hasattr(deposit.user, 'person')
+                assert deposit.user.person.balance() - amount >= 0
+            except AssertionError:
+                raise GraphQLError('Balance would be below zero')
             deposit.amount = amount
         if payment_id:
             deposit.payment_id = payment_id
@@ -518,7 +537,7 @@ class WithdrawalNode(DjangoObjectType):
 class WithdrawalCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
-        amount = graphene.String(required=True)
+        amount = graphene.Int(required=True)
 
     withdrawal = graphene.Field(WithdrawalNode)
 
@@ -526,8 +545,22 @@ class WithdrawalCreate(Mutation):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
+        try:
+            assert amount > 0
+            assert amount <= settings.MAX_EXCHANGE
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
+
+        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+
+        try:
+            assert hasattr(user_obj, 'nonprofit')
+            assert user_obj.nonprofit.balance() - amount >= 0
+        except AssertionError:
+            raise GraphQLError('Balance would be below zero')
+
         withdrawal = models.Withdrawal.objects.create(
-            user=models.Nonprofit.objects.get(pk=from_global_id(user)[1]),
+            user=user_obj.nonprofit,
             amount=amount,
         )
         withdrawal.save()
@@ -538,7 +571,7 @@ class WithdrawalUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         user = graphene.ID()
-        amount = graphene.String()
+        amount = graphene.Int()
 
     withdrawal = graphene.Field(WithdrawalNode)
 
@@ -546,11 +579,22 @@ class WithdrawalUpdate(Mutation):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
+        try:
+            assert amount > 0
+            assert amount <= settings.MAX_EXCHANGE
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
+
         withdrawal = models.Withdrawal.objects.get(pk=from_global_id(id)[1])
         if user:
             withdrawal.user = models.Nonprofit.objects.get(
                 pk=from_global_id(user)[1])
         if amount:
+            try:
+                assert hasattr(withdrawal.user, 'nonprofit')
+                assert withdrawal.user.nonprofit.balance() - amount >= 0
+            except AssertionError:
+                raise GraphQLError('Balance would be below zero')
             withdrawal.amount = amount
         withdrawal.save()
         return WithdrawalUpdate(withdrawal=withdrawal)

@@ -211,6 +211,8 @@ EMAIL_USE_TLS = True
 
 MAX_TRANSFER = 10000
 
+MAX_EXCHANGE = 100000
+
 PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
 
 PAYPAL_SANDBOX_CLIENT_ID = CONF['payment']['paypal']['sandbox']['client_id']
