@@ -22,8 +22,7 @@ with open('../config.json') as fd:
 
 ACCOUNT_UNIQUE_EMAIL = False
 
-# ALLOWED_HOSTS = ['localhost', 'api.tokenibis.org', 'app.tokenibis.org']
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [CONF['ibis']['api'], CONF['ibis']['app']]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -57,9 +56,7 @@ DATABASES = {
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-GRAPHENE = {
-    'SCHEMA': 'api.schema.schema'
-}
+GRAPHENE = {'SCHEMA': 'api.schema.schema'}
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -177,11 +174,11 @@ CORS_ALLOW_HEADERS = [
 ]
 
 CORS_ORIGIN_WHITELIST = (
-    'https://app.tokenibis.org',
+    'https://{}'.format(CONF['ibis']['app']),
     'http://localhost:3000',
 )
 
-CSRF_TRUSTED_ORIGINS = ['api.tokenibis.org', 'app.tokenibis.org']
+CSRF_TRUSTED_ORIGINS = [CONF['ibis']['api'], CONF['ibis']['app']]
 
 CSRF_COOKIE_DOMAIN = 'tokenibis.org'
 
@@ -198,6 +195,10 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 # ------------------------------------------------------------ #
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
+
+AVATAR_BUCKET = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
+
+AVATAR_BUCKET_LEN = 233
 
 EMAIL_HOST = CONF['email']['host']
 
@@ -223,6 +224,7 @@ PAYPAL_LIVE_CLIENT_ID = CONF['payment']['paypal']['live']['client_id']
 
 PAYPAL_LIVE_SECRET_KEY = CONF['payment']['paypal']['live']['secret_key']
 
-REDIRECT_URL_GOOGLE = 'https://app.tokenibis.org/redirect/google/'
+REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(CONF['ibis']['app'])
 
-REDIRECT_URL_FACEBOOK = 'https://app.tokenibis.org/redirect/facebook/'
+REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
+    CONF['ibis']['app'])

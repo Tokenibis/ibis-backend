@@ -5,6 +5,7 @@ import json
 import requests
 
 from django.contrib.auth import logout
+from django.conf import settings
 from rest_framework import generics, response, exceptions, serializers
 from users.models import User
 from allauth.socialaccount.models import SocialAccount
@@ -16,8 +17,6 @@ from .payments import PayPalClient
 
 QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
-IBIS_AVATAR = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
-IBIS_AVATAR_LEN = 233
 
 
 class QuoteView(generics.GenericAPIView):
@@ -69,8 +68,8 @@ class LoginView(generics.GenericAPIView):
             if social_account.provider == 'facebook':
                 person.avatar = FB_AVATAR.format(social_account.uid)
             else:
-                person.avatar = IBIS_AVATAR.format(
-                    hash(str(request.user.id)) % IBIS_AVATAR_LEN)
+                person.avatar = settings.AVATAR_BUCKET.format(
+                    hash(str(request.user.id)) % settings.AVATAR_BUCKET_LEN)
 
             person.score = 0
             person.save()
@@ -98,16 +97,13 @@ class LogoutView(generics.GenericAPIView):
 
 
 class IdentifyView(generics.GenericAPIView):
-
     def get(self, request, *args, **kwargs):
         if Person.objects.filter(id=request.user.id).exists():
             user_id = to_global_id('PersonNode', str(request.user.id))
         else:
             user_id = ''
 
-        return response.Response({
-            'user_id': user_id
-        })
+        return response.Response({'user_id': user_id})
 
 
 class PaymentView(generics.GenericAPIView):
@@ -139,5 +135,6 @@ class PaymentView(generics.GenericAPIView):
         deposit.save()
 
         return response.Response({
-            'depositID': to_global_id('DepositNode', deposit.id),
+            'depositID':
+            to_global_id('DepositNode', deposit.id),
         })
