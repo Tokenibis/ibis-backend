@@ -46,7 +46,7 @@ class IbisUser(User, Scoreable):
                 return entry.user.following.filter(pk=self.id).exists()
 
         if hasattr(entry, 'transaction') and hasattr(entry.user, 'person'):
-            permission = entry.self.person.visibility_transaction
+            permission = entry.user.person.visibility_transaction
             if permission == Person.PRIVATE:
                 return self == entry.user.person
             if permission == Person.FOLLOWING:
