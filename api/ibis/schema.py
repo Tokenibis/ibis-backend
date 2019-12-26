@@ -4,6 +4,7 @@ import graphene
 from django.db.models import Q, Count, Value
 from django.db.models.functions import Concat
 from django.core.exceptions import ObjectDoesNotExist
+from django.conf import settings
 from graphql import GraphQLError
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
@@ -666,14 +667,21 @@ class DonationCreate(Mutation):
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
-        assert len(description) > 0
-        assert amount > 0
+        try:
+            assert len(description) > 0
+            assert amount > 0
+            assert amount <= settings.MAX_TRANSFER
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Nonprofit.objects.get(pk=from_global_id(target)[1])
 
-        assert hasattr(user_obj, 'person')
-        assert user_obj.person.balance() - amount >= 0
+        try:
+            assert hasattr(user_obj, 'person')
+            assert user_obj.person.balance() - amount >= 0
+        except AssertionError:
+            raise GraphQLError('Balance would be below zero')
 
         donation = models.Donation.objects.create(
             user=user_obj,
@@ -712,8 +720,12 @@ class DonationUpdate(Mutation):
         if not info.context.user.is_staff:
             return
 
-        assert len(description) > 0
-        assert amount > 0
+        try:
+            assert len(description) > 0
+            assert amount > 0
+            assert amount <= settings.MAX_TRANSFER
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
 
         donation = models.Donation.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -725,6 +737,11 @@ class DonationUpdate(Mutation):
             donation.target = models.Nonprofit.objects.get(
                 pk=from_global_id(target)[1])
         if amount:
+            try:
+                assert hasattr(donation.user, 'person')
+                assert donation.user.person.balance() - amount >= 0
+            except AssertionError:
+                raise GraphQLError('Balance would be below zero')
             donation.amount = amount
         donation.save()
         return DonationUpdate(donation=donation)
@@ -814,14 +831,21 @@ class TransactionCreate(Mutation):
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
-        assert len(description) > 0
-        assert amount > 0
+        try:
+            assert len(description) > 0
+            assert amount > 0
+            assert amount <= settings.MAX_TRANSFER
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Person.objects.get(pk=from_global_id(target)[1])
 
-        assert hasattr(user_obj, 'person')
-        assert user_obj.person.balance() - amount >= 0
+        try:
+            assert hasattr(user_obj, 'person')
+            assert user_obj.person.balance() - amount >= 0
+        except AssertionError:
+            raise GraphQLError('Balance would be below zero')
 
         transaction = models.Transaction.objects.create(
             user=user_obj,
@@ -860,8 +884,12 @@ class TransactionUpdate(Mutation):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
-        assert len(description) > 0
-        assert amount > 0
+        try:
+            assert len(description) > 0
+            assert amount > 0
+            assert amount <= settings.MAX_TRANSFER
+        except AssertionError:
+            raise GraphQLError('Arguments do not satisfy constraints')
 
         transaction = models.Transaction.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -873,6 +901,11 @@ class TransactionUpdate(Mutation):
             transaction.target = models.Person.objects.get(
                 pk=from_global_id(target)[1])
         if amount:
+            try:
+                assert hasattr(transaction.user, 'person')
+                assert transaction.user.person.balance() - amount >= 0
+            except AssertionError:
+                raise GraphQLError('Balance would be below zero')
             transaction.amount = amount
         transaction.save()
         return TransactionUpdate(transaction=transaction)

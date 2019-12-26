@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from django.core.management import call_command
+from django.conf import settings
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import now, timedelta
@@ -880,3 +881,49 @@ class APITestCase(GraphQLTestCase):
 
         self._client.force_login(self.me)
         assert not any(self.run_privacy(self.person).values())
+
+    def test_money_limits(self):
+        self._client.force_login(self.me)
+
+        def transfer(op_name, target, amount):
+            return 'errors' not in json.loads(
+                self.query(
+                    self.gql[op_name],
+                    op_name=op_name,
+                    variables={
+                        'user': self.me.gid,
+                        'target': target.gid,
+                        'amount': amount,
+                        'description': 'This is a description',
+                    },
+                ).content)
+
+        models.Deposit.objects.create(
+            user=self.me,
+            amount=int((settings.MAX_TRANSFER - self.me.balance()) * 1.5),
+            payment_id='unique_test_money_limit_donation',
+        )
+
+        assert not transfer('DonationCreate', self.nonprofit, -1)
+        assert not transfer('DonationCreate', self.nonprofit, 0.5)
+        assert not transfer('DonationCreate', self.nonprofit, 0)
+        assert not transfer('DonationCreate', self.nonprofit,
+                            settings.MAX_TRANSFER + 1)
+        assert transfer('DonationCreate', self.nonprofit,
+                        settings.MAX_TRANSFER)
+        assert transfer('DonationCreate', self.nonprofit, self.me.balance())
+        assert not transfer('DonationCreate', self.nonprofit, 1)
+
+        models.Deposit.objects.create(
+            user=self.me,
+            amount=int((settings.MAX_TRANSFER - self.me.balance()) * 1.5),
+            payment_id='unique_test_money_limit_transaction',
+        )
+
+        assert not transfer('TransactionCreate', self.person, -1)
+        assert not transfer('TransactionCreate', self.person, 0.5)
+        assert not transfer('TransactionCreate', self.person, 0)
+        assert not transfer('TransactionCreate', self.person,
+                            settings.MAX_TRANSFER + 1)
+        assert transfer('TransactionCreate', self.person,
+                        settings.MAX_TRANSFER)
