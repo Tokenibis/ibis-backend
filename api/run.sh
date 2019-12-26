@@ -1,3 +1,4 @@
 #!/bin/bash
 
-uwsgi --ini api_uwgsi.ini
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+uwsgi --ini $DIR/api_uwgsi.ini
