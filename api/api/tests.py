@@ -1,17 +1,12 @@
 import os
 import json
 import logging
-from django.test import TestCase
 from django.core.management import call_command
-from django.contrib import auth
-from django.test import Client as DjangoClient
-from graphene.test import Client as GraphQLClient
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import now, timedelta
 
 import users.models
-import notifications.models
 import tracker.models
 import ibis.models as models
 import api.schema
@@ -46,11 +41,6 @@ call_command(
     num_bookmark=NUM_BOOKMARK,
     num_like=NUM_LIKE,
 )
-
-
-class WSGI_Sim:
-    def __init__(self, user):
-        self.user = user
 
 
 class APITestCase(GraphQLTestCase):
@@ -801,15 +791,3 @@ class APITestCase(GraphQLTestCase):
         }
         result = self.run_all(self.person)
         assert(result[x] == expected[x] for x in result)
-
-    # logged in users can see some of other people's information
-    def test_other_following(self):
-        pass
-
-    # logged in users can see some of other people's information
-    def test_other_private(self):
-        pass
-
-    # balances below zero and integer overflow
-    def test_money_invalid(self):
-        pass

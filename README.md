@@ -24,9 +24,13 @@ Please ensure that your environment is set up to run python 3
 
 `$ pip3 install -r requirements.txt --user`
 
+`$ cd api`
+
+`$ python3 manage.py test`
+
 ### Option 1 - Load Fixtures
 
-`$ ./fixtures/load_fixtures.sh`
+`$ ./api/scripts/reset_test.sh
 
 ### Option 2 - Manual Setup
 
