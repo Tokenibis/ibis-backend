@@ -223,7 +223,6 @@ class APITestCase(GraphQLTestCase):
             content_type="application/json")
         return resp
 
-    # staff can do everything
     def run_all(self, person):
         success = {}
         init_tracker_len = len(tracker.models.Log.objects.all())
@@ -829,6 +828,7 @@ class APITestCase(GraphQLTestCase):
 
         return success
 
+    # anyone can see public visibility
     def test_privacy_public(self):
         self.person.visibility_donation = models.Person.PUBLIC
         self.person.visibility_transaction = models.Person.PUBLIC
@@ -837,6 +837,7 @@ class APITestCase(GraphQLTestCase):
         self._client.force_login(self.me)
         assert all(self.run_privacy(self.person).values())
 
+    # nobody can see private visibility except self
     def test_privacy_private(self):
         self.person.visibility_donation = models.Person.PRIVATE
         self.person.visibility_transaction = models.Person.PRIVATE
@@ -845,16 +846,11 @@ class APITestCase(GraphQLTestCase):
         self._client.force_login(self.me)
         assert not any(self.run_privacy(self.person).values())
 
-    def test_privacy_following_yes(self):
-        self.person.visibility_donation = models.Person.FOLLOWING
-        self.person.visibility_transaction = models.Person.FOLLOWING
-        self.person.following.add(self.me)
-        self.person.save()
-
-        self._client.force_login(self.me)
+        self._client.force_login(self.person)
         assert all(self.run_privacy(self.person).values())
 
-    def test_privacy_following_no(self):
+    # only people being followed have visibility if set to 'following'
+    def test_privacy_following(self):
         self.person.visibility_donation = models.Person.FOLLOWING
         self.person.visibility_transaction = models.Person.FOLLOWING
         self.person.save()
@@ -862,6 +858,13 @@ class APITestCase(GraphQLTestCase):
         self._client.force_login(self.me)
         assert not any(self.run_privacy(self.person).values())
 
+        self.person.following.add(self.me)
+        self.person.save()
+
+        self._client.force_login(self.me)
+        assert all(self.run_privacy(self.person).values())
+
+    # make sure that money constraints work
     def test_money_limits(self):
         self._client.force_login(self.me)
 
