@@ -128,12 +128,6 @@ class Person(IbisUser):
         symmetrical=False,
     )
 
-    visibility_follow = models.CharField(
-        max_length=2,
-        choices=VISIBILITY_CHOICES,
-        default=PUBLIC,
-    )
-
     visibility_donation = models.CharField(
         max_length=2,
         choices=VISIBILITY_CHOICES,

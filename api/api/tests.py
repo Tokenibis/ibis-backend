@@ -668,7 +668,6 @@ class APITestCase(GraphQLTestCase):
                 op_name='PersonSettingsUpdate',
                 variables={
                     'id': person.gid,
-                    'visibilityFollow': models.Person.PUBLIC,
                     'visibilityDonation': models.Person.PUBLIC,
                     'visibilityTransaction': models.Person.PUBLIC,
                 },

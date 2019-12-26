@@ -1237,15 +1237,6 @@ class PersonNode(IbisUserNode, UserNode):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_following(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff or info.context.user.id == self.id
-                or (self.following.filter(pk=info.context.user.id).exists()
-                    and self.visibility_follow == models.Person.FOLLOWING)
-                or self.visibility_follow == models.Person.PUBLIC):
-            raise GraphQLError('You do not have sufficient permission')
-
-        return self.following
-
     def resolve_balance(self, *args, **kwargs):
         return self.balance()
 
