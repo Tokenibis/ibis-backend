@@ -149,7 +149,7 @@ class Model:
         return pk
 
     def add_nonprofit(self, title, description, category, score):
-        pk = len(self.users) + 2
+        pk = len(self.users) + 1
 
         unique_title = title
         i = 0
@@ -216,7 +216,7 @@ class Model:
         return pk
 
     def add_person(self, first, last, score):
-        pk = len(self.users) + 2
+        pk = len(self.users) + 1
         username = '{}_{}'.format('{}_{}'.format(first, last)[:10].lower(), pk)
 
         self.users.append({

@@ -34,5 +34,4 @@ python3 manage.py migrate ibis
 python3 manage.py migrate tracker
 python3 manage.py migrate notifications
 python3 manage.py migrate
-python3 manage.py createsuperuser --username dummy --email 'admin@admin.com' --noinput
 python3 manage.py loaddata $DIR/../ibis/fixtures/fixtures.json
