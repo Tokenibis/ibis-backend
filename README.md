@@ -1,6 +1,10 @@
 # Ibis Backend API
 
-This is the application backend for the Token Ibis application. It is implemented as a REST API using the Django REST framework. Currently, the default database backend is SQLite.
+This is the application backend for the Token Ibis application. It is
+implemented as a REST API using the Django REST framework. Currently,
+the default database backend is SQLite.
+
+__This code is currently in BETA__
 
 ## Dependencies
 
@@ -32,19 +36,13 @@ Please ensure that your environment is set up to run python 3
 
 `$ ./api/scripts/reset_test.sh
 
-### Option 2 - Manual Setup
+### Option 2 - Blank Database
 
-`$ cd api`
+`$ ./api/scripts/reset_blank.sh`
 
-`$ python3 manage.py makemigrations users`
+### Create Admin
 
-`$ python3 manage.py makemigrations ibis`
-
-`$ python3 manage.py migrate users`
-
-`$ python3 manage.py migrate ibis`
-
-`$ python3 manage.py migrate`
+`$ cd ibis-backend/api`
 
 `$ python3 manage.py createsuperuser`
 
