@@ -19,3 +19,4 @@ python3 manage.py migrate ibis
 python3 manage.py migrate notifications
 python3 manage.py migrate tracker
 python3 manage.py migrate
+python3 manage.py run_setup
