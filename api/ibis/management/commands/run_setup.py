@@ -27,7 +27,7 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
             config = json.load(fd)
 
-        site = Site.objects.create(domain='127.0.0.1')
+        site = Site.objects.all().first()
 
         app = SocialApp.objects.create(
             name='facebook',
