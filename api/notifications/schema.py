@@ -18,6 +18,9 @@ class NotifierNode(DjangoObjectType):
     email_transaction = graphene.Boolean()
     email_like = graphene.Boolean()
 
+    last_seen = graphene.String()
+    has_unseen = graphene.Boolean()
+
     class Meta:
         model = models.Notifier
         filter_fields = []
@@ -46,6 +49,18 @@ class NotifierNode(DjangoObjectType):
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_like
+
+    def resolve_last_seen(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.last_seen
+
+    def resolve_has_unseen(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.has_unseen()
 
     @classmethod
     def get_queryset(cls, queryset, info):
