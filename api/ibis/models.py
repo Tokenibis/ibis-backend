@@ -41,14 +41,14 @@ class IbisUser(User, Scoreable):
         if hasattr(entry, 'donation') and hasattr(entry.user, 'person'):
             permission = entry.user.person.visibility_donation
             if permission == Person.PRIVATE:
-                return self == entry.user.person
+                return self.id == entry.user.person.id
             if permission == Person.FOLLOWING:
                 return entry.user.following.filter(pk=self.id).exists()
 
         if hasattr(entry, 'transaction') and hasattr(entry.user, 'person'):
             permission = entry.user.person.visibility_transaction
             if permission == Person.PRIVATE:
-                return self == entry.user.person
+                return self.id == entry.user.person.id
             if permission == Person.FOLLOWING:
                 return entry.self.following.filter(pk=self.id).exists()
 

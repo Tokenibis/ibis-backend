@@ -196,6 +196,7 @@ class EventOrderingFilter(django_filters.OrderingFilter):
 
 class EventFilter(django_filters.FilterSet):
     by_user = django_filters.CharFilter(method='filter_by_user')
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
     rsvp_by = django_filters.CharFilter(method='filter_rsvp_by')
     by_following = django_filters.CharFilter(method='filter_by_following')
     begin_date = django_filters.CharFilter(method='filter_begin_date')
@@ -214,6 +215,11 @@ class EventFilter(django_filters.FilterSet):
 
     def filter_by_user(self, qs, name, value):
         return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_bookmark_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).bookmark_for_event.all())
 
     def filter_rsvp_by(self, qs, name, value):
         return qs.filter(
@@ -1112,6 +1118,10 @@ class EventNode(EntryNode):
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
+    bookmark = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
     rsvp = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -1127,6 +1137,9 @@ class EventNode(EntryNode):
 
     def resolve_like(self, *args, **kwargs):
         return self.like
+
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
 
     def resolve_rsvp(self, *args, **kwargs):
         return self.rsvp
