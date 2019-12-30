@@ -37,6 +37,8 @@ class IbisUserFilter(django_filters.FilterSet):
     id = django_filters.CharFilter(method='filter_id')
     followed_by = django_filters.CharFilter(method='filter_followed_by')
     follower_of = django_filters.CharFilter(method='filter_follower_of')
+    like_for = django_filters.CharFilter(method='filter_like_for')
+    rsvp_for = django_filters.CharFilter(method='filter_rsvp_for')
     order_by = IbisUserOrderingFilter(
         fields=(
             ('score', 'score'),
@@ -63,6 +65,36 @@ class IbisUserFilter(django_filters.FilterSet):
         return qs.filter(
             id__in=self.Meta.model.objects.get(
                 id=from_global_id(value)[1]).follower.all())
+
+    def filter_like_for(self, qs, name, value):
+        entry_type, entry_id = from_global_id(value)
+        submodels = {
+            '{}Node'.format(x.__name__): x
+            for x in models.Likeable.__subclasses__()
+        }
+
+        try:
+            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
+        except (KeyError, ObjectDoesNotExist):
+            raise KeyError('Object is not likeable')
+
+        return qs.filter(
+            id__in=entry_obj.like.all())
+
+    def filter_rsvp_for(self, qs, name, value):
+        entry_type, entry_id = from_global_id(value)
+        submodels = {
+            '{}Node'.format(x.__name__): x
+            for x in models.Rsvpable.__subclasses__()
+        }
+
+        try:
+            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
+        except (KeyError, ObjectDoesNotExist):
+            raise KeyError('Object is not Rsvpable')
+
+        return qs.filter(
+            id__in=entry_obj.rsvp.all())
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -1126,6 +1158,7 @@ class EventNode(EntryNode):
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
+    rsvp_count = graphene.Int()
 
     class Meta:
         model = models.Event
@@ -1143,6 +1176,9 @@ class EventNode(EntryNode):
 
     def resolve_rsvp(self, *args, **kwargs):
         return self.rsvp
+
+    def resolve_rsvp_count(self, *args, **kwargs):
+        return self.rsvp.count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
