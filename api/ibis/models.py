@@ -248,8 +248,8 @@ class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
     image = models.TextField(validators=[MinLengthValidator(1)])
     address = models.TextField(validators=[MinLengthValidator(1)])
     date = models.DateTimeField()
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.FloatField(blank=True, null=True)
+    longitude = models.FloatField(blank=True, null=True)
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
