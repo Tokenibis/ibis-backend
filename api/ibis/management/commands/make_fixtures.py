@@ -542,6 +542,9 @@ class Command(BaseCommand):
             'Invitational',
         ]
 
+        with open(os.path.join(DIR, 'data/addresses.json')) as fd:
+            addresses = json.load(fd)
+
         # make nonprofit categories from charity navigator categories
         nonprofit_categories = [
             model.add_nonprofit_category(x, np_cat_raw[x]) for x in np_cat_raw
@@ -631,7 +634,7 @@ class Command(BaseCommand):
                 random.choice(event_type),
             )
             date_next += timedelta(hours=random.randint(0, 48))
-            address = 'The Convention Thingy\n55555 Road Ave.\nAlbuquerque NM, 87555'
+            address = random.choice(addresses)
             events.append(
                 model.add_event(
                     random.choice(nonprofits),
