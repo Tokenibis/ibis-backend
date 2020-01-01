@@ -53,8 +53,6 @@ def handleLikeCreate(variables, data):
         # target of like is probably a nonprofit; just drop silently
         return
 
-    description = '{} liked your activity'.format(str(user))
-
     while hasattr(current, 'comment'):
         current = current.comment.parent
 
@@ -63,6 +61,8 @@ def handleLikeCreate(variables, data):
             ref_type = Subclass.__name__
             ref_id = to_global_id('{}Node'.format(ref_type), current.id)
             break
+
+    description = '{} liked your {}'.format(str(user), ref_type.lower())
 
     notification = Notification.objects.create(
         notifier=notifier,
@@ -89,8 +89,8 @@ def handleLikeCreate(variables, data):
 def handleTransactionCreate(variables, data):
     try:
         user = ibis.Person.objects.get(pk=from_global_id(variables['user'])[1])
-        notifier = ibis.Entry.objects.get(
-            pk=from_global_id(variables['target'])[1]).user.person.notifier
+        notifier = ibis.Person.objects.get(
+            pk=from_global_id(variables['target'])[1]).notifier
     except ObjectDoesNotExist:
         print('ERROR: notification received a bad input')
         return
@@ -135,7 +135,7 @@ def handleCommentCreate(variables, data):
         print('ERROR: notification received a bad input')
         return
 
-    description = '{} commented on your activity'.format(str(user))
+    description = '{} replied to your comment'.format(str(user))
 
     notifications = []
 
@@ -169,6 +169,9 @@ def handleCommentCreate(variables, data):
             ref_type = Subclass.__name__
             ref_id = to_global_id('{}Node'.format(ref_type), current.id)
             break
+
+    notifications[-1].description = '{} replied to your {}'.format(
+        str(user), ref_type.lower())
 
     for notification in notifications:
         notification.reference = '{}:{}'.format(ref_type, ref_id)
@@ -230,7 +233,7 @@ def handleEventCreate(variables, data):
             print('ERROR: notification received a bad input')
             continue
 
-        description = '{} planned an event'.format(str(user))
+        description = '{} planned an new event'.format(str(user))
 
         notification = Notification.objects.create(
             notifier=notifier,
@@ -266,7 +269,7 @@ def handlePostCreate(variables, data):
             print('ERROR: notification received a bad input')
             continue
 
-        description = '{} made a post'.format(str(user))
+        description = '{} made a new post'.format(str(user))
 
         notification = Notification.objects.create(
             notifier=notifier,
