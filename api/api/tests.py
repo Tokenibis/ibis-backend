@@ -1227,6 +1227,29 @@ class APITestCase(GraphQLTestCase):
         self._client.force_login(self.person)
         assert 'errors' not in json.loads(
             self.query(
+                self.gql['CommentCreate'],
+                op_name='CommentCreate',
+                variables={
+                    'user':
+                    self.person.gid,
+                    'parent':
+                    to_global_id(
+                        'DonationNode',
+                        models.Donation.objects.filter(
+                            user=self.person).first().id,
+                    ),
+                    'description':
+                    'This is a description',
+                    'self':
+                    self.person.gid,
+                },
+            ).content)
+        assert self.person.notifier.notification_set.all().count(
+        ) == count + 12
+
+        self._client.force_login(self.person)
+        assert 'errors' not in json.loads(
+            self.query(
                 self.gql['NotifierSeen'],
                 op_name='NotifierSeen',
                 variables={

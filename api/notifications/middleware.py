@@ -143,7 +143,8 @@ def handleCommentCreate(variables, data):
         parent = current.comment.parent
         if hasattr(parent.user, 'person'):
             notifier = parent.user.person.notifier
-            if notifier not in [x.notifier for x in notifications]:
+            if notifier not in [x.notifier for x in notifications] and \
+               notifier != user.notifier:
                 notification = Notification.objects.create(
                     notifier=notifier,
                     category=Notification.RECEIVED_COMMENT,
@@ -170,8 +171,9 @@ def handleCommentCreate(variables, data):
             ref_id = to_global_id('{}Node'.format(ref_type), current.id)
             break
 
-    notifications[-1].description = '{} replied to your {}'.format(
-        str(user), ref_type.lower())
+    if notifications:
+        notifications[-1].description = '{} replied to your {}'.format(
+            str(user), ref_type.lower())
 
     for notification in notifications:
         notification.reference = '{}:{}'.format(ref_type, ref_id)
