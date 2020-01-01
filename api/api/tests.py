@@ -1207,7 +1207,6 @@ class APITestCase(GraphQLTestCase):
             assert self.person.notifier.notification_set.all().count() == c + 0
             create_operation('{}Create'.format(op_type))
             assert self.person.notifier.notification_set.all().count() == c + 1
-            assert query_unseen() == c + 1
 
         run('Follow', count)
         run('Follow', count)
@@ -1224,6 +1223,8 @@ class APITestCase(GraphQLTestCase):
         run('Post', count + 10)
         run('Post', count + 11)
 
+        assert query_unseen() == count + 12
+
         self._client.force_login(self.person)
         assert 'errors' not in json.loads(
             self.query(
@@ -1234,5 +1235,12 @@ class APITestCase(GraphQLTestCase):
                     'lastSeen': str(now()),
                 },
             ).content)
+        assert query_unseen() == 0
 
+        follow_id = create_operation('FollowCreate')
+        like_id = create_operation('LikeCreate')
+        assert query_unseen() == 2
+
+        delete_operation('FollowDelete', follow_id)
+        delete_operation('LikeDelete', like_id)
         assert query_unseen() == 0
