@@ -915,7 +915,6 @@ class APITestCase(GraphQLTestCase):
 
     # send money around randomly and make sure that balances agree at the end
     def test_money_dynamic(self):
-        return
 
         def deposit(user, amount):
             self._client.force_login(self.staff)
