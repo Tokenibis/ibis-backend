@@ -317,8 +317,6 @@ class Model:
             description,
             date,
             address,
-            latitude,
-            longitude,
             score,
     ):
         assert nonprofit in [x['pk'] for x in self.nonprofits]
@@ -344,8 +342,6 @@ class Model:
                 'like': [],
                 'date': date,
                 'address': address,
-                'latitude': latitude,
-                'longitude': longitude,
                 'score': score,
             }
         })
@@ -635,8 +631,6 @@ class Command(BaseCommand):
                 random.choice(event_type),
             )
             date_next += timedelta(hours=random.randint(0, 48))
-            latitude = 35.107 + (random.random() * 0.2 - 0.1)
-            longitude = -106.630 + (random.random() * 0.2 - 0.1)
             address = 'The Convention Thingy\n55555 Road Ave.\nAlbuquerque NM, 87555'
             events.append(
                 model.add_event(
@@ -645,8 +639,6 @@ class Command(BaseCommand):
                     markov.generate_markov_text(size=60),
                     date_next.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
                     address,
-                    latitude,
-                    longitude,
                     random.randint(0, 100),
                 ))
 

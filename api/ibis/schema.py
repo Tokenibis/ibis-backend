@@ -1196,8 +1196,6 @@ class EventCreate(Mutation):
         image = graphene.String(required=True)
         date = graphene.String(required=True)
         address = graphene.String(required=True)
-        latitude = graphene.Float(required=True)
-        longitude = graphene.Float(required=True)
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -1212,8 +1210,6 @@ class EventCreate(Mutation):
             image,
             date,
             address,
-            latitude,
-            longitude,
             score=0,
     ):
         if not info.context.user.is_staff:
@@ -1227,8 +1223,6 @@ class EventCreate(Mutation):
             image=image,
             date=dateutil.parser.parse(date),
             address=address,
-            latitude=latitude,
-            longitude=longitude,
             score=score,
         )
         event.save()
@@ -1245,8 +1239,6 @@ class EventUpdate(Mutation):
         image = graphene.String()
         date = graphene.String()
         address = graphene.String()
-        latitude = graphene.Float()
-        longitude = graphene.Float()
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -1262,8 +1254,6 @@ class EventUpdate(Mutation):
             image='',
             date='',
             address='',
-            latitude=None,
-            longitude=None,
             score=0,
     ):
         if not info.context.user.is_staff:
@@ -1285,10 +1275,6 @@ class EventUpdate(Mutation):
             event.date = date
         if address:
             event.address = address
-        if type(latitude) == float or type(latitude) == int:
-            event.latitude = latitude
-        if type(longitude) == float or type(longitude) == int:
-            event.longitude = longitude
         event.save()
         return EventUpdate(event=event)
 
