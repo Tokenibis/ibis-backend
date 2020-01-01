@@ -29,9 +29,9 @@ class Notifier(models.Model):
             microsecond=0,
         )))
 
-    def has_unseen(self):
+    def unseen_count(self):
         return self.notification_set.filter(
-            created__gt=self.last_seen).exists()
+            created__gt=self.last_seen).count()
 
 
 class Notification(TimeStampedModel):

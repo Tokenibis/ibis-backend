@@ -19,7 +19,7 @@ class NotifierNode(DjangoObjectType):
     email_like = graphene.Boolean()
 
     last_seen = graphene.String()
-    has_unseen = graphene.Boolean()
+    unseen_count = graphene.Int()
 
     class Meta:
         model = models.Notifier
@@ -56,11 +56,11 @@ class NotifierNode(DjangoObjectType):
             raise GraphQLError('You do not have sufficient permission')
         return self.last_seen
 
-    def resolve_has_unseen(self, info, *args, **kwargs):
+    def resolve_unseen_count(self, info, *args, **kwargs):
         if not (info.context.user.is_staff
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
-        return self.has_unseen()
+        return self.unseen_count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
