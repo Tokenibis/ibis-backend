@@ -78,8 +78,7 @@ class IbisUserFilter(django_filters.FilterSet):
         except (KeyError, ObjectDoesNotExist):
             raise KeyError('Object is not likeable')
 
-        return qs.filter(
-            id__in=entry_obj.like.all())
+        return qs.filter(id__in=entry_obj.like.all())
 
     def filter_rsvp_for(self, qs, name, value):
         entry_type, entry_id = from_global_id(value)
@@ -93,8 +92,7 @@ class IbisUserFilter(django_filters.FilterSet):
         except (KeyError, ObjectDoesNotExist):
             raise KeyError('Object is not Rsvpable')
 
-        return qs.filter(
-            id__in=entry_obj.rsvp.all())
+        return qs.filter(id__in=entry_obj.rsvp.all())
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -1311,6 +1309,12 @@ class IbisUserNode(UserNode):
     )
     following_count = graphene.Int()
     follower_count = graphene.Int()
+    donation_to_count = graphene.Int()
+    transaction_to_count = graphene.Int()
+    news_count = graphene.Int()
+    event_count = graphene.Int()
+    post_count = graphene.Int()
+    event_rsvp_count = graphene.Int()
 
     class Meta:
         model = models.IbisUser
@@ -1325,6 +1329,24 @@ class IbisUserNode(UserNode):
 
     def resolve_follower_count(self, *args, **kwargs):
         return self.follower.count()
+
+    def resolve_donation_to_count(self, *args, **kwargs):
+        return models.Donation.objects.filter(user__id=self.id).count()
+
+    def resolve_transaction_to_count(self, *args, **kwargs):
+        return models.Transaction.objects.filter(user__id=self.id).count()
+
+    def resolve_news_count(self, *args, **kwargs):
+        return models.News.objects.filter(user__id=self.id).count()
+
+    def resolve_event_count(self, *args, **kwargs):
+        return models.Event.objects.filter(user__id=self.id).count()
+
+    def resolve_post_count(self, *args, **kwargs):
+        return models.Post.objects.filter(user__id=self.id).count()
+
+    def resolve_event_rsvp_count(self, *args, **kwargs):
+        return self.rsvp_for_event.all().count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1344,6 +1366,8 @@ class PersonNode(IbisUserNode, UserNode):
     visibility_follow = graphene.String()
     visibility_donation = graphene.String()
     visibility_transaction = graphene.String()
+
+    transaction_to_count = graphene.Int()
 
     class Meta:
         model = models.Person
@@ -1370,6 +1394,9 @@ class PersonNode(IbisUserNode, UserNode):
         if not (info.context.user.is_staff or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_transaction
+
+    def resolve_transaction_from_count(self, *args, **kwargs):
+        return models.Transaction.objects.filter(target__id=self.id).count()
 
 
 class PersonCreate(Mutation):
@@ -1519,6 +1546,8 @@ class NonprofitNode(IbisUserNode):
     balance = graphene.Int()
     fundraised = graphene.Int()
 
+    donation_from_count = graphene.Int()
+
     class Meta:
         model = models.Nonprofit
         filter_fields = []
@@ -1529,6 +1558,9 @@ class NonprofitNode(IbisUserNode):
 
     def resolve_fundraised(self, *args, **kwargs):
         return self.fundraised()
+
+    def resolve_donation_from_count(self, *args, **kwargs):
+        return models.Donation.objects.filter(target__id=self.id).count()
 
 
 class NonprofitCreate(Mutation):
