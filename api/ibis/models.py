@@ -164,6 +164,7 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
     )
     description = models.TextField(validators=[MinLengthValidator(1)])
     link = models.TextField(validators=[MinLengthValidator(1)])
+    banner = models.TextField(validators=[MinLengthValidator(1)])
 
     donation_from = models.ManyToManyField(
         IbisUser,
