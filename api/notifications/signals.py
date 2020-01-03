@@ -28,7 +28,7 @@ def handleTransactionCreate(sender, instance, created, raw, **kwargs):
         category=Notification.RECEIVED_TRANSACTION,
         reference='{}:{}'.format(
             ibis.models.Transaction.__name__,
-            instance.id,
+            to_global_id('TransactionNode', instance.id),
         ),
         deduper='transaction:{}'.format(instance.id),
         description=description,
@@ -118,7 +118,10 @@ def handleNewsCreate(sender, instance, created, raw, **kwargs):
         notification = Notification.objects.create(
             notifier=notifier,
             category=Notification.FOLLOWING_NEWS,
-            reference='{}:{}'.format(ibis.models.News.__name__, instance.id),
+            reference='{}:{}'.format(
+                ibis.models.News.__name__,
+                to_global_id('NewsNode', instance.id),
+            ),
             deduper='news:{}:{}'.format(
                 instance.id,
                 to_global_id('PersonNode', target.id),
@@ -147,7 +150,7 @@ def handleEventCreate(sender, instance, created, raw, **kwargs):
             category=Notification.FOLLOWING_EVENT,
             reference='{}:{}'.format(
                 ibis.models.Event.__name__,
-                instance.id,
+                to_global_id('EventNode', instance.id),
             ),
             deduper='event:{}:{}'.format(
                 instance.id,
@@ -177,7 +180,7 @@ def handlePostCreate(sender, instance, created, raw, **kwargs):
             category=Notification.FOLLOWING_POST,
             reference='{}:{}'.format(
                 ibis.models.Post.__name__,
-                instance.id,
+                to_global_id('PostNode', instance.id),
             ),
             deduper='post:{}:{}'.format(
                 instance.id,
