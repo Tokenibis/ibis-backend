@@ -235,6 +235,7 @@ class EventFilter(django_filters.FilterSet):
         fields=(
             ('score', 'score'),
             ('created', 'created'),
+            ('date', 'date'),
             ('like_count', 'like_count'),
         ))
     search = django_filters.CharFilter(method='filter_search')

@@ -3,12 +3,13 @@ from django.core.validators import MinLengthValidator
 from django.utils.timezone import localtime, now
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
-from ibis.models import Person
+
+import ibis.models
 
 
 class Notifier(models.Model):
     user = AutoOneToOneField(
-        Person,
+        ibis.models.Person,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -30,8 +31,7 @@ class Notifier(models.Model):
         )))
 
     def unseen_count(self):
-        return self.notification_set.filter(
-            created__gt=self.last_seen).count()
+        return self.notification_set.filter(created__gt=self.last_seen).count()
 
 
 class Notification(TimeStampedModel):
@@ -83,3 +83,5 @@ class Email(models.Model):
     subject = models.TextField()
     body = models.TextField()
     schedule = models.DateTimeField()
+
+
