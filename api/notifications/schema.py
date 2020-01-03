@@ -7,6 +7,7 @@ from graphql_relay.node.node import from_global_id
 from graphene_django.filter import DjangoFilterConnectionField
 
 import notifications.models as models
+import ibis.models
 
 # --- Notifier -------------------------------------------------------------- #
 
@@ -128,7 +129,7 @@ class NotificationFilter(django_filters.FilterSet):
         fields = []
 
     def filter_for_user(self, qs, name, value):
-        notifier = models.Person(pk=from_global_id(value)[1]).notifier
+        notifier = ibis.models.Person(pk=from_global_id(value)[1]).notifier
         return qs.filter(notifier=notifier)
 
 
