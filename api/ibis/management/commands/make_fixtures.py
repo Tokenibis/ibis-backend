@@ -316,6 +316,7 @@ class Model:
             title,
             description,
             date,
+            duration,
             address,
             score,
     ):
@@ -341,6 +342,7 @@ class Model:
                 'rsvp': [],
                 'like': [],
                 'date': date,
+                'duration': duration,
                 'address': address,
                 'score': score,
             }
@@ -641,6 +643,7 @@ class Command(BaseCommand):
                     title,
                     markov.generate_markov_text(size=60),
                     date_next.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
+                    60,
                     address,
                     random.randint(0, 100),
                 ))
