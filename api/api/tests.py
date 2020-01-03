@@ -915,7 +915,6 @@ class APITestCase(GraphQLTestCase):
 
     # send money around randomly and make sure that balances agree at the end
     def test_money_dynamic(self):
-
         def deposit(user, amount):
             self._client.force_login(self.staff)
             result = json.loads(
@@ -1077,6 +1076,7 @@ class APITestCase(GraphQLTestCase):
     def test_notifications(self):
         def create_operation(op_name):
             variables = {'user': self.me.gid}
+            types = {}
 
             if op_name == 'FollowCreate':
                 variables['target'] = self.person.gid
@@ -1108,7 +1108,9 @@ class APITestCase(GraphQLTestCase):
                 variables['link'] = 'link'
                 variables['image'] = 'image'
                 variables['date'] = str(now())
+                variables['duration'] = 60
                 variables['address'] = 'address'
+                types['duration'] = 'Int!'
             elif op_name == 'PostCreate':
                 variables['description'] = 'description'
                 variables['title'] = 'title'
@@ -1132,7 +1134,9 @@ class APITestCase(GraphQLTestCase):
                     op_name=op_name,
                     op_type=op_name.replace('Create', ''),
                     op_lower=op_name.replace('Create', '').lower(),
-                    vt=' '.join('${}: String!'.format(x) for x in variables),
+                    vt=' '.join('${}: {}'.format(
+                        x, types[x] if x in types else 'String!')
+                                for x in variables),
                     vm=' '.join('{}: ${}'.format(x, x) for x in variables),
                 )
                 variables['user'] = self.nonprofit.gid

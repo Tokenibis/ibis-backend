@@ -249,6 +249,7 @@ class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
     image = models.TextField(validators=[MinLengthValidator(1)])
     address = models.TextField(validators=[MinLengthValidator(1)])
     date = models.DateTimeField()
+    duration = models.PositiveIntegerField()
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
