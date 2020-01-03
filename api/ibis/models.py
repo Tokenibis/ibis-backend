@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinLengthValidator
-from model_utils.models import TimeStampedModel, SoftDeletableModel
+from model_utils.models import TimeStampedModel
 
 from users.models import User
 
@@ -153,7 +153,7 @@ class Person(IbisUser):
         return sum([x.amount for x in Donation.objects.filter(user=self)])
 
 
-class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
+class Nonprofit(IbisUser, TimeStampedModel):
     class Meta:
         verbose_name = "Nonprofit"
 
@@ -189,7 +189,7 @@ class Nonprofit(IbisUser, TimeStampedModel, SoftDeletableModel):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
 
 
-class Entry(TimeStampedModel, SoftDeletableModel):
+class Entry(TimeStampedModel):
     class Meta:
         verbose_name = "Entry"
         verbose_name_plural = "Entries"
