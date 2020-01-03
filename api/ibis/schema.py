@@ -1317,6 +1317,11 @@ class IbisUserNode(UserNode):
     )
     following_count = graphene.Int()
     follower_count = graphene.Int()
+    following_count_person = graphene.String()
+    following_count_nonprofit = graphene.String()
+    follower_count_person = graphene.String()
+    follower_count_nonprofit = graphene.String()
+
     donation_to_count = graphene.Int()
     transaction_to_count = graphene.Int()
     news_count = graphene.Int()
@@ -1337,6 +1342,18 @@ class IbisUserNode(UserNode):
 
     def resolve_follower_count(self, *args, **kwargs):
         return self.follower.count()
+
+    def resolve_following_count_person(self, *args, **kwargs):
+        return len([x for x in self.following.all() if hasattr(x, 'person')])
+
+    def resolve_following_count_nonprofit(self, *args, **kwargs):
+        return len([x for x in self.following.all() if hasattr(x, 'nonprofit')])
+
+    def resolve_follower_count_person(self, *args, **kwargs):
+        return len([x for x in self.follower.all() if hasattr(x, 'person')])
+
+    def resolve_follower_count_nonprofit(self, *args, **kwargs):
+        return len([x for x in self.follower.all() if hasattr(x, 'nonprofit')])
 
     def resolve_donation_to_count(self, *args, **kwargs):
         return models.Donation.objects.filter(user__id=self.id).count()
