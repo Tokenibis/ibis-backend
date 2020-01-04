@@ -117,22 +117,21 @@ class PaymentView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
-        payment_id, amount = self.paypal_client.get_order(
+        payment_id, net, fee = self.paypal_client.get_order(
             request.data['orderID'])
 
-        if not (payment_id and amount):
+        if not (payment_id and net):
             print('Error fetching order information')
-            return {
+            return response.Response({
                 'depositID': '',
-            }
+            })
 
         user = IbisUser.objects.get(pk=request.user.id)
         deposit = Deposit.objects.create(
             user=user,
-            amount=amount,
-            payment_id='paypal:{}'.format(payment_id),
+            amount=net,
+            payment_id='paypal:{}:{}'.format(fee, payment_id),
         )
-        deposit.save()
 
         return response.Response({
             'depositID':

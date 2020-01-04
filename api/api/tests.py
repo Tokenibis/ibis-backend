@@ -52,6 +52,7 @@ class APITestCase(GraphQLTestCase):
         'BookmarkDelete',
         'CommentCreate',
         'CommentTree',
+        'Deposit',
         'DepositList',
         'Donation',
         'DonationCreate',
@@ -571,6 +572,17 @@ class APITestCase(GraphQLTestCase):
                 },
             ).content)
         success['CommentTree'] = 'errors' not in result and len(result) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['Deposit'],
+                op_name='Deposit',
+                variables={
+                    'id': person.gid,
+                },
+            ).content)
+        success['Deposit'] = 'errors' not in result and bool(
+            result['data']['person']['id'])
 
         result = json.loads(
             self.query(

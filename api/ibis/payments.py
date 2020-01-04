@@ -44,10 +44,25 @@ class PayPalClient:
             assert response.result.id == order_id, 'order id does not match'
 
             purchase = response.result.purchase_units[0]
+            srb = purchase.payments.captures[0].seller_receivable_breakdown
 
-            parts = purchase.amount.value.split('.')
-            amount = int(parts[0]) * 100 + int(parts[1])
-            assert amount > 0, 'invalid amount'
+            assert srb.paypal_fee.currency_code == 'USD', 'foreign currency'
+            assert srb.net_amount.currency_code == 'USD', 'foreign currency'
+            assert srb.gross_amount.currency_code == 'USD', 'foreign currency'
+
+            parts = srb.paypal_fee.value.split('.')
+            fee = int(parts[0]) * 100 + int(parts[1])
+            assert fee > 0, 'invalid fee amount'
+
+            parts = srb.net_amount.value.split('.')
+            net = int(parts[0]) * 100 + int(parts[1])
+            assert fee > 0, 'invalid net amount'
+
+            parts = srb.gross_amount.value.split('.')
+            gross = int(parts[0]) * 100 + int(parts[1])
+            assert fee > 0, 'invalid gross amount'
+
+            assert fee + net == gross, 'conversion error'
 
             payment_id = purchase.payments.captures[0].id
             assert payment_id, 'missing paypal TransactionID'
@@ -56,4 +71,4 @@ class PayPalClient:
             print('AssertionError while fetching PayPal order: {}'.format(e))
             return '', 0
 
-        return payment_id, amount
+        return payment_id, net, fee
