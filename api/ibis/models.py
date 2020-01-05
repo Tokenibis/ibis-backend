@@ -90,9 +90,8 @@ class IbisUser(User, Scoreable):
 
         return True
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         username_validator(self.username)
-        super(IbisUser, self).save(*args, **kwargs)
 
 
 class Valuable(models.Model):
