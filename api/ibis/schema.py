@@ -1049,9 +1049,9 @@ class NewsCreate(Mutation):
         user = graphene.ID(required=True)
         description = graphene.String(required=True)
         title = graphene.String(required=True)
-        link = graphene.String(required=True)
         image = graphene.String(required=True)
         score = graphene.Int()
+        link = graphene.String()
 
     news = graphene.Field(NewsNode)
 
@@ -1061,8 +1061,8 @@ class NewsCreate(Mutation):
             user,
             description,
             title,
-            link,
             image,
+            link='',
             score=0,
     ):
         if not info.context.user.is_staff:
@@ -1076,6 +1076,8 @@ class NewsCreate(Mutation):
             image=image,
             score=score,
         )
+        if link:
+            news.link = link
         news.save()
         return NewsCreate(news=news)
 
@@ -1191,11 +1193,11 @@ class EventCreate(Mutation):
         user = graphene.ID(required=True)
         description = graphene.String(required=True)
         title = graphene.String(required=True)
-        link = graphene.String(required=True)
         image = graphene.String(required=True)
         date = graphene.String(required=True)
         duration = graphene.Int(required=True)
         address = graphene.String(required=True)
+        link = graphene.String()
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -1206,11 +1208,11 @@ class EventCreate(Mutation):
             user,
             description,
             title,
-            link,
             image,
             date,
             duration,
             address,
+            link='',
             score=0,
     ):
         if not info.context.user.is_staff:
@@ -1227,6 +1229,8 @@ class EventCreate(Mutation):
             address=address,
             score=score,
         )
+        if link:
+            event.link = link
         event.save()
         return EventCreate(event=event)
 
