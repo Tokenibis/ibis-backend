@@ -237,7 +237,7 @@ class News(Entry, Likeable, Bookmarkable, Scoreable):
 
     title = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
-    link = models.TextField()
+    link = models.TextField(blank=True)
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
@@ -249,7 +249,7 @@ class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
     address = models.TextField(validators=[MinLengthValidator(1)])
     date = models.DateTimeField()
     duration = models.PositiveIntegerField()
-    link = models.TextField()
+    link = models.TextField(blank=True)
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)
