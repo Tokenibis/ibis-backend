@@ -1292,13 +1292,14 @@ class APITestCase(GraphQLTestCase):
             assert len(user.username) >= models.MIN_USERNAME_LEN
             assert re.sub(r'\W+', '', user.username) == user.username
 
+        person =models.Person.objects.create(
+            username='This is an INVALID @username',
+            email='invalid@example.com',
+            first_name='John',
+            last_name='Invalid',
+        )
         try:
-            models.Person.objects.create(
-                username='This is an INVALID @username',
-                email='invalid@example.com',
-                first_name='John',
-                last_name='Invalid',
-            )
+            person.clean()
             raise AssertionError
         except ValidationError:
             pass
