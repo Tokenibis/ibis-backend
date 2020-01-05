@@ -1,8 +1,44 @@
+import re
+
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from model_utils.models import TimeStampedModel
 
 from users.models import User
+
+MIN_USERNAME_LEN = 3
+MAX_USERNAME_LEN = 15
+
+
+def username_validator(value):
+    if type(value) != str:
+        raise ValidationError('{} is not a string'.format(value))
+
+    if len(value) < MIN_USERNAME_LEN or len(value) > MAX_USERNAME_LEN:
+        raise ValidationError('{} is not 3-15 characters long'.format(value))
+
+    if not (value.islower() and value.replace('_', '').isalnum()):
+        raise ValidationError(
+            '{} has non lower alphanumeric or \'_\' characters'.format(value))
+
+
+def generate_valid_username(first_name, last_name):
+    base = re.sub(
+        r'\W+', '', '{} {}'.format(first_name, last_name).strip().replace(
+            ' ', '_')).lower()[:MAX_USERNAME_LEN]
+
+    if len(base) < MIN_USERNAME_LEN:
+        base = '___'
+
+    name = base
+    index = 2
+
+    while IbisUser.objects.filter(username=name).exists():
+        suffix = '_{}'.format(index)
+        name = base[:MAX_USERNAME_LEN - len(suffix)] + suffix
+
+    return name
 
 
 class Scoreable(models.Model):
@@ -53,6 +89,10 @@ class IbisUser(User, Scoreable):
                 return entry.self.following.filter(pk=self.id).exists()
 
         return True
+
+    def save(self, *args, **kwargs):
+        username_validator(self.username)
+        super(IbisUser, self).save(*args, **kwargs)
 
 
 class Valuable(models.Model):

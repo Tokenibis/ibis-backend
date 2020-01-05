@@ -151,11 +151,12 @@ class Model:
     def add_nonprofit(self, title, description, category, score):
         pk = len(self.users) + 1
 
-        unique_title = title
+        unique_title = re.sub(r'\W+', '_', title).lower()[:15]
         i = 0
         while unique_title in [x['fields']['title'] for x in self.nonprofits]:
             i += 1
-            unique_title = '{} ({})'.format(title, i)
+            suffix = '_{}'.format(i)
+            unique_title = unique_title[:15 - len(suffix)] + suffix
 
         self.users.append({
             'model': 'users.User',
@@ -217,7 +218,7 @@ class Model:
 
     def add_person(self, first, last, score):
         pk = len(self.users) + 1
-        username = '{}_{}'.format('{}_{}'.format(first, last)[:10].lower(), pk)
+        username = '{}_{}_{}'.format(pk, first, last)[:15].lower()
 
         self.users.append({
             'model': 'users.User',

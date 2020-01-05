@@ -1,9 +1,11 @@
 import os
+import re
 import json
 import logging
 import random
 from django.utils.timezone import now, timedelta
 from django.core.management import call_command
+from django.core.exceptions import ValidationError
 from django.conf import settings
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
@@ -1282,3 +1284,39 @@ class APITestCase(GraphQLTestCase):
         delete_operation('FollowDelete', follow_id)
         delete_operation('LikeDelete', like_id)
         assert query_unseen() == 0
+
+    # makes sure the username validator + valid generator works as expected
+    def test_usernames(self):
+        for user in models.IbisUser.objects.all():
+            assert len(user.username) <= models.MAX_USERNAME_LEN
+            assert len(user.username) >= models.MIN_USERNAME_LEN
+            assert re.sub(r'\W+', '', user.username) == user.username
+
+        try:
+            models.Person.objects.create(
+                username='This is an INVALID @username',
+                email='invalid@example.com',
+                first_name='John',
+                last_name='Invalid',
+            )
+            raise AssertionError
+        except ValidationError:
+            pass
+
+        person1 = models.Person.objects.create(
+            username=models.generate_valid_username('Jane', 'Valid'),
+            email='invalid@example.com',
+            first_name='Jane',
+            last_name='Valid',
+        )
+
+        assert person1.username == 'jane_valid'
+
+        person2 = models.Person.objects.create(
+            username=models.generate_valid_username('Jane', 'Valid'),
+            email='invalid@example.com',
+            first_name='Jane',
+            last_name='Valid',
+        )
+
+        assert person2.username == 'jane_valid_2'

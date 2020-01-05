@@ -11,7 +11,7 @@ from users.models import User
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 
-from .models import IbisUser, Person, Deposit
+import ibis.models as models
 from .serializers import PaymentSerializer
 from .payments import PayPalClient
 
@@ -53,17 +53,22 @@ class LoginView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
-        exists = Person.objects.filter(id=request.user.id).exists()
+        exists = models.Person.objects.filter(id=request.user.id).exists()
         if not exists:
             social_accounts = SocialAccount.objects.filter(
                 user=request.user.id)
             assert len(social_accounts) == 1, \
-                    'New Ibis Users must be authenticated through social accounts'
+                'New Ibis Users must be authenticated through social accounts'
 
             social_account = social_accounts[0]
             user = User.objects.get(id=request.user.id)
-            person = Person(user_ptr_id=request.user.id)
+            person = models.Person(user_ptr_id=request.user.id)
             person.__dict__.update(user.__dict__)
+
+            person.username = models.generate_valid_username(
+                person.first_name,
+                person.last_name,
+            )
 
             if social_account.provider == 'facebook':
                 person.avatar = FB_AVATAR.format(social_account.uid)
@@ -98,7 +103,7 @@ class LogoutView(generics.GenericAPIView):
 
 class IdentifyView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
-        if Person.objects.filter(id=request.user.id).exists():
+        if models.Person.objects.filter(id=request.user.id).exists():
             user_id = to_global_id('PersonNode', str(request.user.id))
         else:
             user_id = ''
@@ -126,8 +131,8 @@ class PaymentView(generics.GenericAPIView):
                 'depositID': '',
             })
 
-        user = IbisUser.objects.get(pk=request.user.id)
-        deposit = Deposit.objects.create(
+        user = models.IbisUser.objects.get(pk=request.user.id)
+        deposit = models.Deposit.objects.create(
             user=user,
             amount=net,
             payment_id='paypal:{}:{}'.format(fee, payment_id),
