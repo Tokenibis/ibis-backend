@@ -18,6 +18,9 @@ class NotifierNode(DjangoObjectType):
     email_donation = graphene.Boolean()
     email_transaction = graphene.Boolean()
     email_like = graphene.Boolean()
+    email_news = graphene.Boolean()
+    email_event = graphene.Boolean()
+    email_post = graphene.Boolean()
 
     last_seen = graphene.String()
     unseen_count = graphene.Int()
@@ -51,6 +54,24 @@ class NotifierNode(DjangoObjectType):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_like
 
+    def resolve_email_news(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_news
+
+    def resolve_email_event(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_event
+
+    def resolve_email_post(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_post
+
     def resolve_last_seen(self, info, *args, **kwargs):
         if not (info.context.user.is_staff
                 or info.context.user.id == self.user.id):
@@ -80,6 +101,9 @@ class NotifierUpdate(Mutation):
         email_transaction = graphene.Boolean()
         email_comment = graphene.Boolean()
         email_like = graphene.Boolean()
+        email_news = graphene.Boolean()
+        email_event = graphene.Boolean()
+        email_post = graphene.Boolean()
         last_seen = graphene.String()
 
     notifier = graphene.Field(NotifierNode)
@@ -92,6 +116,9 @@ class NotifierUpdate(Mutation):
             email_transaction=None,
             email_comment=None,
             email_like=None,
+            email_news=None,
+            email_event=None,
+            email_post=None,
             last_seen='',
     ):
 
@@ -109,6 +136,12 @@ class NotifierUpdate(Mutation):
             notifier.email_comment = email_comment
         if type(email_like) == bool:
             notifier.email_like = email_like
+        if type(email_news) == bool:
+            notifier.email_news = email_news
+        if type(email_event) == bool:
+            notifier.email_event = email_event
+        if type(email_post) == bool:
+            notifier.email_post = email_post
         if last_seen:
             notifier.last_seen = last_seen
 

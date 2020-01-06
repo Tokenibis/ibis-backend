@@ -1206,6 +1206,16 @@ class APITestCase(GraphQLTestCase):
             assert 'errors' not in result
             return result['data']['person']['notifier']['unseenCount']
 
+        self.person.notifier.email_follow = True
+        self.person.notifier.email_transaction = True
+        self.person.notifier.email_comment = True
+        self.person.notifier.email_like = True
+        self.person.notifier.email_news = True
+        self.person.notifier.email_event = True
+        self.person.notifier.email_post = True
+
+        self.person.notifier.save()
+
         count = self.person.notifier.notification_set.all().count()
 
         models.Deposit.objects.create(

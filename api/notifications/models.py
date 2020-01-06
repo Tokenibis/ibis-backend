@@ -18,6 +18,9 @@ class Notifier(models.Model):
     email_transaction = models.BooleanField(default=True)
     email_comment = models.BooleanField(default=True)
     email_like = models.BooleanField(default=False)
+    email_news = models.BooleanField(default=False)
+    email_event = models.BooleanField(default=False)
+    email_post = models.BooleanField(default=False)
 
     last_seen = models.DateTimeField(
         default=localtime(now().replace(

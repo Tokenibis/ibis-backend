@@ -129,6 +129,15 @@ def handleNewsCreate(sender, instance, created, raw, **kwargs):
             description=description,
         )
 
+        if notifier.email_news:
+            email = Email.objects.create(
+                notification=notification,
+                subject=description,
+                body='TODO',
+                schedule=now(),
+            )
+            email.save()
+
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
 
@@ -159,6 +168,15 @@ def handleEventCreate(sender, instance, created, raw, **kwargs):
             description=description,
         )
 
+        if notifier.email_event:
+            email = Email.objects.create(
+                notification=notification,
+                subject=description,
+                body='TODO',
+                schedule=now(),
+            )
+            email.save()
+
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
 
@@ -188,6 +206,15 @@ def handlePostCreate(sender, instance, created, raw, **kwargs):
             ),
             description=description,
         )
+
+        if notifier.email_post:
+            email = Email.objects.create(
+                notification=notification,
+                subject=description,
+                body='TODO',
+                schedule=now(),
+            )
+            email.save()
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
