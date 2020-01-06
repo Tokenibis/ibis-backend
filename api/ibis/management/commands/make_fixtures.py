@@ -148,24 +148,24 @@ class Model:
 
         return pk
 
-    def add_nonprofit(self, title, description, category, score):
+    def add_nonprofit(self, name, description, category, score):
         pk = len(self.users) + 1
 
-        unique_title = re.sub(r'\W+', '_', title).lower()[:15]
+        unique_name = re.sub(r'\W+', '_', name).lower()[:15]
         i = 0
-        while unique_title in [x['fields']['title'] for x in self.nonprofits]:
+        while unique_name in [x['fields']['last_name'] for x in self.users]:
             i += 1
             suffix = '_{}'.format(i)
-            unique_title = unique_title[:15 - len(suffix)] + suffix
+            unique_name = unique_name[:15 - len(suffix)] + suffix
 
         self.users.append({
             'model': 'users.User',
             'pk': pk,
             'fields': {
-                'username': unique_title,
-                'first_name': unique_title,
-                'last_name': '',
-                'email': '{}@example.com'.format(unique_title),
+                'username': unique_name,
+                'first_name': '',
+                'last_name': unique_name,
+                'email': '{}@example.com'.format(unique_name),
             }
         })
 
@@ -173,7 +173,7 @@ class Model:
             'model': 'ibis.IbisUser',
             'pk': pk,
             'fields': {
-                'avatar': BIRDS.format(hash(title) % BIRDS_LEN),
+                'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
                 'score': score,
             },
         })
@@ -182,10 +182,9 @@ class Model:
             'model': 'ibis.Nonprofit',
             'pk': pk,
             'fields': {
-                'title': unique_title,
                 'category': category,
                 'description': description,
-                'link': 'https://{}.org'.format(title.replace(' ', '_')),
+                'link': 'https://{}.org'.format(unique_name.replace(' ', '_')),
             }
         })
 
@@ -514,7 +513,7 @@ class Command(BaseCommand):
             np_cat_raw = json.load(fd)
 
         with open(os.path.join(DIR, 'data/nonprofits.json')) as fd:
-            np_raw = sorted(json.load(fd), key=lambda x: x['title'])
+            np_raw = sorted(json.load(fd), key=lambda x: x['name'])
 
         with open(os.path.join(DIR, 'data/names.txt')) as fd:
             people_raw = [x.strip().split(' ') for x in fd.readlines()]
@@ -556,7 +555,7 @@ class Command(BaseCommand):
         # make nonprofits from scraped list of real nonprofits
         nonprofits = [
             model.add_nonprofit(
-                x['title'],
+                x['name'],
                 x['description'],
                 random.choice(nonprofit_categories),
                 random.randint(0, 100),

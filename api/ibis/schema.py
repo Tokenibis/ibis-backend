@@ -1222,7 +1222,6 @@ class EventCreate(Mutation):
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
-            link=link,
             image=image,
             date=dateutil.parser.parse(date),
             duration=duration,
@@ -1596,9 +1595,9 @@ class NonprofitCreate(Mutation):
     class Arguments:
         username = graphene.String(required=True)
         email = graphene.String(required=True)
-        title = graphene.String(required=True)
         category = graphene.ID(required=True)
         description = graphene.String(required=True)
+        last_name = graphene.String(required=True)
         link = graphene.String(required=True)
         score = graphene.Int()
 
@@ -1609,9 +1608,9 @@ class NonprofitCreate(Mutation):
             info,
             username,
             email,
-            title,
             category,
             description,
+            last_name,
             link,
             score=0,
     ):
@@ -1621,9 +1620,8 @@ class NonprofitCreate(Mutation):
         nonprofit = models.Nonprofit.objects.create(
             username=username,
             email=email,
-            first_name=title,
-            last_name='',
-            title=title,
+            first_name='',
+            last_name=last_name,
             description=description,
             link=link,
             category=models.NonprofitCategory.objects.get(
@@ -1639,9 +1637,9 @@ class NonprofitUpdate(Mutation):
         id = graphene.ID(required=True)
         username = graphene.String()
         email = graphene.String()
-        title = graphene.String()
         category = graphene.ID()
         description = graphene.String()
+        last_name = graphene.String()
         link = graphene.String()
         score = graphene.Int()
 
@@ -1653,9 +1651,9 @@ class NonprofitUpdate(Mutation):
             id,
             username='',
             email='',
-            title='',
             category=None,
             description='',
+            last_name='',
             link='',
             score=0,
     ):
@@ -1667,9 +1665,8 @@ class NonprofitUpdate(Mutation):
             nonprofit.username = username
         if email:
             nonprofit.email = email
-        if title:
-            nonprofit.title = title
-            nonprofit.first_name = title
+        if last_name:
+            nonprofit.last_name = last_name
         if category:
             nonprofit.category = models.NonprofitCategory.objects.get(
                 pk=from_global_id(category)[1])

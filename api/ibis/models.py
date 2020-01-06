@@ -196,7 +196,6 @@ class Nonprofit(IbisUser, TimeStampedModel):
     class Meta:
         verbose_name = "Nonprofit"
 
-    title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
     category = models.ForeignKey(
         NonprofitCategory,
         on_delete=models.CASCADE,
@@ -211,9 +210,6 @@ class Nonprofit(IbisUser, TimeStampedModel):
         through='Donation',
         symmetrical=False,
     )
-
-    def __str__(self):
-        return self.title
 
     def balance(self):
         deposit = sum([ex.amount for ex in self.deposit_set.all()])
