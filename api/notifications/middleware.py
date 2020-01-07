@@ -13,7 +13,7 @@ def handleFollowCreate(variables, data):
         notifier = ibis.Person.objects.get(
             pk=from_global_id(variables['target'])[1]).notifier
     except ObjectDoesNotExist:
-        print('ERROR: notification received a bad input')
+        # target of follow is probably a nonprofit; just drop silently
         return
 
     description = '{} started following you'.format(str(user))
