@@ -1395,7 +1395,7 @@ class PersonNode(IbisUserNode, UserNode):
     visibility_donation = graphene.String()
     visibility_transaction = graphene.String()
 
-    transaction_to_count = graphene.Int()
+    transaction_from_count = graphene.Int()
 
     class Meta:
         model = models.Person
