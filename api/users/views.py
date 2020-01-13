@@ -64,7 +64,7 @@ class Login(APIView):
         view.request = request
         view.adapter = adapter
         client = view.get_client(request, app)
-        action = AuthAction.REAUTHENTICATE
+        action = AuthAction.AUTHENTICATE
         auth_params = provider.get_auth_params(request, action)
         client.state = SocialLogin.stash_state(request)
         url = client.get_redirect_url(adapter.authorize_url, auth_params)
