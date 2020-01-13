@@ -4,12 +4,13 @@ import random
 import json
 import requests
 
-from django.contrib.auth import logout
+from django.contrib.auth import login, logout
 from django.conf import settings
 from rest_framework import generics, response, exceptions, serializers
 from users.models import User
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
+from django.utils.timezone import localtime, now
 
 import ibis.models as models
 from .serializers import PaymentSerializer
@@ -17,6 +18,7 @@ from .payments import PayPalClient
 
 QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
+ANONYMOUS_AVATAR = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/miscellaneous/confused_robot.jpg'
 
 
 class QuoteView(generics.GenericAPIView):
@@ -82,6 +84,44 @@ class LoginView(generics.GenericAPIView):
         return response.Response({
             'user_id':
             to_global_id('PersonNode', str(request.user.id)),
+            'is_new_account':
+            not exists,
+        })
+
+
+class AnonymousLoginView(generics.GenericAPIView):
+    serializer_class = serializers.Serializer
+
+    def post(self, request, *args, **kwargs):
+        exists = models.Person.objects.filter(username='anonymous').exists()
+        if not exists:
+            person = models.Person.objects.create(
+                username='anonymous',
+                email='anonymous@example.com',
+                first_name='Anonymous',
+                last_name='Robot',
+                avatar=ANONYMOUS_AVATAR,
+            )
+
+        else:
+            person = models.Person.objects.get(username='anonymous')
+
+        login(request, person.user_ptr)
+
+        person.date_joined = localtime(now().replace(
+            year=2019,
+            month=4,
+            day=5,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        ))
+        person.save()
+
+        return response.Response({
+            'user_id':
+            to_global_id('PersonNode', str(person.user_ptr.id)),
             'is_new_account':
             not exists,
         })

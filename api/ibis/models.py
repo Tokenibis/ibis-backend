@@ -9,6 +9,7 @@ from users.models import User
 
 MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 15
+RESERVED_USERNAMES = ['admin', 'anonymous']
 
 
 def username_validator(value):
@@ -21,6 +22,9 @@ def username_validator(value):
     if not (value.islower() and value.replace('_', '').isalnum()):
         raise ValidationError(
             '{} has non lower alphanumeric or \'_\' characters'.format(value))
+
+    if value in RESERVED_USERNAMES:
+        raise ValidationError('{} is a reserved username'.format(value))
 
 
 def generate_valid_username(first_name, last_name):
