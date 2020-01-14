@@ -11,6 +11,10 @@ def scoreFundraisedDescending(sender, instance, created, **kwargs):
     nonprofits = list(models.Nonprofit.objects.all())
     nonprofits.sort(key=lambda x: x.fundraised(), reverse=True)
     for i, nonprofit in enumerate(nonprofits):
+        if settings.SCORE_NONPROFIT_IGNORE and \
+           nonprofit.username in settings.SCORE_NONPROFIT_IGNORE:
+            continue
+
         if nonprofit.score != i:
             nonprofit.score = i
             nonprofit.save()
