@@ -228,3 +228,7 @@ REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(CONF['ibis']['app'])
 
 REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
     CONF['ibis']['app'])
+
+SCORE_NONPROFIT = 'fundraised_descending'
+
+SCORE_NONPROFT_IGNORE = 'tokenibis'
