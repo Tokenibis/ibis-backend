@@ -15,8 +15,8 @@ def scoreFundraisedDescending(sender, instance, created, **kwargs):
            nonprofit.username in settings.SCORE_NONPROFIT_IGNORE:
             continue
 
-        if nonprofit.score != i:
-            nonprofit.score = i
+        if nonprofit.score != i + len(settings.SCORE_NONPROFIT_IGNORE):
+            nonprofit.score = i + len(settings.SCORE_NONPROFIT_IGNORE)
             nonprofit.save()
 
 
