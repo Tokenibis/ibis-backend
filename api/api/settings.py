@@ -231,4 +231,4 @@ REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
 
 SCORE_NONPROFIT = 'fundraised_descending'
 
-SCORE_NONPROFIT_IGNORE = 'tokenibis'
+SCORE_NONPROFIT_IGNORE = ['tokenibis', 'oneabq']
