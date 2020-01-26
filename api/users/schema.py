@@ -2,7 +2,6 @@ import graphene
 
 from graphene import relay
 from graphene_django import DjangoObjectType
-from graphene_django.filter import DjangoFilterConnectionField
 from allauth.socialaccount.models import SocialAccount
 
 import users.models as models
@@ -25,4 +24,3 @@ class UserNode(DjangoObjectType):
 
 class Query(object):
     user = relay.Node.Field(UserNode)
-    all_users = DjangoFilterConnectionField(UserNode)

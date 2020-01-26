@@ -11,7 +11,6 @@ from users.models import User
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import localtime, now
-from rest_framework.views import APIView
 
 import ibis.models as models
 from .serializers import PasswordLoginSerializer, PaymentSerializer
