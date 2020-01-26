@@ -4,16 +4,17 @@ import random
 import json
 import requests
 
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
 from rest_framework import generics, response, exceptions, serializers
 from users.models import User
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import localtime, now
+from rest_framework.views import APIView
 
 import ibis.models as models
-from .serializers import PaymentSerializer
+from .serializers import PasswordLoginSerializer, PaymentSerializer
 from .payments import PayPalClient
 
 QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
@@ -87,6 +88,25 @@ class LoginView(generics.GenericAPIView):
             'is_new_account':
             not exists,
         })
+
+
+class PasswordLoginView(generics.GenericAPIView):
+    serializer_class = PasswordLoginSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail="No valid values")
+
+        user = authenticate(
+            username=request.data['username'],
+            password=request.data['password'],
+        )
+        if user is not None:
+            login(request, user)
+            return response.Response({'success': True})
+        else:
+            return response.Response({'success': False})
 
 
 class AnonymousLoginView(generics.GenericAPIView):
