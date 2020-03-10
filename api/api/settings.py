@@ -124,7 +124,7 @@ TEMPLATES = [
     },
 ]
 
-TIME_ZONE = 'MST'
+TIME_ZONE = 'America/Denver'
 
 USE_I18N = True
 
