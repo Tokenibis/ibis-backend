@@ -11,3 +11,4 @@ django-annoying
 graphene_django
 python-dateutil
 paypal-checkout-serversdk
+ftfy

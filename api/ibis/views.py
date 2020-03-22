@@ -3,6 +3,7 @@ import sys
 import random
 import json
 import requests
+import ftfy
 
 from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
@@ -27,9 +28,9 @@ class QuoteView(generics.GenericAPIView):
         obj = json.loads(result.text.replace('\\\'', '\'')[2:-1])
         return response.Response({
             'quote':
-            obj['quoteText'],
+            ftfy.fix_text(obj['quoteText']),
             'author':
-            obj['quoteAuthor'] if obj['quoteAuthor'] else 'Unknown',
+            ftfy.fix_text(obj['quoteAuthor']) if obj['quoteAuthor'] else 'Unknown',
         })
 
 
