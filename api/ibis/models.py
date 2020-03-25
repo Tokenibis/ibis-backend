@@ -36,9 +36,10 @@ def generate_valid_username(first_name, last_name):
         base = '___'
 
     name = base
-    index = 2
+    index = 1
 
     while IbisUser.objects.filter(username=name).exists():
+        index += 1
         suffix = '_{}'.format(index)
         name = base[:MAX_USERNAME_LEN - len(suffix)] + suffix
 
