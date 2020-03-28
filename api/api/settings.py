@@ -101,6 +101,10 @@ MIDDLEWARE = [
     'tracker.middleware.TrackerMiddleware',
 ]
 
+REST_FRAMEWORK = {
+  'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+}
+
 ROOT_URLCONF = 'api.urls'
 
 # SECURITY WARNING: keep the secret key used in production secret!
