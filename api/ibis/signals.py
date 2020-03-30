@@ -37,7 +37,12 @@ if settings.SIGNAL_SCORE_NONPROFIT:
 
 
 def createPersonInitialUbp(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+    if raw:
+        return
+
+    if not created and [
+            x for x in instance.deposit_set.all() if 'ubp' in x.payment_id
+    ]:
         return
 
     try:
