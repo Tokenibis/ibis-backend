@@ -11,6 +11,7 @@ api/notifications/migrations
 
 api/ibis/fixtures
 
+env
 lib
 bin
 include
