@@ -1,0 +1,7 @@
+[
+  {
+    "subject": "UBP",
+    "body": "Hello {user},\n\nJust wanted to confirm that you've made a deposit of <amount>. To see\nall deposits, got here <link>\n\nIf you did not do this, please email us at info@tokenibis.org\n",
+    "html": ""
+  }
+]

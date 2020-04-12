@@ -1,0 +1,7 @@
+[
+  {
+    "subject": "Comment",
+    "body": "Hello {user},\n\n{sender} left the following comment for you: <comment>.\n\nSee or like the response at <link>.\n\nThanks, the Token Ibis Team",
+    "html": ""
+  }
+]

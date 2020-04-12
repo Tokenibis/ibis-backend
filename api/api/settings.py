@@ -46,6 +46,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+CRON_CLASSES = [
+    'notifications.crons.EmailNotificationCron',
+]
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -67,7 +71,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django_extensions',
+    'django_cron',
     'annoying',
+    'crispy_forms',
     'rest_framework',
     'rest_framework_swagger',
     'rest_framework.authtoken',
@@ -91,6 +97,7 @@ LANGUAGE_CODE = 'en-us'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'api.middleware.AuthenticateAllMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -102,7 +109,7 @@ MIDDLEWARE = [
 ]
 
 REST_FRAMEWORK = {
-  'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 }
 
 ROOT_URLCONF = 'api.urls'
@@ -212,6 +219,8 @@ EMAIL_HOST_USER = CONF['email']['user']
 
 EMAIL_PORT = CONF['email']['port']
 
+EMAIL_DELAY = 1  # minutes
+
 EMAIL_USE_TLS = True
 
 MAX_TRANSFER = 10000
@@ -228,9 +237,12 @@ PAYPAL_LIVE_CLIENT_ID = CONF['payment']['paypal']['live']['client_id']
 
 PAYPAL_LIVE_SECRET_KEY = CONF['payment']['paypal']['live']['secret_key']
 
+REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
+    CONF['ibis']['app'])
+
 REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(CONF['ibis']['app'])
 
-REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
+REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
     CONF['ibis']['app'])
 
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'

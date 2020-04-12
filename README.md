@@ -1,8 +1,6 @@
 # Ibis Backend API
 
-This is the application backend for the Token Ibis application. It is
-implemented as a REST API using the Django REST framework. Currently,
-the default database backend is SQLite.
+This is the Django backend for the Token Ibis application.
 
 __This code is currently in BETA__
 
@@ -12,25 +10,30 @@ __This code is currently in BETA__
 
 `$ sudo apt install graphviz-dev`
 
-`$ pip3 install pipenv`
+`$ sudo apt install python3.6-venv`
 
 ## Setup
 
-Please ensure that your environment is set up to run python 3
+Please ensure that your environment is set up to run python 3.6 or
+higher.
+
+
 
 `$ git submodule init`
 
 `$ git submodule update`
 
-`$ virtualenv ibis-backend`
-
 `$ cd ibis-backend`
 
-`$ pip3 install -r requirements.txt --user`
+`$ python3.6 -m venv env`
+
+`$ source env/bin/activate`
+
+`$ pip install -r requirements.txt`
 
 `$ cd api`
 
-`$ python3 manage.py test`
+`$ python manage.py test`
 
 ### Option 1 - Load Fixtures
 
@@ -44,13 +47,13 @@ Please ensure that your environment is set up to run python 3
 
 `$ cd ibis-backend/api`
 
-`$ python3 manage.py createsuperuser`
+`$ python manage.py createsuperuser`
 
 ## Run - Development
 
 `$ cd ibis-backend/api`
 
-`$ python3 manage.py runserver`
+`$ python manage.py runserver`
 
 ## Explore
 
@@ -60,7 +63,7 @@ To produce a visualization of model, execute the following commands
 
 `$ cd ibis-backend/api`
 
-`$ python3 manage.py graph_models -a -o ibis_models.png`
+`$ python manage.py graph_models -a -o ibis_models.png`
 
 ## License
 

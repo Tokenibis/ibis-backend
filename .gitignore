@@ -17,3 +17,5 @@ bin
 include
 api/static
 config.json
+
+*.log

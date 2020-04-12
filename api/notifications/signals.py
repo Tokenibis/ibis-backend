@@ -1,13 +1,102 @@
-from django.utils.timezone import now
+import os
+import json
+import random
+
+from django.utils.timezone import now, timedelta
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.conf import settings
 from graphql_relay.node.node import to_global_id
 
 from notifications.models import Notification, Email
 
 import ibis.models
 
+DIR = os.path.dirname(os.path.realpath(__file__))
+
+with open(os.path.join(DIR, 'emails/welcome.json')) as fd:
+    welcome_templates = json.load(fd)
+
+with open(os.path.join(DIR, 'emails/deposit.json')) as fd:
+    deposit_templates = json.load(fd)
+
+with open(os.path.join(DIR, 'emails/ubp.json')) as fd:
+    ubp_templates = json.load(fd)
+
+with open(os.path.join(DIR, 'emails/transaction.json')) as fd:
+    transaction_templates = json.load(fd)
+
+with open(os.path.join(DIR, 'emails/comment.json')) as fd:
+    comment_templates = json.load(fd)
+
 # --- Signals --------------------------------------------------------------- #
+
+
+@receiver(post_save, sender=ibis.models.Deposit)
+def handleDepositCreate(sender, instance, created, raw, **kwargs):
+    if raw or not created:
+        return
+
+    user = instance.user.person
+    notifier = instance.user.notifier
+
+    if instance.payment_id.split(':')[0] == 'ubp':
+        description = 'You have a fresh ${:.2f} waiting for you'.format(
+            instance.amount / 100)
+
+        notification = Notification.objects.create(
+            notifier=notifier,
+            category=Notification.UBP_DISTRIBUTION,
+            reference='{}:{}'.format(
+                ibis.models.Deposit.__name__,
+                to_global_id('DepositNode', instance.id),
+            ),
+            deduper='deposit:{}'.format(instance.id),
+            description=description,
+        )
+
+        template = random.choice(ubp_templates)
+
+        if notifier.email_ubp:
+            Email.objects.create(
+                notification=notification,
+                subject=template['subject'].format(user=str(user)),
+                body=template['body'].format(user=str(user)),
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+            )
+    else:
+        description = 'Your deposit of ${:.2f} was successful'.format(
+            instance.amount / 100)
+
+        notification = Notification.objects.create(
+            notifier=notifier,
+            category=Notification.SUCCESSFUL_DEPOSIT,
+            reference='{}:{}'.format(
+                ibis.models.Deposit.__name__,
+                to_global_id('DepositNode', instance.id),
+            ),
+            deduper='deposit:{}'.format(instance.id),
+            description=description,
+            clicked=True,  # the user should have seen the deposit
+        )
+
+        template = random.choice(deposit_templates)
+
+        if notifier.email_deposit:
+            Email.objects.create(
+                notification=notification,
+                subject=template['subject'].format(user=str(user)),
+                body=template['body'].format(user=str(user)),
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+            )
+
+    Notification.objects.filter(deduper=notification.deduper).exclude(
+        pk=notification.id).delete()
+
+
+# @receiver(post_save, sender=ibis.models.IbisUser)
+# def handleLikeCreate(sender, instance, created, raw, **kwargs):
+#     print(instance.tracker.changed())
 
 
 @receiver(post_save, sender=ibis.models.Transaction)
@@ -34,14 +123,15 @@ def handleTransactionCreate(sender, instance, created, raw, **kwargs):
         description=description,
     )
 
+    template = random.choice(transaction_templates)
+
     if notifier.email_transaction:
-        email = Email.objects.create(
+        Email.objects.create(
             notification=notification,
-            subject=description,
-            body='TODO',
-            schedule=now(),
+            subject=template['subject'].format(user=str(user)),
+            body=template['body'].format(user=str(user)),
+            schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
         )
-        email.save()
 
     Notification.objects.filter(deduper=notification.deduper).exclude(
         pk=notification.id).delete()
@@ -75,14 +165,18 @@ def handleCommentCreate(sender, instance, created, raw, **kwargs):
                     description=description,
                 )
                 notifications.append(notification)
+
+                template = random.choice(comment_templates)
+
                 if notifier.email_comment:
-                    email = Email.objects.create(
+                    Email.objects.create(
                         notification=notification,
-                        subject=description,
-                        body='TODO',
-                        schedule=now(),
+                        subject=template['subject'].format(user=str(user)),
+                        body=template['body'].format(user=str(user)),
+                        schedule=now() +
+                        timedelta(minutes=settings.EMAIL_DELAY),
                     )
-                    email.save()
+
         current = parent
 
     for Subclass in ibis.models.Entry.__subclasses__():
@@ -130,13 +224,12 @@ def handleNewsCreate(sender, instance, created, raw, **kwargs):
         )
 
         if notifier.email_news:
-            email = Email.objects.create(
+            Email.objects.create(
                 notification=notification,
                 subject=description,
                 body='TODO',
-                schedule=now(),
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
             )
-            email.save()
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
@@ -169,13 +262,12 @@ def handleEventCreate(sender, instance, created, raw, **kwargs):
         )
 
         if notifier.email_event:
-            email = Email.objects.create(
+            Email.objects.create(
                 notification=notification,
                 subject=description,
                 body='TODO',
-                schedule=now(),
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
             )
-            email.save()
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
@@ -208,13 +300,12 @@ def handlePostCreate(sender, instance, created, raw, **kwargs):
         )
 
         if notifier.email_post:
-            email = Email.objects.create(
+            Email.objects.create(
                 notification=notification,
                 subject=description,
                 body='TODO',
-                schedule=now(),
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
             )
-            email.save()
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()

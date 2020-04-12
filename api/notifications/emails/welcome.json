@@ -1,0 +1,7 @@
+[
+  {
+    "subject": "Welcome!",
+    "body": "Hello {user},\n\nwelcome to the token ibis app.\n\nYou can do these things:\n- thing 1\n- thing 2\n- thing 3\n\nyou can check out more stuff at \n- stuff 1\n- stuff 2\n- stuff 3\n\nyou can unsubscribe at any time on app at <unsubscribe_app> or <unsubscribe_link>.",
+    "html": ""
+  }
+]

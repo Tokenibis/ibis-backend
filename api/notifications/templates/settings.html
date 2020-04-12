@@ -1,0 +1,12 @@
+{% extends 'notifier.html' %}
+{% block content %}
+{% load crispy_forms_tags %}
+<h2 class="mt-2">Update Email Settings</h2>
+<hr class="mt-0 mb-4">
+<form method="post">
+  {% csrf_token %}
+  {{ form|crispy }}
+  <button style="margin-top: 20px; background-color: #84ab3f;"
+  type="submit" class="btn btn-success">Save Settings</button>
+</form>
+{% endblock %}

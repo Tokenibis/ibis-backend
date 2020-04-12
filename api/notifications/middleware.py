@@ -1,10 +1,18 @@
+import os
 import json
-from django.utils.timezone import now
+
+from django.utils.timezone import now, timedelta
 from graphql_relay.node.node import from_global_id, to_global_id
-from notifications.models import Notification, Email
 from django.core.exceptions import ObjectDoesNotExist
+from django.conf import settings
 
 import ibis.models as ibis
+from notifications.models import Notification, Email
+
+DIR = os.path.dirname(os.path.realpath(__file__))
+
+with open(os.path.join(DIR, 'emails/follow.json')) as fd:
+    follow_template = json.load(fd)
 
 
 def handleFollowCreate(variables, data):
@@ -31,16 +39,14 @@ def handleFollowCreate(variables, data):
         ),
         description=description,
     )
-    notification.save()
 
     if notifier.email_follow:
-        email = Email.objects.create(
+        Email.objects.create(
             notification=notification,
-            subject=description,
-            body='TODO',
-            schedule=now(),
+            subject=follow_template['subject'].format(user=str(user)),
+            body=follow_template['body'].format(user=str(user)),
+            schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
         )
-        email.save()
 
     Notification.objects.filter(deduper=notification.deduper).exclude(
         pk=notification.id).delete()
@@ -80,13 +86,12 @@ def handleLikeCreate(variables, data):
     notification.save()
 
     if notifier.email_like:
-        email = Email.objects.create(
+        Email.objects.create(
             notification=notification,
             subject=description,
             body='TODO',
-            schedule=now(),
+            schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
         )
-        email.save()
 
     Notification.objects.filter(deduper=notification.deduper).exclude(
         pk=notification.id).delete()
@@ -97,8 +102,7 @@ def handleFollowDelete(variables, data):
         deduper='follow:{}:{}'.format(
             from_global_id(variables['user'])[1],
             from_global_id(variables['target'])[1],
-        ),
-    ).delete()
+        ), ).delete()
 
 
 def handleLikeDelete(variables, data):
@@ -106,8 +110,7 @@ def handleLikeDelete(variables, data):
         deduper='like:{}:{}'.format(
             from_global_id(variables['user'])[1],
             from_global_id(variables['target'])[1],
-        ),
-    ).delete()
+        ), ).delete()
 
 
 switcher = {

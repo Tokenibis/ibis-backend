@@ -12,4 +12,5 @@ urlpatterns = [
     path('accounts/', include('allauth.urls'), name='socialaccount_signup'),
     path('ibis/', include('ibis.urls')),
     path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path('notifications/', include('notifications.urls')),
 ]

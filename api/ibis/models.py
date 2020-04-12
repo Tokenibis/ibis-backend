@@ -4,6 +4,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from model_utils.models import TimeStampedModel
+from model_utils import FieldTracker
 
 from users.models import User
 
@@ -64,6 +65,8 @@ class IbisUser(User, Scoreable):
         blank=True,
     )
     avatar = models.TextField(validators=[MinLengthValidator(1)])
+
+    tracker = FieldTracker()
 
     def __str__(self):
         return '{}{}{}'.format(

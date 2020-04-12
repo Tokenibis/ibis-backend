@@ -1,0 +1,7 @@
+[
+  {
+    "subject": "Transaction",
+    "body": "Hello {user},\n\nsend <sender> sent <amount> to you, with a comment that says {comment}. Check it out at <link>.\n\nYou can unsubscribe at any time on app at <unsubscribe_app> or <unsubscribe_link>.",
+    "html": ""
+  }
+]

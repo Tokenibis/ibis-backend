@@ -1,6 +1,8 @@
 from django.db import models
+from django.urls import reverse
 from django.core.validators import MinLengthValidator
 from django.utils.timezone import localtime, now
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 
@@ -14,13 +16,45 @@ class Notifier(models.Model):
         primary_key=True,
     )
 
-    email_follow = models.BooleanField(default=True)
-    email_transaction = models.BooleanField(default=True)
-    email_comment = models.BooleanField(default=True)
-    email_like = models.BooleanField(default=False)
-    email_news = models.BooleanField(default=False)
-    email_event = models.BooleanField(default=False)
-    email_post = models.BooleanField(default=False)
+    WEEKLY = 'WE'
+    DAILY = 'DA'
+    INSTANTLY = 'IN'
+    NEVER = 'NE'
+
+    FREQUENCY = (
+        (WEEKLY, 'weekly'),
+        (DAILY, 'daily'),
+        (INSTANTLY, 'instantly'),
+        (NEVER, 'never'),
+    )
+
+    email_follow = models.BooleanField(
+        verbose_name='follow',
+        default=True,
+    )
+    email_transaction = models.BooleanField(
+        verbose_name='transaction',
+        default=True,
+    )
+    email_comment = models.BooleanField(
+        verbose_name='comment',
+        default=True,
+    )
+    email_ubp = models.BooleanField(
+        verbose_name='ubp',
+        default=True,
+    )
+    email_deposit = models.BooleanField(verbose_name='deposit', default=True)
+    email_like = models.BooleanField(
+        verbose_name='like',
+        default=False,
+    )
+    email_feed = models.CharField(
+        verbose_name='feed',
+        max_length=2,
+        choices=FREQUENCY,
+        default=WEEKLY,
+    )
 
     last_seen = models.DateTimeField(
         default=localtime(now().replace(
@@ -36,11 +70,36 @@ class Notifier(models.Model):
     def unseen_count(self):
         return self.notification_set.filter(created__gt=self.last_seen).count()
 
+    def _create_link(self, link):
+        username, token = self.TimestampSigner().sign(
+            self.user.username).split(":", 1)
+        return reverse(
+            link, kwargs={
+                'pk': self.pk,
+                'token': token,
+            })
+
+    def create_settings_link(self):
+        return self._create_link('settings')
+
+    def create_unsubscribe_link(self):
+        return self._create_link('unsubscribe')
+
+    def check_link_token(self, token):
+        try:
+            key = '%s:%s' % (self.user.username, token)
+            TimestampSigner().unsign(
+                key, max_age=60 * 60 * 48)  # Valid for 2 days
+        except (BadSignature, SignatureExpired):
+            return False
+        return True
+
 
 class Notification(TimeStampedModel):
 
     GENERAL_ANNOUNCEMENT = 'GA'
     UBP_DISTRIBUTION = 'UD'
+    SUCCESSFUL_DEPOSIT = 'SD'
     RECEIVED_FOLLOW = 'RF'
     RECEIVED_TRANSACTION = 'RT'
     RECEIVED_COMMENT = 'RC'
@@ -53,6 +112,7 @@ class Notification(TimeStampedModel):
     NOTIFICATION_CATEGORY = (
         (GENERAL_ANNOUNCEMENT, 'General Announcement'),
         (UBP_DISTRIBUTION, 'UBP Distribution'),
+        (SUCCESSFUL_DEPOSIT, 'Successful Deposit'),
         (RECEIVED_FOLLOW, 'Received Follow'),
         (RECEIVED_TRANSACTION, 'Received Transaction'),
         (RECEIVED_COMMENT, 'Received Comment'),
@@ -78,6 +138,18 @@ class Notification(TimeStampedModel):
 
 
 class Email(models.Model):
+
+    SCHEDULED = 'SC'
+    ATTEMPTING = 'SC'
+    FAILED = 'FA'
+    SUCCEEDED = 'SU'
+
+    EMAIL_STATUS = (
+        (SCHEDULED, 'Scheduled'),
+        (FAILED, 'Failed'),
+        (SUCCEEDED, 'Succeeded'),
+    )
+
     notification = models.ForeignKey(
         Notification,
         on_delete=models.CASCADE,
@@ -86,5 +158,8 @@ class Email(models.Model):
     subject = models.TextField()
     body = models.TextField()
     schedule = models.DateTimeField()
-
-
+    status = models.CharField(
+        max_length=2,
+        choices=EMAIL_STATUS,
+        default=SCHEDULED,
+    )
