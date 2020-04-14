@@ -22,7 +22,7 @@ class EmailNotificationCron(CronJobBase):
                 elif email.schedule < now():
                     email.status = Email.ATTEMPTING
                     destination = email.notification.notifier.user.email
-                    if destination.split('@') == 'example.com':
+                    if destination.split('@')[-1] == 'example.com':
                         print('Processed fake email to {}'.format(destination))
                         email.status = Email.SUCCEEDED
                     else:
