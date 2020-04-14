@@ -16,6 +16,7 @@ class NotifierNode(DjangoObjectType):
 
     email_follow = graphene.Boolean()
     email_transaction = graphene.Boolean()
+    email_donation = graphene.Boolean()
     email_comment = graphene.Boolean()
     email_ubp = graphene.Boolean()
     email_deposit = graphene.Boolean()
@@ -37,6 +38,12 @@ class NotifierNode(DjangoObjectType):
         return self.email_following
 
     def resolve_email_transaction(self, info, *args, **kwargs):
+        if not (info.context.user.is_staff
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_transaction
+
+    def resolve_email_donation(self, info, *args, **kwargs):
         if not (info.context.user.is_staff
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')

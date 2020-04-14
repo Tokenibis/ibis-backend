@@ -527,8 +527,7 @@ class DepositUpdate(Mutation):
                 pk=from_global_id(user)[1])
         if amount:
             try:
-                assert hasattr(deposit.user, 'person')
-                assert deposit.user.person.balance() - amount >= 0
+                assert deposit.user.balance() - amount >= 0
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             deposit.amount = amount
@@ -592,7 +591,7 @@ class WithdrawalCreate(Mutation):
 
         try:
             assert hasattr(user_obj, 'nonprofit')
-            assert user_obj.nonprofit.balance() - amount >= 0
+            assert user_obj.balance() - amount >= 0
         except AssertionError:
             raise GraphQLError('Balance would be below zero')
 
@@ -629,7 +628,7 @@ class WithdrawalUpdate(Mutation):
         if amount:
             try:
                 assert hasattr(withdrawal.user, 'nonprofit')
-                assert withdrawal.user.nonprofit.balance() - amount >= 0
+                assert withdrawal.user.balance() - amount >= 0
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             withdrawal.amount = amount
@@ -759,8 +758,7 @@ class DonationCreate(Mutation):
         target_obj = models.Nonprofit.objects.get(pk=from_global_id(target)[1])
 
         try:
-            assert hasattr(user_obj, 'person')
-            assert user_obj.person.balance() - amount >= 0
+            assert user_obj.balance() - amount >= 0
         except AssertionError:
             raise GraphQLError('Balance would be below zero')
 
@@ -819,8 +817,7 @@ class DonationUpdate(Mutation):
                 pk=from_global_id(target)[1])
         if amount:
             try:
-                assert hasattr(donation.user, 'person')
-                assert donation.user.person.balance() - amount >= 0
+                assert donation.user.balance() - amount >= 0
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             donation.amount = amount
@@ -923,8 +920,7 @@ class TransactionCreate(Mutation):
         target_obj = models.Person.objects.get(pk=from_global_id(target)[1])
 
         try:
-            assert hasattr(user_obj, 'person')
-            assert user_obj.person.balance() - amount >= 0
+            assert user_obj.balance() - amount >= 0
         except AssertionError:
             raise GraphQLError('Balance would be below zero')
 
@@ -983,8 +979,7 @@ class TransactionUpdate(Mutation):
                 pk=from_global_id(target)[1])
         if amount:
             try:
-                assert hasattr(transaction.user, 'person')
-                assert transaction.user.person.balance() - amount >= 0
+                assert transaction.user.balance() - amount >= 0
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             transaction.amount = amount

@@ -102,11 +102,16 @@ class IbisUser(User, Scoreable):
         return sum([
             +sum([x.amount for x in Deposit.objects.filter(user=self.id)]),
             +sum([x.amount for x in Donation.objects.filter(target=self.id)]),
-            +sum([x.amount for x in Transaction.objects.filter(target=self.id)]),
+            +sum(
+                [x.amount
+                 for x in Transaction.objects.filter(target=self.id)]),
             -sum([x.amount for x in Donation.objects.filter(user=self.id)]),
             -sum([x.amount for x in Transaction.objects.filter(user=self.id)]),
             -sum([x.amount for x in Withdrawal.objects.filter(user=self.id)]),
         ])
+
+    def donated(self):
+        return sum([x.amount for x in Donation.objects.filter(user=self)])
 
     def can_see(self, entry):
         if hasattr(entry, 'comment'):
@@ -194,9 +199,6 @@ class Person(IbisUser):
         through='Transaction',
         symmetrical=False,
     )
-
-    def donated(self):
-        return sum([x.amount for x in Donation.objects.filter(user=self)])
 
 
 class Nonprofit(IbisUser, TimeStampedModel):

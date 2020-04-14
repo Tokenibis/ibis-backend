@@ -124,18 +124,33 @@ class APITestCase(GraphQLTestCase):
             is_staff=True,
         )
 
-        self.me = models.Person.objects.create(
-            username='user',
+        self.me_person = models.Person.objects.create(
+            username='person',
             password='password',
-            first_name='User',
-            last_name='McUserFace',
-            email='user@example.com',
+            first_name='Person',
+            last_name='McPersonFace',
+            email='person@example.com',
+        )
+
+        self.me_nonprofit = models.Nonprofit.objects.create(
+            username='nonprofit',
+            password='password',
+            first_name='Nonprofit',
+            last_name='McNonprofitFace',
+            email='nonprofit@example.com',
+            category_id=models.NonprofitCategory.objects.first().id,
         )
 
         models.Deposit.objects.create(
-            user=self.me,
+            user=self.me_person,
             amount=300,
             payment_id='unique_1',
+        )
+
+        models.Deposit.objects.create(
+            user=self.me_nonprofit,
+            amount=300,
+            payment_id='unique_2',
         )
 
         self.nonprofit = models.Nonprofit.objects.all().first()
@@ -146,7 +161,9 @@ class APITestCase(GraphQLTestCase):
         self.event = models.Event.objects.all().first()
         self.post = models.Post.objects.all().first()
 
-        self.me.gid = to_global_id('PersonNode', self.me.id)
+        self.me_person.gid = to_global_id('PersonNode', self.me_person.id)
+        self.me_nonprofit.gid = to_global_id('NonprofitNode',
+                                             self.me_nonprofit.id)
         self.nonprofit.gid = to_global_id('NonprofitNode', self.nonprofit.id)
         self.person.gid = to_global_id('PersonNode', self.person.id)
         self.donation.gid = to_global_id('DonationNode', self.donation.id)
@@ -156,9 +173,15 @@ class APITestCase(GraphQLTestCase):
         self.event.gid = to_global_id('EventNode', self.event.id)
         self.post.gid = to_global_id('PostNode', self.post.id)
 
-        # make sure that self.me and self.person both have one notification
-        donation_me = models.Donation.objects.create(
-            user=self.me,
+        # make sure that me_person, me_nonprofit, and person have notifications
+        donation_me_person = models.Donation.objects.create(
+            user=self.me_person,
+            target=self.nonprofit,
+            amount=100,
+            description='My donation',
+        )
+        donation_me_nonprofit = models.Donation.objects.create(
+            user=self.me_nonprofit,
             target=self.nonprofit,
             amount=100,
             description='My donation',
@@ -169,35 +192,45 @@ class APITestCase(GraphQLTestCase):
             amount=100,
             description='Person\'s donation',
         )
+
         self._client.force_login(self.person)
         self.query(
             self.gql['LikeCreate'],
             op_name='LikeCreate',
             variables={
                 'user': self.person.gid,
-                'target': to_global_id('DonationNode', donation_me.id),
+                'target': to_global_id('DonationNode', donation_me_person.id),
             },
         )
-        self._client.logout()
-        self._client.force_login(self.me)
         self.query(
             self.gql['LikeCreate'],
             op_name='LikeCreate',
             variables={
-                'user': self.me.gid,
+                'user': self.person.gid,
+                'target': to_global_id('DonationNode',
+                                       donation_me_nonprofit.id),
+            },
+        )
+        self._client.logout()
+        self._client.force_login(self.me_person)
+        self.query(
+            self.gql['LikeCreate'],
+            op_name='LikeCreate',
+            variables={
+                'user': self.me_person.gid,
                 'target': to_global_id('DonationNode', donation_person.id),
             },
         )
         self._client.logout()
 
-        self.notification = self.me.notifier.notification_set.first()
+        self.notification = self.me_person.notifier.notification_set.first()
 
         # make sure that self.person has things to hide for later
 
         models.Deposit.objects.create(
-            user=self.me,
+            user=self.me_person,
             amount=200,
-            payment_id='unique_2',
+            payment_id='unique_3',
         )
 
         models.Donation.objects.create(
@@ -226,7 +259,7 @@ class APITestCase(GraphQLTestCase):
             content_type="application/json")
         return resp
 
-    def run_all(self, person):
+    def run_all(self, user):
         success = {}
         init_tracker_len = len(tracker.models.Log.objects.all())
 
@@ -235,7 +268,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', person.id),
+                    'user': to_global_id('IbisUserNode', user.id),
                     'target': self.nonprofit.gid,
                     'amount': 100,
                     'description': 'This is a donation',
@@ -249,7 +282,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['TransactionCreate'],
                 op_name='TransactionCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', person.id),
+                    'user': to_global_id('IbisUserNode', user.id),
                     'target': self.person.gid,
                     'amount': 100,
                     'description': 'This is a transaction',
@@ -263,7 +296,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['PostCreate'],
                 op_name='PostCreate',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'title': 'This is a title',
                     'description': 'This is a description',
                 },
@@ -276,10 +309,10 @@ class APITestCase(GraphQLTestCase):
                 self.gql['CommentCreate'],
                 op_name='CommentCreate',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'parent': self.donation.gid,
                     'description': 'This is a description',
-                    'self': person.gid,
+                    'self': user.gid,
                 },
             ).content)
         success['CommentCreate'] = 'errors' not in result and result['data'][
@@ -290,7 +323,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['FollowCreate'],
                 op_name='FollowCreate',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.person.gid,
                 },
             ).content)
@@ -301,7 +334,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['LikeCreate'],
                 op_name='LikeCreate',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.donation.gid,
                 },
             ).content)
@@ -313,7 +346,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['BookmarkCreate'],
                 op_name='BookmarkCreate',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.news.gid,
                 },
             ).content)
@@ -325,7 +358,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['RsvpCreate'],
                 op_name='RsvpCreate',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.event.gid,
                 },
             ).content)
@@ -348,7 +381,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['Person'],
                 op_name='Person',
                 variables={
-                    'id': person.gid,
+                    'id': user.gid,
                 },
             ).content)
         success['Person'] = 'errors' not in result and bool(
@@ -414,7 +447,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['Home'],
                 op_name='Home',
                 variables={
-                    'id': to_global_id('IbisUserNode', person.id),
+                    'id': to_global_id('IbisUserNode', user.id),
                 },
             ).content)
         success['Home'] = 'errors' not in result and bool(
@@ -425,7 +458,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['SideMenu'],
                 op_name='SideMenu',
                 variables={
-                    'id': to_global_id('IbisUserNode', person.id),
+                    'id': to_global_id('IbisUserNode', user.id),
                 },
             ).content)
         success['SideMenu'] = 'errors' not in result and bool(
@@ -436,7 +469,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['Settings'],
                 op_name='Settings',
                 variables={
-                    'id': to_global_id('IbisUserNode', person.id),
+                    'id': to_global_id('IbisUserNode', user.id),
                 },
             ).content)
         success['Settings'] = 'errors' not in result and bool(
@@ -447,19 +480,19 @@ class APITestCase(GraphQLTestCase):
                 self.gql['Notifier'],
                 op_name='Notifier',
                 variables={
-                    'id': to_global_id('IbisUserNode', person.id),
+                    'id': to_global_id('IbisUserNode', user.id),
                 },
             ).content)
         success['Notifier'] = 'errors' not in result and (
             result['data']['ibisUser']['notifier']['id'] == to_global_id(
-                'NotifierNode', person.id))
+                'NotifierNode', user.id))
 
         result = json.loads(
             self.query(
                 self.gql['NonprofitList'],
                 op_name='NonprofitList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -473,7 +506,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['PersonList'],
                 op_name='PersonList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -487,7 +520,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['DonationList'],
                 op_name='DonationList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -501,7 +534,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['TransactionList'],
                 op_name='TransactionList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -515,7 +548,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['PostList'],
                 op_name='PostList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -529,7 +562,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['NewsList'],
                 op_name='NewsList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -543,7 +576,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['EventList'],
                 op_name='EventList',
                 variables={
-                    'self': person.gid,
+                    'self': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -570,7 +603,7 @@ class APITestCase(GraphQLTestCase):
                 op_name='CommentTree',
                 variables={
                     'hasParent': self.donation.gid,
-                    'self': person.gid,
+                    'self': user.gid,
                 },
             ).content)
         success['CommentTree'] = 'errors' not in result and len(result) > 0
@@ -580,18 +613,18 @@ class APITestCase(GraphQLTestCase):
                 self.gql['Deposit'],
                 op_name='Deposit',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', user.id),
                 },
             ).content)
         success['Deposit'] = 'errors' not in result and bool(
-            result['data']['person']['id'])
+            result['data']['ibisUser']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['DepositList'],
                 op_name='DepositList',
                 variables={
-                    'byUser': person.gid,
+                    'byUser': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -605,7 +638,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['NotificationList'],
                 op_name='NotificationList',
                 variables={
-                    'forUser': person.gid,
+                    'forUser': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -619,7 +652,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['LikeDelete'],
                 op_name='LikeDelete',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.donation.gid,
                 },
             ).content)
@@ -630,7 +663,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['FollowDelete'],
                 op_name='FollowDelete',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.person.gid,
                 },
             ).content)
@@ -642,7 +675,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['BookmarkDelete'],
                 op_name='BookmarkDelete',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.news.gid,
                 },
             ).content)
@@ -654,7 +687,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['RsvpDelete'],
                 op_name='RsvpDelete',
                 variables={
-                    'user': person.gid,
+                    'user': user.gid,
                     'target': self.event.gid,
                 },
             ).content)
@@ -666,7 +699,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['DonationForm'],
                 op_name='DonationForm',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', user.id),
                     'target': self.nonprofit.gid,
                 },
             ).content)
@@ -678,7 +711,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['TransactionForm'],
                 op_name='TransactionForm',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', user.id),
                     'target': self.person.gid,
                 },
             ).content)
@@ -690,7 +723,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['PersonSettingsUpdate'],
                 op_name='PersonSettingsUpdate',
                 variables={
-                    'id': person.gid,
+                    'id': user.gid,
                     'visibilityDonation': models.Person.PUBLIC,
                     'visibilityTransaction': models.Person.PUBLIC,
                 },
@@ -703,7 +736,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['NotifierSettingsUpdate'],
                 op_name='NotifierSettingsUpdate',
                 variables={
-                    'id': person.gid,
+                    'id': user.gid,
                     'emailFollow': True,
                     'emailDonation': True,
                     'emailTransaction': True,
@@ -717,14 +750,14 @@ class APITestCase(GraphQLTestCase):
                 self.gql['NotifierSeen'],
                 op_name='NotifierSeen',
                 variables={
-                    'id': to_global_id('NotifierNode', person.id),
+                    'id': to_global_id('NotifierNode', user.id),
                     'lastSeen': str(now()),
                 },
             ).content)
         success['NotifierSeen'] = 'errors' not in result and result['data'][
             'updateNotifier']['notifier']['id']
 
-        notification = person.notifier.notification_set.first()
+        notification = user.notifier.notification_set.first()
 
         result = json.loads(
             self.query(
@@ -778,16 +811,22 @@ class APITestCase(GraphQLTestCase):
     # staff can do everything
     def test_staff(self):
         self._client.force_login(self.staff)
-        assert all(self.run_all(self.me).values())
+        assert all(self.run_all(self.me_person).values())
 
     # anonymous users can't do anything
     def test_anonymous(self):
-        assert not any(self.run_all(self.me).values())
+        assert not any(self.run_all(self.me_person).values())
 
     # logged in users can see all of their own information
-    def test_self(self):
-        self._client.force_login(self.me)
-        assert all(self.run_all(self.me).values())
+    def test_person(self):
+        self._client.force_login(self.me_person)
+        assert all(self.run_all(self.me_person).values())
+
+    # logged in users can see all of their own information
+    def test_nonprofit(self):
+        self._client.force_login(self.me_nonprofit)
+        assert all(x[0] for x in self.run_all(self.me_nonprofit).items()
+                   if x[1] not in ['Person', 'PersonSettingsUpdate'])
 
     # logged in users can see some of other people's information
     def test_other_public(self):
@@ -838,7 +877,7 @@ class APITestCase(GraphQLTestCase):
         self.person.visibility_transaction = models.Person.PUBLIC
         self.person.save()
 
-        self._client.force_login(self.me)
+        self._client.force_login(self.me_person)
         result = self.run_all(self.person)
         assert (result[x] == expected[x] for x in result)
 
@@ -848,7 +887,7 @@ class APITestCase(GraphQLTestCase):
         self.person.visibility_transaction = models.Person.PUBLIC
         self.person.save()
 
-        self._client.force_login(self.me)
+        self._client.force_login(self.me_person)
         assert all(self.run_privacy(self.person).values())
 
     # nobody can see private visibility except self
@@ -857,7 +896,7 @@ class APITestCase(GraphQLTestCase):
         self.person.visibility_transaction = models.Person.PRIVATE
         self.person.save()
 
-        self._client.force_login(self.me)
+        self._client.force_login(self.me_person)
         assert not any(self.run_privacy(self.person).values())
 
         self._client.force_login(self.person)
@@ -869,18 +908,18 @@ class APITestCase(GraphQLTestCase):
         self.person.visibility_transaction = models.Person.FOLLOWING
         self.person.save()
 
-        self._client.force_login(self.me)
+        self._client.force_login(self.me_person)
         assert not any(self.run_privacy(self.person).values())
 
-        self.person.following.add(self.me)
+        self.person.following.add(self.me_person)
         self.person.save()
 
-        self._client.force_login(self.me)
+        self._client.force_login(self.me_person)
         assert all(self.run_privacy(self.person).values())
 
     # make sure that money constraints work
     def test_money_limits(self):
-        self._client.force_login(self.me)
+        self._client.force_login(self.me_person)
 
         def transfer(op_name, target, amount):
             return 'errors' not in json.loads(
@@ -888,7 +927,7 @@ class APITestCase(GraphQLTestCase):
                     self.gql[op_name],
                     op_name=op_name,
                     variables={
-                        'user': self.me.gid,
+                        'user': self.me_person.gid,
                         'target': target.gid,
                         'amount': amount,
                         'description': 'This is a description',
@@ -896,8 +935,9 @@ class APITestCase(GraphQLTestCase):
                 ).content)
 
         models.Deposit.objects.create(
-            user=self.me,
-            amount=int((settings.MAX_TRANSFER - self.me.balance()) * 1.5),
+            user=self.me_person,
+            amount=int(
+                (settings.MAX_TRANSFER - self.me_person.balance()) * 1.5),
             payment_id='unique_test_money_limit_donation',
         )
 
@@ -908,12 +948,14 @@ class APITestCase(GraphQLTestCase):
                             settings.MAX_TRANSFER + 1)
         assert transfer('DonationCreate', self.nonprofit,
                         settings.MAX_TRANSFER)
-        assert transfer('DonationCreate', self.nonprofit, self.me.balance())
+        assert transfer('DonationCreate', self.nonprofit,
+                        self.me_person.balance())
         assert not transfer('DonationCreate', self.nonprofit, 1)
 
         models.Deposit.objects.create(
-            user=self.me,
-            amount=int((settings.MAX_TRANSFER - self.me.balance()) * 1.5),
+            user=self.me_person,
+            amount=int(
+                (settings.MAX_TRANSFER - self.me_person.balance()) * 1.5),
             payment_id='unique_test_money_limit_transaction',
         )
 
@@ -924,7 +966,8 @@ class APITestCase(GraphQLTestCase):
                             settings.MAX_TRANSFER + 1)
         assert transfer('TransactionCreate', self.person,
                         settings.MAX_TRANSFER)
-        assert transfer('TransactionCreate', self.person, self.me.balance())
+        assert transfer('TransactionCreate', self.person,
+                        self.me_person.balance())
         assert not transfer('TransactionCreate', self.person, 1)
 
     # send money around randomly and make sure that balances agree at the end
@@ -965,7 +1008,7 @@ class APITestCase(GraphQLTestCase):
                     self.gql['DonationCreate'],
                     op_name='DonationCreate',
                     variables={
-                        'user': to_global_id('PersonNode', user.id),
+                        'user': to_global_id('IbisUserNode', user.id),
                         'target': to_global_id('NonprofitNode', target.id),
                         'amount': amount,
                         'description': 'This is a donation',
@@ -981,7 +1024,7 @@ class APITestCase(GraphQLTestCase):
                     self.gql['TransactionCreate'],
                     op_name='TransactionCreate',
                     variables={
-                        'user': to_global_id('PersonNode', user.id),
+                        'user': to_global_id('IbisUserNode', user.id),
                         'target': to_global_id('PersonNode', target.id),
                         'amount': amount,
                         'description': 'This is a transaction',
@@ -1023,6 +1066,7 @@ class APITestCase(GraphQLTestCase):
         nonprofit_state = {
             x: {
                 'balance': x.balance(),
+                'donated': x.donated(),
                 'fundraised': x.fundraised(),
             }
             for x in models.Nonprofit.objects.all()
@@ -1043,30 +1087,56 @@ class APITestCase(GraphQLTestCase):
                 person_state[user]['balance'] += amount
 
             elif choice == donate:
-                user = random.choice(list(person_state.keys()))
-                target = random.choice(list(nonprofit_state.keys()))
-                result = donate(user, target, amount)
+                if random.random() < 0.8:  # person donates
+                    user = random.choice(list(person_state.keys()))
+                    target = random.choice(list(nonprofit_state.keys()))
+                    result = donate(user, target, amount)
 
-                if person_state[user]['balance'] - amount >= 0:
-                    assert 'errors' not in result
-                    person_state[user]['balance'] -= amount
-                    person_state[user]['donated'] += amount
-                    nonprofit_state[target]['balance'] += amount
-                    nonprofit_state[target]['fundraised'] += amount
-                else:
-                    assert 'errors' in result
+                    if person_state[user]['balance'] - amount >= 0:
+                        assert 'errors' not in result
+                        person_state[user]['balance'] -= amount
+                        person_state[user]['donated'] += amount
+                        nonprofit_state[target]['balance'] += amount
+                        nonprofit_state[target]['fundraised'] += amount
+                    else:
+                        assert 'errors' in result
+                else:  # nonprofit donates
+                    user = random.choice(list(nonprofit_state.keys()))
+                    target = random.choice(list(nonprofit_state.keys()))
+                    result = donate(user, target, amount)
+
+                    if nonprofit_state[user]['balance'] - amount >= 0:
+                        assert 'errors' not in result
+                        nonprofit_state[user]['balance'] -= amount
+                        nonprofit_state[user]['donated'] += amount
+                        nonprofit_state[target]['balance'] += amount
+                        nonprofit_state[target]['fundraised'] += amount
+                    else:
+                        assert 'errors' in result
 
             elif choice == transact:
-                user = random.choice(list(person_state.keys()))
-                target = random.choice(list(person_state.keys()))
-                result = transact(user, target, amount)
+                if random.random() < 0.8:  # person transacts
+                    user = random.choice(list(person_state.keys()))
+                    target = random.choice(list(person_state.keys()))
+                    result = transact(user, target, amount)
 
-                if person_state[user]['balance'] - amount >= 0:
-                    assert 'errors' not in result
-                    person_state[user]['balance'] -= amount
-                    person_state[target]['balance'] += amount
-                else:
-                    assert 'errors' in result
+                    if person_state[user]['balance'] - amount >= 0:
+                        assert 'errors' not in result
+                        person_state[user]['balance'] -= amount
+                        person_state[target]['balance'] += amount
+                    else:
+                        assert 'errors' in result
+                else:  # nonprofit transacts
+                    user = random.choice(list(nonprofit_state.keys()))
+                    target = random.choice(list(person_state.keys()))
+                    result = transact(user, target, amount)
+
+                    if nonprofit_state[user]['balance'] - amount >= 0:
+                        assert 'errors' not in result
+                        nonprofit_state[user]['balance'] -= amount
+                        person_state[target]['balance'] += amount
+                    else:
+                        assert 'errors' in result
 
             if choice == withdraw:
                 user = random.choice(list(nonprofit_state.keys()))
@@ -1089,7 +1159,7 @@ class APITestCase(GraphQLTestCase):
     # test notifications, especially deduping behavior
     def test_notifications(self):
         def create_operation(op_name):
-            variables = {'user': self.me.gid}
+            variables = {'user': self.me_person.gid}
             types = {}
 
             if op_name == 'FollowCreate':
@@ -1110,7 +1180,7 @@ class APITestCase(GraphQLTestCase):
                     models.Donation.objects.filter(
                         user=self.person).first().id,
                 )
-                variables['self'] = self.me.gid
+                variables['self'] = self.me_person.gid
             elif op_name == 'NewsCreate':
                 variables['description'] = 'description'
                 variables['title'] = 'title'
@@ -1172,7 +1242,7 @@ class APITestCase(GraphQLTestCase):
         def delete_operation(op_name, id):
             if op_name in ['FollowDelete', 'LikeDelete']:
                 query = self.gql[op_name]
-                variables = {'user': self.me.gid, 'target': id}
+                variables = {'user': self.me_person.gid, 'target': id}
             else:
                 query = '''
                     mutation {}($id: ID!) {{
@@ -1216,13 +1286,13 @@ class APITestCase(GraphQLTestCase):
         count = self.person.notifier.notification_set.all().count()
 
         models.Deposit.objects.create(
-            user=self.me,
+            user=self.me_person,
             amount=200,
             payment_id='unique_test_notifications',
         )
 
         self.person.following.add(self.nonprofit)
-        self.person.following.add(self.me)
+        self.person.following.add(self.me_person)
 
         def run(op_type, c):
             id = create_operation('{}Create'.format(op_type))
