@@ -58,13 +58,36 @@ class IbisUser(User, Scoreable):
     class Meta:
         verbose_name_plural = 'ibis user'
 
+    PUBLIC = 'PC'
+    FOLLOWING = 'FL'
+    PRIVATE = 'PR'
+
+    VISIBILITY_CHOICES = (
+        (PUBLIC, 'Public'),
+        (FOLLOWING, 'Following Only'),
+        (PRIVATE, 'Me Only'),
+    )
+
     following = models.ManyToManyField(
         'self',
         related_name='follower',
         symmetrical=False,
         blank=True,
     )
+
     avatar = models.TextField(validators=[MinLengthValidator(1)])
+
+    visibility_donation = models.CharField(
+        max_length=2,
+        choices=VISIBILITY_CHOICES,
+        default=PUBLIC,
+    )
+
+    visibility_transaction = models.CharField(
+        max_length=2,
+        choices=VISIBILITY_CHOICES,
+        default=PUBLIC,
+    )
 
     tracker = FieldTracker()
 
@@ -76,24 +99,31 @@ class IbisUser(User, Scoreable):
         )
 
     def balance(self):
-        raise NotImplementedError
+        return sum([
+            +sum([x.amount for x in Deposit.objects.filter(user=self.id)]),
+            +sum([x.amount for x in Donation.objects.filter(target=self.id)]),
+            +sum([x.amount for x in Transaction.objects.filter(target=self.id)]),
+            -sum([x.amount for x in Donation.objects.filter(user=self.id)]),
+            -sum([x.amount for x in Transaction.objects.filter(user=self.id)]),
+            -sum([x.amount for x in Withdrawal.objects.filter(user=self.id)]),
+        ])
 
     def can_see(self, entry):
         if hasattr(entry, 'comment'):
             entry = entry.comment.get_root()
 
-        if hasattr(entry, 'donation') and hasattr(entry.user, 'person'):
-            permission = entry.user.person.visibility_donation
-            if permission == Person.PRIVATE:
-                return self.id == entry.user.person.id
-            if permission == Person.FOLLOWING:
+        if hasattr(entry, 'donation'):
+            permission = entry.user.visibility_donation
+            if permission == IbisUser.PRIVATE:
+                return self.id == entry.user.id
+            if permission == IbisUser.FOLLOWING:
                 return entry.user.following.filter(pk=self.id).exists()
 
-        if hasattr(entry, 'transaction') and hasattr(entry.user, 'person'):
-            permission = entry.user.person.visibility_transaction
-            if permission == Person.PRIVATE:
-                return self.id == entry.user.person.id
-            if permission == Person.FOLLOWING:
+        if hasattr(entry, 'transaction'):
+            permission = entry.user.visibility_transaction
+            if permission == IbisUser.PRIVATE:
+                return self.id == entry.user.id
+            if permission == IbisUser.FOLLOWING:
                 return entry.self.following.filter(pk=self.id).exists()
 
         return True
@@ -158,43 +188,12 @@ class Person(IbisUser):
         verbose_name = "Person"
         verbose_name_plural = "People"
 
-    PUBLIC = 'PC'
-    FOLLOWING = 'FL'
-    PRIVATE = 'PR'
-
-    VISIBILITY_CHOICES = (
-        (PUBLIC, 'Public'),
-        (FOLLOWING, 'Following Only'),
-        (PRIVATE, 'Me Only'),
-    )
-
-    transaction_to = models.ManyToManyField(
+    transaction_from = models.ManyToManyField(
         IbisUser,
-        related_name='transaction_from',
+        related_name='transaction_to',
         through='Transaction',
         symmetrical=False,
     )
-
-    visibility_donation = models.CharField(
-        max_length=2,
-        choices=VISIBILITY_CHOICES,
-        default=PUBLIC,
-    )
-
-    visibility_transaction = models.CharField(
-        max_length=2,
-        choices=VISIBILITY_CHOICES,
-        default=PUBLIC,
-    )
-
-    def balance(self):
-        deposit = sum([ex.amount for ex in self.deposit_set.all()])
-        donation = sum([x.amount for x in Donation.objects.filter(user=self)])
-        transaction_in = sum(
-            [x.amount for x in Transaction.objects.filter(target=self)])
-        transaction_out = sum(
-            [x.amount for x in Transaction.objects.filter(user=self)])
-        return (deposit) + (transaction_in - transaction_out) - (donation)
 
     def donated(self):
         return sum([x.amount for x in Donation.objects.filter(user=self)])
@@ -218,15 +217,6 @@ class Nonprofit(IbisUser, TimeStampedModel):
         through='Donation',
         symmetrical=False,
     )
-
-    def balance(self):
-        deposit = sum([ex.amount for ex in self.deposit_set.all()])
-        withdrawal = sum([ex.amount for ex in self.withdrawal_set.all()])
-        donation_in = sum(
-            [x.amount for x in Donation.objects.filter(target=self)])
-        transaction_out = sum(
-            [x.amount for x in Transaction.objects.filter(user=self)])
-        return (deposit - withdrawal) + (donation_in - transaction_out)
 
     def fundraised(self):
         return sum([x.amount for x in Donation.objects.filter(target=self)])

@@ -1,5 +1,6 @@
 import os
 import json
+import random
 
 from django.utils.timezone import now, timedelta
 from graphql_relay.node.node import from_global_id, to_global_id
@@ -17,8 +18,8 @@ with open(os.path.join(DIR, 'emails/follow.json')) as fd:
 
 def handleFollowCreate(variables, data):
     try:
-        user = ibis.Person.objects.get(pk=from_global_id(variables['user'])[1])
-        notifier = ibis.Person.objects.get(
+        user = ibis.IbisUser.objects.get(pk=from_global_id(variables['user'])[1])
+        notifier = ibis.IbisUser.objects.get(
             pk=from_global_id(variables['target'])[1]).notifier
     except ObjectDoesNotExist:
         # target of follow is probably a nonprofit; just drop silently
@@ -30,7 +31,7 @@ def handleFollowCreate(variables, data):
         notifier=notifier,
         category=Notification.RECEIVED_FOLLOW,
         reference='{}:{}'.format(
-            ibis.Person.__name__,
+            ibis.IbisUser.__name__,
             variables['user'],
         ),
         deduper='follow:{}:{}'.format(
@@ -40,11 +41,13 @@ def handleFollowCreate(variables, data):
         description=description,
     )
 
+    template = random.choice(follow_template)
+
     if notifier.email_follow:
         Email.objects.create(
             notification=notification,
-            subject=follow_template['subject'].format(user=str(user)),
-            body=follow_template['body'].format(user=str(user)),
+            subject=template['subject'].format(user=str(user)),
+            body=template['body'].format(user=str(user)),
             schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
         )
 
@@ -54,10 +57,10 @@ def handleFollowCreate(variables, data):
 
 def handleLikeCreate(variables, data):
     try:
-        user = ibis.Person.objects.get(pk=from_global_id(variables['user'])[1])
+        user = ibis.IbisUser.objects.get(pk=from_global_id(variables['user'])[1])
         current = ibis.Entry.objects.get(
             pk=from_global_id(variables['target'])[1])
-        notifier = current.user.person.notifier
+        notifier = current.user.ibisuser.notifier
     except (ObjectDoesNotExist, AttributeError):
         # target of like is probably a nonprofit; just drop silently
         return

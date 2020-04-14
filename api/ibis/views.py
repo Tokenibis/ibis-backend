@@ -30,7 +30,8 @@ class QuoteView(generics.GenericAPIView):
             'quote':
             ftfy.fix_text(obj['quoteText']),
             'author':
-            ftfy.fix_text(obj['quoteAuthor']) if obj['quoteAuthor'] else 'Unknown',
+            ftfy.fix_text(obj['quoteAuthor'])
+            if obj['quoteAuthor'] else 'Unknown',
         })
 
 
@@ -84,7 +85,9 @@ class LoginView(generics.GenericAPIView):
 
         return response.Response({
             'user_id':
-            to_global_id('PersonNode', str(request.user.id)),
+            to_global_id('IbisUserNode', str(request.user.id)),
+            'user_type':
+            'person',
             'is_new_account':
             not exists,
         })
@@ -141,7 +144,9 @@ class AnonymousLoginView(generics.GenericAPIView):
 
         return response.Response({
             'user_id':
-            to_global_id('PersonNode', str(person.user_ptr.id)),
+            to_global_id('IbisUserNode', str(person.user_ptr.id)),
+            'user_type':
+            'person',
             'is_new_account':
             not exists,
         })
@@ -163,12 +168,15 @@ class LogoutView(generics.GenericAPIView):
 
 class IdentifyView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
-        if models.Person.objects.filter(id=request.user.id).exists():
-            user_id = to_global_id('PersonNode', str(request.user.id))
+        if models.IbisUser.objects.filter(id=request.user.id).exists():
+            user_id = to_global_id('IbisUserNode', str(request.user.id))
+            user_type = 'person' if models.Person.objects.filter(
+                id=request.user.id).exists() else 'nonprofit'
         else:
             user_id = ''
+            user_type = ''
 
-        return response.Response({'user_id': user_id})
+        return response.Response({'user_id': user_id, 'user_type': user_type})
 
 
 class PaymentView(generics.GenericAPIView):

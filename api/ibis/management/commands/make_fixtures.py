@@ -175,6 +175,7 @@ class Model:
             'fields': {
                 'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
                 'score': score,
+                'following': [],
             },
         })
 
@@ -184,21 +185,22 @@ class Model:
             'fields': {
                 'category': category,
                 'description': description,
+                'banner': BIRDS.format(hash(name + '_') % BIRDS_LEN),
                 'link': 'https://{}.org'.format(unique_name.replace(' ', '_')),
             }
         })
 
         return pk
 
-    def add_donation(self, person, nonprofit, amount, description, score):
-        assert nonprofit in [x['pk'] for x in self.nonprofits]
+    def add_donation(self, source, target, amount, description, score):
+        assert target in [x['pk'] for x in self.nonprofits]
         pk = len(self.entries) + 1
 
         self.entries.append({
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': person,
+                'user': source,
                 'description': description,
             }
         })
@@ -206,7 +208,7 @@ class Model:
             'model': 'ibis.Donation',
             'pk': pk,
             'fields': {
-                'target': nonprofit,
+                'target': target,
                 'amount': amount,
                 'like': [],
                 'score': score,
@@ -256,7 +258,6 @@ class Model:
             description,
             score,
     ):
-        assert source not in [x['pk'] for x in self.nonprofits]
         assert target not in [x['pk'] for x in self.nonprofits]
         pk = len(self.entries) + 1
 
@@ -573,12 +574,18 @@ class Command(BaseCommand):
         for person in people:
             model.add_deposit(person, 1000000)
 
+        # initial donations for nonprofits
+        for nonprofit in nonprofits:
+            donor = random.choice(people)
+            model.add_deposit(donor, 1000000)
+            model.add_donation(donor, nonprofit, 1000000, 'initial', 0)
+
         # make random donations
         donations = []
-        for i in range(num_donation):
+        for i in range(num_donation - len(nonprofits)):
             donations.append(
                 model.add_donation(
-                    random.choice(people),
+                    random.choice(people + nonprofits),
                     random.choice(nonprofits),
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
@@ -588,11 +595,10 @@ class Command(BaseCommand):
         # make random transactions
         transactions = []
         for i in range(num_transaction):
-            sample = random.sample(people, 2)
             transactions.append(
                 model.add_transaction(
-                    sample[0],
-                    sample[1],
+                    random.choice(people + nonprofits),
+                    random.choice(people),
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
@@ -668,13 +674,14 @@ class Command(BaseCommand):
         # make fake comments
         comments = []
         for i in range(num_comment):
-            commentable = transactions + donations + news + events + posts + comments
+            commentable = transactions + donations + news + events + posts\
+                + comments
             parent = random.choice(commentable)
             description = markov.generate_markov_text(
                 size=random.randint(25, 100))
             comments.append(
                 model.add_comment(
-                    random.choice(people),
+                    random.choice(people + nonprofits),
                     parent,
                     description,
                     random.randint(0, 100),
@@ -682,23 +689,30 @@ class Command(BaseCommand):
 
         # add followers
         for i in range(num_follow):
-            person = random.choice(people)
-            target = random.choice([p for p in people if p != person])
-            model.add_follow(person, target)
+            source = random.choice(people + nonprofits)
+            target = random.choice(people + nonprofits)
+            model.add_follow(source, target)
 
         # add rsvps
         for i in range(num_rsvp):
-            model.add_rsvp(random.choice(people), random.choice(events))
+            model.add_rsvp(
+                random.choice(people + nonprofits),
+                random.choice(events),
+            )
 
         # add bookmarks
         for i in range(num_bookmark):
             model.add_bookmark(
-                random.choice(people), random.choice(news + posts))
+                random.choice(people + nonprofits),
+                random.choice(news + posts))
 
         # add likes
         likeable = transactions + donations + news + events + posts + comments
         for i in range(num_like):
-            model.add_like(random.choice(people), random.choice(likeable))
+            model.add_like(
+                random.choice(people + nonprofits),
+                random.choice(likeable),
+            )
 
         # save fixtures
         fixtures_dir = os.path.join(DIR, '../../fixtures')

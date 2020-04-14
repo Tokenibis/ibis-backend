@@ -723,9 +723,9 @@ class DonationNode(EntryNode):
             return queryset
 
         return queryset.filter(
-            Q(user__person__visibility_donation=models.Person.PUBLIC)
-            | (Q(user__person__visibility_donation=models.Person.FOLLOWING)
-               & Q(user__person__following__id__exact=info.context.user.id))
+            Q(user__visibility_donation=models.Person.PUBLIC)
+            | (Q(user__visibility_donation=models.Person.FOLLOWING)
+               & Q(user__following__id__exact=info.context.user.id))
             | (Q(user_id=info.context.user.id)
                | Q(target_id=info.context.user.id))).distinct()
 
@@ -879,9 +879,9 @@ class TransactionNode(EntryNode):
             return queryset
 
         return queryset.filter(
-            Q(user__person__visibility_transaction=models.Person.PUBLIC)
-            | (Q(user__person__visibility_transaction=models.Person.FOLLOWING)
-               & Q(user__person__following__id__exact=info.context.user.id))
+            Q(user__visibility_transaction=models.IbisUser.PUBLIC)
+            | (Q(user__visibility_transaction=models.IbisUser.FOLLOWING)
+               & Q(user__following__id__exact=info.context.user.id))
             | (Q(user_id=info.context.user.id)
                | Q(target_id=info.context.user.id))).distinct()
 
@@ -1310,6 +1310,7 @@ class EventDelete(Mutation):
 
 class IbisUserNode(UserNode):
     name = graphene.String()
+    balance = graphene.Int()
     following = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -1340,6 +1341,9 @@ class IbisUserNode(UserNode):
     def resolve_name(self, *args, **kwargs):
         return str(self)
 
+    def resolve_balance(self, *args, **kwargs):
+        return self.balance()
+
     def resolve_following_count(self, *args, **kwargs):
         return self.following.count()
 
@@ -1350,7 +1354,8 @@ class IbisUserNode(UserNode):
         return len([x for x in self.following.all() if hasattr(x, 'person')])
 
     def resolve_following_count_nonprofit(self, *args, **kwargs):
-        return len([x for x in self.following.all() if hasattr(x, 'nonprofit')])
+        return len(
+            [x for x in self.following.all() if hasattr(x, 'nonprofit')])
 
     def resolve_follower_count_person(self, *args, **kwargs):
         return len([x for x in self.follower.all() if hasattr(x, 'person')])
@@ -1388,7 +1393,6 @@ class IbisUserNode(UserNode):
 
 class PersonNode(IbisUserNode, UserNode):
 
-    balance = graphene.Int()
     donated = graphene.Int()
 
     visibility_follow = graphene.String()
@@ -1401,9 +1405,6 @@ class PersonNode(IbisUserNode, UserNode):
         model = models.Person
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_balance(self, *args, **kwargs):
-        return self.balance()
 
     def resolve_donated(self, *args, **kwargs):
         return self.donated()
@@ -1571,7 +1572,6 @@ class PersonDelete(Mutation):
 
 class NonprofitNode(IbisUserNode):
 
-    balance = graphene.Int()
     fundraised = graphene.Int()
 
     donation_from_count = graphene.Int()
@@ -1580,9 +1580,6 @@ class NonprofitNode(IbisUserNode):
         model = models.Nonprofit
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_balance(self, *args, **kwargs):
-        return self.balance()
 
     def resolve_fundraised(self, *args, **kwargs):
         return self.fundraised()
@@ -2072,6 +2069,7 @@ class RsvpDelete(RsvpMutation):
 class Query(object):
 
     nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
+    ibis_user = relay.Node.Field(IbisUserNode)
     person = relay.Node.Field(PersonNode)
     nonprofit = relay.Node.Field(NonprofitNode)
     withdrawal = relay.Node.Field(WithdrawalNode)
@@ -2085,6 +2083,10 @@ class Query(object):
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)
+    all_ibis_users = DjangoFilterConnectionField(
+        IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
     all_people = DjangoFilterConnectionField(
         PersonNode,
         filterset_class=IbisUserFilter,

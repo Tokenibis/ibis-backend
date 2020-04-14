@@ -9,8 +9,8 @@ import ibis.models as models
 INITIAL_UBP_DEFAULT = 1000
 
 
-def scoreFundraisedDescending(sender, instance, created, **kwargs):
-    if not created:
+def scoreFundraisedDescending(sender, instance, created, raw, **kwargs):
+    if raw or not created:
         return
 
     nonprofits = list(models.Nonprofit.objects.all())

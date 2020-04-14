@@ -11,7 +11,7 @@ import ibis.models
 
 class Notifier(models.Model):
     user = AutoOneToOneField(
-        ibis.models.Person,
+        ibis.models.IbisUser,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -44,7 +44,10 @@ class Notifier(models.Model):
         verbose_name='ubp',
         default=True,
     )
-    email_deposit = models.BooleanField(verbose_name='deposit', default=True)
+    email_deposit = models.BooleanField(
+        verbose_name='deposit',
+        default=True,
+    )
     email_like = models.BooleanField(
         verbose_name='like',
         default=False,

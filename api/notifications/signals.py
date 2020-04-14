@@ -37,7 +37,7 @@ def handleDepositCreate(sender, instance, created, raw, **kwargs):
     if raw or not created:
         return
 
-    user = instance.user.person
+    user = instance.user.ibisuser
     notifier = instance.user.notifier
 
     if instance.payment_id.split(':')[0] == 'ubp':
@@ -104,7 +104,7 @@ def handleTransactionCreate(sender, instance, created, raw, **kwargs):
     if raw or not created:
         return
 
-    user = instance.user.person
+    user = instance.user.ibisuser
     notifier = instance.target.notifier
 
     description = '{} sent you ${:.2f}'.format(
@@ -142,7 +142,7 @@ def handleCommentCreate(sender, instance, created, raw, **kwargs):
     if raw or not created:
         return
 
-    user = instance.user.person
+    user = instance.user.ibisuser
     current = instance
 
     description = '{} replied to your comment'.format(str(user))
@@ -151,8 +151,8 @@ def handleCommentCreate(sender, instance, created, raw, **kwargs):
 
     while hasattr(current, 'comment'):
         parent = current.comment.parent
-        if hasattr(parent.user, 'person'):
-            notifier = parent.user.person.notifier
+        if hasattr(parent.user, 'ibisuser'):
+            notifier = parent.user.ibisuser.notifier
             if notifier not in [x.notifier for x in notifications] and \
                notifier != user.notifier:
                 notification = Notification.objects.create(
@@ -160,7 +160,7 @@ def handleCommentCreate(sender, instance, created, raw, **kwargs):
                     category=Notification.RECEIVED_COMMENT,
                     deduper='comment:{}:{}'.format(
                         instance.id,
-                        to_global_id('PersonNode', parent.user.person.id),
+                        to_global_id('IbisUserNode', parent.user.ibisuser.id),
                     ),
                     description=description,
                 )
@@ -205,7 +205,7 @@ def handleNewsCreate(sender, instance, created, raw, **kwargs):
     user = instance.user.nonprofit
 
     for target in user.follower.all():
-        notifier = target.person.notifier
+        notifier = target.ibisuser.notifier
 
         description = '{} released a news story'.format(str(user))
 
@@ -218,18 +218,10 @@ def handleNewsCreate(sender, instance, created, raw, **kwargs):
             ),
             deduper='news:{}:{}'.format(
                 instance.id,
-                to_global_id('PersonNode', target.id),
+                to_global_id('IbisUserNode', target.id),
             ),
             description=description,
         )
-
-        if notifier.email_news:
-            Email.objects.create(
-                notification=notification,
-                subject=description,
-                body='TODO',
-                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-            )
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
@@ -243,7 +235,7 @@ def handleEventCreate(sender, instance, created, raw, **kwargs):
     user = instance.user.nonprofit
 
     for target in user.follower.all():
-        notifier = target.person.notifier
+        notifier = target.ibisuser.notifier
 
         description = '{} planned an new event'.format(str(user))
 
@@ -256,18 +248,10 @@ def handleEventCreate(sender, instance, created, raw, **kwargs):
             ),
             deduper='event:{}:{}'.format(
                 instance.id,
-                to_global_id('PersonNode', target.id),
+                to_global_id('IbisUserNode', target.id),
             ),
             description=description,
         )
-
-        if notifier.email_event:
-            Email.objects.create(
-                notification=notification,
-                subject=description,
-                body='TODO',
-                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-            )
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()
@@ -278,10 +262,10 @@ def handlePostCreate(sender, instance, created, raw, **kwargs):
     if raw or not created:
         return
 
-    user = instance.user.person
+    user = instance.user.ibisuser
 
     for target in user.follower.all():
-        notifier = target.person.notifier
+        notifier = target.ibisuser.notifier
 
         description = '{} made a new post'.format(str(user))
 
@@ -294,18 +278,10 @@ def handlePostCreate(sender, instance, created, raw, **kwargs):
             ),
             deduper='post:{}:{}'.format(
                 instance.id,
-                to_global_id('PersonNode', target.id),
+                to_global_id('IbisUserNode', target.id),
             ),
             description=description,
         )
-
-        if notifier.email_post:
-            Email.objects.create(
-                notification=notification,
-                subject=description,
-                body='TODO',
-                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-            )
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
             pk=notification.id).delete()

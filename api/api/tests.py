@@ -235,7 +235,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
                 variables={
-                    'user': person.gid,
+                    'user': to_global_id('IbisUserNode', person.id),
                     'target': self.nonprofit.gid,
                     'amount': 100,
                     'description': 'This is a donation',
@@ -249,7 +249,7 @@ class APITestCase(GraphQLTestCase):
                 self.gql['TransactionCreate'],
                 op_name='TransactionCreate',
                 variables={
-                    'user': person.gid,
+                    'user': to_global_id('IbisUserNode', person.id),
                     'target': self.person.gid,
                     'amount': 100,
                     'description': 'This is a transaction',
@@ -414,44 +414,44 @@ class APITestCase(GraphQLTestCase):
                 self.gql['Home'],
                 op_name='Home',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', person.id),
                 },
             ).content)
         success['Home'] = 'errors' not in result and bool(
-            result['data']['person']['id'])
+            result['data']['ibisUser']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['SideMenu'],
                 op_name='SideMenu',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', person.id),
                 },
             ).content)
         success['SideMenu'] = 'errors' not in result and bool(
-            result['data']['person']['id'])
+            result['data']['ibisUser']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['Settings'],
                 op_name='Settings',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', person.id),
                 },
             ).content)
         success['Settings'] = 'errors' not in result and bool(
-            result['data']['person']['notifier']['id'])
+            result['data']['ibisUser']['notifier']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['Notifier'],
                 op_name='Notifier',
                 variables={
-                    'id': person.gid,
+                    'id': to_global_id('IbisUserNode', person.id),
                 },
             ).content)
         success['Notifier'] = 'errors' not in result and (
-            result['data']['person']['notifier']['id'] == to_global_id(
+            result['data']['ibisUser']['notifier']['id'] == to_global_id(
                 'NotifierNode', person.id))
 
         result = json.loads(
@@ -743,6 +743,38 @@ class APITestCase(GraphQLTestCase):
 
         return success
 
+    def run_privacy(self, person):
+        success = {}
+
+        result = json.loads(
+            self.query(
+                self.gql['DonationList'],
+                op_name='DonationList',
+                variables={
+                    'byUser': person.gid,
+                    'orderBy': '-created',
+                    'first': 2,
+                },
+            ).content)
+        success['DonationList'] = 'errors' not in result and any(
+            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
+            for x in result['data']['allDonations']['edges'])
+
+        result = json.loads(
+            self.query(
+                self.gql['TransactionList'],
+                op_name='TransactionList',
+                variables={
+                    'byUser': person.gid,
+                    'orderBy': '-created',
+                },
+            ).content)
+        success['TransactionList'] = 'errors' not in result and any(
+            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
+            for x in result['data']['allTransactions']['edges'])
+
+        return success
+
     # staff can do everything
     def test_staff(self):
         self._client.force_login(self.staff)
@@ -809,38 +841,6 @@ class APITestCase(GraphQLTestCase):
         self._client.force_login(self.me)
         result = self.run_all(self.person)
         assert (result[x] == expected[x] for x in result)
-
-    def run_privacy(self, person):
-        success = {}
-
-        result = json.loads(
-            self.query(
-                self.gql['DonationList'],
-                op_name='DonationList',
-                variables={
-                    'byUser': person.gid,
-                    'orderBy': '-created',
-                    'first': 2,
-                },
-            ).content)
-        success['DonationList'] = 'errors' not in result and any(
-            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
-            for x in result['data']['allDonations']['edges'])
-
-        result = json.loads(
-            self.query(
-                self.gql['TransactionList'],
-                op_name='TransactionList',
-                variables={
-                    'byUser': person.gid,
-                    'orderBy': '-created',
-                },
-            ).content)
-        success['TransactionList'] = 'errors' not in result and any(
-            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
-            for x in result['data']['allTransactions']['edges'])
-
-        return success
 
     # anyone can see public visibility
     def test_privacy_public(self):
@@ -1200,19 +1200,16 @@ class APITestCase(GraphQLTestCase):
                     self.gql['Notifier'],
                     op_name='Notifier',
                     variables={
-                        'id': self.person.gid,
+                        'id': to_global_id('IbisUserNode', self.person.id),
                     },
                 ).content)
             assert 'errors' not in result
-            return result['data']['person']['notifier']['unseenCount']
+            return result['data']['ibisUser']['notifier']['unseenCount']
 
         self.person.notifier.email_follow = True
         self.person.notifier.email_transaction = True
         self.person.notifier.email_comment = True
         self.person.notifier.email_like = True
-        self.person.notifier.email_news = True
-        self.person.notifier.email_event = True
-        self.person.notifier.email_post = True
 
         self.person.notifier.save()
 
@@ -1302,7 +1299,7 @@ class APITestCase(GraphQLTestCase):
             assert len(user.username) >= models.MIN_USERNAME_LEN
             assert re.sub(r'\W+', '', user.username) == user.username
 
-        person =models.Person.objects.create(
+        person = models.Person.objects.create(
             username='This is an INVALID @username',
             email='invalid@example.com',
             first_name='John',
