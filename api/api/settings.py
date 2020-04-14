@@ -99,6 +99,13 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+]
+
+if 'authenticate_as' in CONF['ibis']:
+    MIDDLEWARE += ['api.middleware.AuthenticateAllMiddleware']
+    AUTHENTICATE_AS = CONF['ibis']['authenticate_as']
+
+MIDDLEWARE += [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
