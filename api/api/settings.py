@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'rest_auth.registration',
     'corsheaders',
     'graphene_django',
+    'api',
     'users',
     'ibis',
     'notifications',

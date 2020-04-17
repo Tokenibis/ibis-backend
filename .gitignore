@@ -9,7 +9,7 @@ api/users/migrations
 api/tracker/migrations
 api/notifications/migrations
 
-api/ibis/fixtures
+api/api/fixtures
 
 env
 lib

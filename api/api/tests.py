@@ -48,7 +48,9 @@ call_command(
 
 
 class APITestCase(GraphQLTestCase):
-    fixtures = ['fixtures.json']
+    fixtures = sorted([
+        x.split('/')[-1] for x in os.listdir(os.path.join(DIR, 'fixtures'))
+    ])
     operations = [
         'BookmarkCreate',
         'BookmarkDelete',

@@ -440,26 +440,33 @@ class Model:
         entry_obj['fields']['like'].append(person)
 
     def get_model(self):
-        follow_less = copy.deepcopy(self.ibisUsers)
-        for x in follow_less:
+        partial_ibisUsers = copy.deepcopy(self.ibisUsers)
+        for x in partial_ibisUsers:
             del x['fields']['following']
 
-        return self.nonprofit_categories + \
-            self.people + \
-            self.nonprofits + \
-            self.users + \
-            follow_less + \
-            self.ibisUsers + \
-            self.deposits + \
-            self.donations + \
-            self.transactions + \
-            self.news + \
-            self.events + \
-            self.posts + \
-            self.comments + \
-            self.entries + \
-            self.sites + \
-            self.socialApplications
+        partial_entries = copy.deepcopy(self.entries)
+        for x in partial_entries:
+            x['fields']['like'] = []
+
+        return [
+            self.users,
+            partial_ibisUsers,
+            self.nonprofit_categories,
+            self.nonprofits,
+            self.people,
+            self.ibisUsers,
+            self.deposits,
+            partial_entries,
+            self.donations,
+            self.transactions,
+            self.news,
+            self.events,
+            self.posts,
+            self.comments,
+            self.entries,
+            self.sites,
+            self.socialApplications,
+        ]
 
 
 class Command(BaseCommand):
@@ -723,5 +730,11 @@ class Command(BaseCommand):
         if not os.path.exists(fixtures_dir):
             os.makedirs(fixtures_dir)
 
-        with open(os.path.join(fixtures_dir, 'fixtures.json'), 'w') as fd:
-            json.dump(model.get_model(), fd, indent=2)
+        fixtures = model.get_model()
+        for i, fixture in enumerate(fixtures):
+            with open(
+                    os.path.join(
+                        fixtures_dir, '{number:0{width}d}.json'.format(
+                            width=len(str(len(fixtures))), number=i)),
+                    'w') as fd:
+                json.dump(fixture, fd, indent=2)

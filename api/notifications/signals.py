@@ -9,6 +9,7 @@ from django.conf import settings
 from graphql_relay.node.node import to_global_id
 
 from notifications.models import Notification, Email
+from notifications.management.commands.loaddata import STATE
 
 import ibis.models
 
@@ -32,12 +33,35 @@ with open(os.path.join(DIR, 'emails/comment.json')) as fd:
 with open(os.path.join(DIR, 'emails/follow.json')) as fd:
     follow_templates = json.load(fd)
 
-# --- Signals --------------------------------------------------------------- #
 
+# @receiver(post_save, sender=ibis.models.Deposit)
+# def handlePersonCreate(sender, instance, created, **kwargs):
+#     if not created:
+#         return
+
+#     notifier = instance.notifier
+
+#     notification = Notification.objects.create(
+#         notifier=notifier,
+#         category=Notification.UBP_DISTRIBUTION,
+#         reference='{}:{}'.format(
+#             ibis.models.Deposit.__name__,
+#             to_global_id('DepositNode', instance.id),
+#         ),
+#         deduper='deposit:{}'.format(instance.id),
+#         description='Welcome to Ibis!',
+#     )
+
+#     Email.objects.create(
+#         notification=notification,
+#         subject=template['subject'].format(user=str(user)),
+#         body=template['body'].format(user=str(user)),
+#         schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+#     )
 
 @receiver(post_save, sender=ibis.models.Deposit)
-def handleDepositCreate(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+def handleDepositCreate(sender, instance, created, **kwargs):
+    if not created:
         return
 
     user = instance.user.ibisuser
@@ -60,7 +84,7 @@ def handleDepositCreate(sender, instance, created, raw, **kwargs):
 
         template = random.choice(ubp_templates)
 
-        if notifier.email_ubp:
+        if not STATE['LOADING_DATA'] and notifier.email_ubp:
             Email.objects.create(
                 notification=notification,
                 subject=template['subject'].format(user=str(user)),
@@ -98,11 +122,11 @@ def handleDepositCreate(sender, instance, created, raw, **kwargs):
 
 
 @receiver(post_save, sender=ibis.models.Transaction)
-def handleTransactionCreate(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+def handleTransactionCreate(sender, instance, created, **kwargs):
+    if not created:
         return
 
-    user = instance.user.ibisuser
+    user = ibis.models.Entry.objects.get(pk=instance.pk).user
     notifier = instance.target.notifier
 
     description = '{} sent you ${:.2f}'.format(
@@ -123,7 +147,7 @@ def handleTransactionCreate(sender, instance, created, raw, **kwargs):
 
     template = random.choice(transaction_templates)
 
-    if notifier.email_transaction:
+    if not STATE['LOADING_DATA'] and notifier.email_transaction:
         Email.objects.create(
             notification=notification,
             subject=template['subject'].format(user=str(user)),
@@ -136,11 +160,11 @@ def handleTransactionCreate(sender, instance, created, raw, **kwargs):
 
 
 @receiver(post_save, sender=ibis.models.Comment)
-def handleCommentCreate(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+def handleCommentCreate(sender, instance, created, **kwargs):
+    if not created:
         return
 
-    user = instance.user.ibisuser
+    user = ibis.models.Entry.objects.get(pk=instance.pk).user
     current = instance
 
     description = '{} replied to your comment'.format(str(user))
@@ -166,7 +190,7 @@ def handleCommentCreate(sender, instance, created, raw, **kwargs):
 
                 template = random.choice(comment_templates)
 
-                if notifier.email_comment:
+                if not STATE['LOADING_DATA'] and notifier.email_comment:
                     Email.objects.create(
                         notification=notification,
                         subject=template['subject'].format(user=str(user)),
@@ -196,11 +220,11 @@ def handleCommentCreate(sender, instance, created, raw, **kwargs):
 
 
 @receiver(post_save, sender=ibis.models.News)
-def handleNewsCreate(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+def handleNewsCreate(sender, instance, created, **kwargs):
+    if not created:
         return
 
-    user = instance.user.nonprofit
+    user = ibis.models.Entry.objects.get(pk=instance.pk).user
 
     for target in user.follower.all():
         notifier = target.ibisuser.notifier
@@ -226,11 +250,11 @@ def handleNewsCreate(sender, instance, created, raw, **kwargs):
 
 
 @receiver(post_save, sender=ibis.models.Event)
-def handleEventCreate(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+def handleEventCreate(sender, instance, created, **kwargs):
+    if not created:
         return
 
-    user = instance.user.nonprofit
+    user = ibis.models.Entry.objects.get(pk=instance.pk).user
 
     for target in user.follower.all():
         notifier = target.ibisuser.notifier
@@ -256,11 +280,11 @@ def handleEventCreate(sender, instance, created, raw, **kwargs):
 
 
 @receiver(post_save, sender=ibis.models.Post)
-def handlePostCreate(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+def handlePostCreate(sender, instance, created, **kwargs):
+    if not created:
         return
 
-    user = instance.user.ibisuser
+    user = ibis.models.Entry.objects.get(pk=instance.pk).user
 
     for target in user.follower.all():
         notifier = target.ibisuser.notifier
@@ -345,7 +369,7 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
 
             template = random.choice(follow_templates)
 
-            if notifier.email_follow:
+            if not STATE['LOADING_DATA'] and notifier.email_follow:
                 Email.objects.create(
                     notification=notification,
                     subject=template['subject'].format(user=str(target)),
