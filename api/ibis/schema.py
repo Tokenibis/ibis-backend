@@ -67,17 +67,7 @@ class IbisUserFilter(django_filters.FilterSet):
                 id=from_global_id(value)[1]).follower.all())
 
     def filter_like_for(self, qs, name, value):
-        entry_type, entry_id = from_global_id(value)
-        submodels = {
-            '{}Node'.format(x.__name__): x
-            for x in models.Likeable.__subclasses__()
-        }
-
-        try:
-            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
-        except (KeyError, ObjectDoesNotExist):
-            raise KeyError('Object is not likeable')
-
+        entry_obj = models.Entry.objects.get(pk=from_global_id(value)[1])
         return qs.filter(id__in=entry_obj.like.all())
 
     def filter_rsvp_for(self, qs, name, value):
@@ -664,6 +654,12 @@ class EntryNode(DjangoObjectType):
     comment_count = graphene.Int()
     comment_count_recursive = graphene.Int()
 
+    like = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+    like_count = graphene.Int()
+
     class Meta:
         model = models.Entry
         filter_fields = []
@@ -687,17 +683,18 @@ class EntryNode(DjangoObjectType):
 
         return count
 
+    def resolve_like(self, *args, **kwargs):
+        return self.like
+
+    def resolve_like_count(self, *args, **kwargs):
+        return self.like.count()
+
 
 # --- Donation -------------------------------------------------------------- #
 
 
 class DonationNode(EntryNode):
     amount = graphene.Int()
-    like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
-    )
-    like_count = graphene.Int()
 
     class Meta:
         model = models.Donation
@@ -706,12 +703,6 @@ class DonationNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
-
-    def resolve_like(self, *args, **kwargs):
-        return self.like
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -847,11 +838,6 @@ class DonationDelete(Mutation):
 
 class TransactionNode(EntryNode):
     amount = graphene.Int()
-    like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
-    )
-    like_count = graphene.Int()
 
     class Meta:
         model = models.Transaction
@@ -860,12 +846,6 @@ class TransactionNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
-
-    def resolve_like(self, *args, **kwargs):
-        return self.like
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1008,11 +988,6 @@ class TransactionDelete(Mutation):
 
 
 class NewsNode(EntryNode):
-    like_count = graphene.Int()
-    like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
-    )
     bookmark = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -1022,12 +997,6 @@ class NewsNode(EntryNode):
         model = models.News
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
-
-    def resolve_like(self, *args, **kwargs):
-        return self.like
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
@@ -1141,11 +1110,6 @@ class NewsDelete(Mutation):
 
 
 class EventNode(EntryNode):
-    like_count = graphene.Int()
-    like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
-    )
     bookmark = DjangoFilterConnectionField(
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
@@ -1160,12 +1124,6 @@ class EventNode(EntryNode):
         model = models.Event
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
-
-    def resolve_like(self, *args, **kwargs):
-        return self.like
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
@@ -1699,11 +1657,6 @@ class PostNode(EntryNode):
         lambda: IbisUserNode,
         filterset_class=IbisUserFilter,
     )
-    like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
-    )
-    like_count = graphene.Int()
 
     class Meta:
         model = models.Post
@@ -1712,12 +1665,6 @@ class PostNode(EntryNode):
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
-
-    def resolve_like(self, *args, **kwargs):
-        return self.like
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1799,22 +1746,10 @@ class PostDelete(Mutation):
 
 
 class CommentNode(EntryNode):
-    like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
-    )
-    like_count = graphene.Int()
-
     class Meta:
         model = models.Comment
         filter_fields = []
         interfaces = (relay.Node, )
-
-    def resolve_like(self, *args, **kwargs):
-        return self.like
-
-    def resolve_like_count(self, *args, **kwargs):
-        return self.like.count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1945,17 +1880,7 @@ class LikeMutation(Mutation):
     @classmethod
     def mutate(cls, info, operation, user, target):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        entry_type, entry_id = from_global_id(target)
-
-        submodels = {
-            '{}Node'.format(x.__name__): x
-            for x in models.Likeable.__subclasses__()
-        }
-
-        try:
-            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
-        except (KeyError, ObjectDoesNotExist):
-            raise KeyError('Object is not likeable')
+        entry_obj = models.Entry.objects.get(pk=from_global_id(target)[1])
 
         if not (info.context.user.is_staff or
                 (info.context.user.id == int(from_global_id(user)[1])

@@ -145,11 +145,6 @@ class Valuable(models.Model):
 
 
 class Likeable(models.Model):
-    like = models.ManyToManyField(
-        IbisUser,
-        related_name='likes_%(class)s',
-        blank=True,
-    )
 
     class Meta:
         abstract = True
@@ -233,7 +228,14 @@ class Entry(TimeStampedModel):
         IbisUser,
         on_delete=models.CASCADE,
     )
+
     description = models.TextField(validators=[MinLengthValidator(1)])
+
+    like = models.ManyToManyField(
+        IbisUser,
+        related_name='likes',
+        blank=True,
+    )
 
 
 class Deposit(TimeStampedModel, Valuable):
@@ -252,21 +254,21 @@ class Withdrawal(Valuable):
     )
 
 
-class Donation(Entry, Valuable, Likeable, Scoreable):
+class Donation(Entry, Valuable, Scoreable):
     target = models.ForeignKey(
         Nonprofit,
         on_delete=models.CASCADE,
     )
 
 
-class Transaction(Entry, Valuable, Likeable, Scoreable):
+class Transaction(Entry, Valuable, Scoreable):
     target = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
     )
 
 
-class News(Entry, Likeable, Bookmarkable, Scoreable):
+class News(Entry, Bookmarkable, Scoreable):
     class Meta:
         verbose_name_plural = 'news'
 
@@ -278,7 +280,7 @@ class News(Entry, Likeable, Bookmarkable, Scoreable):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
+class Event(Entry, Bookmarkable, Rsvpable, Scoreable):
     title = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
     address = models.TextField(validators=[MinLengthValidator(1)])
@@ -290,11 +292,11 @@ class Event(Entry, Likeable, Bookmarkable, Rsvpable, Scoreable):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Post(Entry, Likeable, Bookmarkable, Scoreable):
+class Post(Entry, Bookmarkable, Scoreable):
     title = models.TextField(validators=[MinLengthValidator(1)])
 
 
-class Comment(Entry, Likeable, Scoreable):
+class Comment(Entry, Scoreable):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',

@@ -1356,6 +1356,10 @@ class APITestCase(GraphQLTestCase):
 
         follow_id = create_operation('FollowCreate')
         like_id = create_operation('LikeCreate')
+        delete_operation('FollowDelete', follow_id)
+        delete_operation('LikeDelete', like_id)
+        follow_id = create_operation('FollowCreate')
+        like_id = create_operation('LikeCreate')
         assert query_unseen() == 2
 
         delete_operation('FollowDelete', follow_id)

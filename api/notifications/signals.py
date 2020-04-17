@@ -3,7 +3,7 @@ import json
 import random
 
 from django.utils.timezone import now, timedelta
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 from django.conf import settings
 from graphql_relay.node.node import to_global_id
@@ -28,6 +28,9 @@ with open(os.path.join(DIR, 'emails/transaction.json')) as fd:
 
 with open(os.path.join(DIR, 'emails/comment.json')) as fd:
     comment_templates = json.load(fd)
+
+with open(os.path.join(DIR, 'emails/follow.json')) as fd:
+    follow_templates = json.load(fd)
 
 # --- Signals --------------------------------------------------------------- #
 
@@ -92,11 +95,6 @@ def handleDepositCreate(sender, instance, created, raw, **kwargs):
 
     Notification.objects.filter(deduper=notification.deduper).exclude(
         pk=notification.id).delete()
-
-
-# @receiver(post_save, sender=ibis.models.IbisUser)
-# def handleLikeCreate(sender, instance, created, raw, **kwargs):
-#     print(instance.tracker.changed())
 
 
 @receiver(post_save, sender=ibis.models.Transaction)
@@ -315,3 +313,95 @@ def handleEventDelete(sender, instance, **kwargs):
 def handlePostDelete(sender, instance, **kwargs):
     Notification.objects.filter(
         deduper__startswith='post:{}:'.format(instance.id)).delete()
+
+
+@receiver(m2m_changed, sender=ibis.models.IbisUser.following.through)
+def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add':
+        for pk in pk_set:
+            target = ibis.models.IbisUser.objects.get(pk=pk)
+            notifier = target.notifier
+
+            submodel = [
+                x for x in ibis.models.IbisUser.__subclasses__()
+                if hasattr(instance, x.__name__.lower())
+            ][0]
+
+            description = '{} started following you'.format(str(instance))
+
+            notification = Notification.objects.create(
+                notifier=notifier,
+                category=Notification.RECEIVED_FOLLOW,
+                reference='{}:{}'.format(
+                    submodel.__name__,
+                    to_global_id('{}Node'.format(submodel.__name__), instance.id),
+                ),
+                deduper='follow:{}:{}'.format(
+                    instance.id,
+                    target.id,
+                ),
+                description=description,
+            )
+
+            template = random.choice(follow_templates)
+
+            if notifier.email_follow:
+                Email.objects.create(
+                    notification=notification,
+                    subject=template['subject'].format(user=str(target)),
+                    body=template['body'].format(user=str(target)),
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+
+            Notification.objects.filter(deduper=notification.deduper).exclude(
+                pk=notification.id).delete()
+
+    elif action == 'post_remove':
+        for pk in pk_set:
+            target = ibis.models.IbisUser.objects.get(pk=pk)
+            Notification.objects.filter(
+                deduper__startswith='follow:{}:{}'.format(
+                    instance.id,
+                    target.id,
+                )).delete()
+
+
+@receiver(m2m_changed, sender=ibis.models.Entry.like.through)
+def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
+    if action == 'post_add':
+        notifier = instance.user.notifier
+
+        submodel = [
+            x for x in ibis.models.Entry.__subclasses__()
+            if hasattr(instance, x.__name__.lower())
+        ][0]
+
+        for pk in pk_set:
+            user = ibis.models.IbisUser.objects.get(pk=pk)
+            description = '{} liked your entry'.format(str(user))
+
+            notification = Notification.objects.create(
+                notifier=notifier,
+                category=Notification.RECEIVED_LIKE,
+                reference='{}:{}'.format(
+                    submodel.__name__,
+                    to_global_id('{}Node', submodel.__name__),
+                ),
+                deduper='like:{}:{}'.format(
+                    user.id,
+                    instance.id,
+                ),
+                description=description,
+            )
+
+            Notification.objects.filter(deduper=notification.deduper).exclude(
+                pk=notification.id).delete()
+
+    elif action == 'post_remove':
+        for pk in pk_set:
+            user = ibis.models.IbisUser.objects.get(pk=pk)
+            Notification.objects.filter(
+                deduper__startswith='like:{}:{}'.format(
+                    user.id,
+                    instance.id,
+                )).delete()

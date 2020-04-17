@@ -6,6 +6,7 @@
 
 import os
 import re
+import copy
 import random
 import json
 import hashlib
@@ -202,6 +203,7 @@ class Model:
             'fields': {
                 'user': source,
                 'description': description,
+                'like': [],
             }
         })
         self.donations.append({
@@ -210,7 +212,6 @@ class Model:
             'fields': {
                 'target': target,
                 'amount': amount,
-                'like': [],
                 'score': score,
             }
         })
@@ -267,6 +268,7 @@ class Model:
             'fields': {
                 'user': source,
                 'description': description,
+                'like': [],
             }
         })
 
@@ -276,7 +278,6 @@ class Model:
             'fields': {
                 'target': target,
                 'amount': amount,
-                'like': [],
                 'score': score,
             }
         })
@@ -293,6 +294,7 @@ class Model:
             'fields': {
                 'user': nonprofit,
                 'description': description,
+                'like': [],
             }
         })
 
@@ -302,7 +304,6 @@ class Model:
             'fields': {
                 'title': title,
                 'bookmark': [],
-                'like': [],
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
                 'score': score,
@@ -330,6 +331,7 @@ class Model:
             'fields': {
                 'user': nonprofit,
                 'description': description,
+                'like': [],
             }
         })
 
@@ -341,7 +343,6 @@ class Model:
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
                 'rsvp': [],
-                'like': [],
                 'date': date,
                 'duration': duration,
                 'address': address,
@@ -360,6 +361,7 @@ class Model:
             'fields': {
                 'user': user,
                 'description': description,
+                'like': [],
             }
         })
 
@@ -368,7 +370,6 @@ class Model:
             'pk': pk,
             'fields': {
                 'title': title,
-                'like': [],
                 'score': score,
                 'bookmark': [],
             }
@@ -385,6 +386,7 @@ class Model:
             'fields': {
                 'user': user,
                 'description': description,
+                'like': [],
             }
         })
 
@@ -393,7 +395,6 @@ class Model:
             'pk': pk,
             'fields': {
                 'parent': parent,
-                'like': [],
                 'score': score,
             }
         })
@@ -435,25 +436,28 @@ class Model:
         entry_obj['fields']['bookmark'].append(person)
 
     def add_like(self, person, entry):
-        likeable = self.donations + self.transactions + self.news + self.events \
-                + self.posts + self.comments
-        entry_obj = next((x for x in likeable if x['pk'] == entry), None)
+        entry_obj = next((x for x in self.entries if x['pk'] == entry), None)
         entry_obj['fields']['like'].append(person)
 
     def get_model(self):
+        follow_less = copy.deepcopy(self.ibisUsers)
+        for x in follow_less:
+            del x['fields']['following']
+
         return self.nonprofit_categories + \
-            self.users + \
-            self.ibisUsers + \
             self.people + \
             self.nonprofits + \
+            self.users + \
+            follow_less + \
+            self.ibisUsers + \
             self.deposits + \
-            self.entries + \
             self.donations + \
             self.transactions + \
             self.news + \
             self.events + \
             self.posts + \
             self.comments + \
+            self.entries + \
             self.sites + \
             self.socialApplications
 
