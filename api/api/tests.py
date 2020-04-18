@@ -140,19 +140,21 @@ class APITestCase(GraphQLTestCase):
             first_name='Nonprofit',
             last_name='McNonprofitFace',
             email='nonprofit@example.com',
-            category_id=models.NonprofitCategory.objects.first().id,
+            category=models.NonprofitCategory.objects.first(),
         )
 
         models.Deposit.objects.create(
             user=self.me_person,
             amount=300,
             payment_id='unique_1',
+            category=models.DepositCategory.objects.first(),
         )
 
         models.Deposit.objects.create(
             user=self.me_nonprofit,
             amount=300,
             payment_id='unique_2',
+            category=models.DepositCategory.objects.first(),
         )
 
         self.nonprofit = models.Nonprofit.objects.all().first()
@@ -233,6 +235,7 @@ class APITestCase(GraphQLTestCase):
             user=self.me_person,
             amount=200,
             payment_id='unique_3',
+            category=models.DepositCategory.objects.first(),
         )
 
         models.Donation.objects.create(
@@ -955,6 +958,7 @@ class APITestCase(GraphQLTestCase):
             amount=int(
                 (settings.MAX_TRANSFER - self.me_person.balance()) * 1.5),
             payment_id='unique_test_money_limit_donation',
+            category=models.DepositCategory.objects.first(),
         )
 
         assert not transfer('DonationCreate', self.nonprofit, -1)
@@ -973,6 +977,7 @@ class APITestCase(GraphQLTestCase):
             amount=int(
                 (settings.MAX_TRANSFER - self.me_person.balance()) * 1.5),
             payment_id='unique_test_money_limit_transaction',
+            category=models.DepositCategory.objects.first(),
         )
 
         assert not transfer('TransactionCreate', self.person, -1)
@@ -993,8 +998,8 @@ class APITestCase(GraphQLTestCase):
             result = json.loads(
                 self.query(
                     '''
-                    mutation DepositCreate($user: ID! $amount: Int! $paymentId: String!) {
-                        createDeposit(user: $user amount: $amount paymentId: $paymentId) {
+                    mutation DepositCreate($user: ID! $amount: Int! $paymentId: String! $category: ID!) {
+                        createDeposit(user: $user amount: $amount paymentId: $paymentId category: $category) {
                             deposit {
                                 id
                             }
@@ -1011,6 +1016,11 @@ class APITestCase(GraphQLTestCase):
                         'unique_{}_{}'.format(
                             user.username,
                             len(user.deposit_set.all()),
+                        ),
+                        'category':
+                        to_global_id(
+                            'DepositCategory',
+                            models.DepositCategory.objects.first().id,
                         ),
                     },
                 ).content)
@@ -1319,6 +1329,7 @@ class APITestCase(GraphQLTestCase):
             user=self.me_person,
             amount=200,
             payment_id='unique_test_notifications',
+            category=models.DepositCategory.objects.first(),
         )
 
         self.person.following.add(self.nonprofit)

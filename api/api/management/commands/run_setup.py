@@ -16,12 +16,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
-            categories = json.load(fd)
+            nonprofit_categories = json.load(fd)
 
-        for cat in categories:
+        with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
+            deposit_categories = json.load(fd)
+
+        for cat in sorted(nonprofit_categories.keys()):
             models.NonprofitCategory.objects.create(
                 title=cat,
-                description=categories[cat],
+                description=nonprofit_categories[cat],
+            )
+
+        for cat in deposit_categories:
+            models.DepositCategory.objects.create(
+                title=cat,
             )
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:

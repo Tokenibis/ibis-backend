@@ -254,5 +254,3 @@ REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
 
 SIGNAL_SCORE_NONPROFIT_IGNORE = ['tokenibis', 'oneabq']
-
-SIGNAL_CREATE_PERSON = CONF['ibis']['create_person']

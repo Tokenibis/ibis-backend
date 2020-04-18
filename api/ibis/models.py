@@ -142,7 +142,6 @@ class Valuable(models.Model):
 
 
 class Likeable(models.Model):
-
     class Meta:
         abstract = True
 
@@ -235,9 +234,20 @@ class Entry(TimeStampedModel):
     )
 
 
+class DepositCategory(models.Model):
+    class Meta:
+        verbose_name_plural = 'deposit categories'
+
+    title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
+
+
 class Deposit(TimeStampedModel, Valuable):
     user = models.ForeignKey(
         IbisUser,
+        on_delete=models.CASCADE,
+    )
+    category = models.ForeignKey(
+        DepositCategory,
         on_delete=models.CASCADE,
     )
     payment_id = models.TextField(

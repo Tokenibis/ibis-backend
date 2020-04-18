@@ -204,6 +204,7 @@ class PaymentView(generics.GenericAPIView):
             user=user,
             amount=net,
             payment_id='paypal:{}:{}'.format(fee, payment_id),
+            category=models.DepositCategory.objects.get(title='paypal'),
         )
 
         return response.Response({

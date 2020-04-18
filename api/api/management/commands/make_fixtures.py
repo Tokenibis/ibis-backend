@@ -86,6 +86,7 @@ class Markov(object):
 class Model:
     def __init__(self):
         self.nonprofit_categories = []
+        self.deposit_categories = []
         self.ibisUsers = []
         self.users = []
         self.people = []
@@ -144,6 +145,19 @@ class Model:
             'fields': {
                 'title': title,
                 'description': description,
+            },
+        })
+
+        return pk
+
+    def add_deposit_category(self, title):
+        pk = len(self.deposit_categories) + 1
+
+        self.deposit_categories.append({
+            'model': 'ibis.DepositCategory',
+            'pk': pk,
+            'fields': {
+                'title': title,
             },
         })
 
@@ -401,12 +415,12 @@ class Model:
 
         return pk
 
-    def add_deposit(self, user, amount):
+    def add_deposit(self, user, amount, category):
         pk = len(self.deposits) + 1
 
         sha = hashlib.sha256()
         sha.update(str(pk).encode())
-        payment_id = 'ubp:{}'.format(sha.hexdigest())
+        payment_id = '{}'.format(sha.hexdigest())
 
         self.deposits.append({
             'model': 'ibis.Deposit',
@@ -415,6 +429,7 @@ class Model:
                 'user': user,
                 'payment_id': payment_id,
                 'amount': amount,
+                'category': category,
             }
         })
 
@@ -452,6 +467,7 @@ class Model:
             self.users,
             partial_ibisUsers,
             self.nonprofit_categories,
+            self.deposit_categories,
             self.nonprofits,
             self.people,
             self.ibisUsers,
@@ -524,6 +540,9 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
             np_cat_raw = json.load(fd)
 
+        with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
+            dp_cat_raw = json.load(fd)
+
         with open(os.path.join(DIR, 'data/nonprofits.json')) as fd:
             np_raw = sorted(json.load(fd), key=lambda x: x['name'])
 
@@ -564,6 +583,11 @@ class Command(BaseCommand):
             model.add_nonprofit_category(x, np_cat_raw[x]) for x in np_cat_raw
         ]
 
+        # make deposit categories from charity navigator categories
+        deposit_categories = [
+            model.add_deposit_category(x) for x in dp_cat_raw
+        ]
+
         # make nonprofits from scraped list of real nonprofits
         nonprofits = [
             model.add_nonprofit(
@@ -583,12 +607,20 @@ class Command(BaseCommand):
 
         # make deposit money for all users
         for person in people:
-            model.add_deposit(person, 1000000)
+            model.add_deposit(
+                person,
+                1000000,
+                random.choice(deposit_categories),
+            )
 
         # initial donations for nonprofits
         for nonprofit in nonprofits:
             donor = random.choice(people)
-            model.add_deposit(donor, 1000000)
+            model.add_deposit(
+                donor,
+                1000000,
+                random.choice(deposit_categories),
+            )
             model.add_donation(donor, nonprofit, 1000000, 'initial', 0)
 
         # make random donations

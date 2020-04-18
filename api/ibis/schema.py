@@ -447,6 +447,78 @@ class NonprofitCategoryDelete(Mutation):
             return NonprofitCategoryDelete(status=False)
 
 
+# --- Deposit Category ------------------------------------------------------ #
+
+
+class DepositCategoryNode(DjangoObjectType):
+    class Meta:
+        model = models.DepositCategory
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
+
+
+class DepositCategoryCreate(Mutation):
+    class Arguments:
+        title = graphene.String(required=True)
+        score = graphene.String(required=True)
+
+    depositCategory = graphene.Field(DepositCategoryNode)
+
+    def mutate(self, info, title):
+        if not info.context.user.is_staff:
+            raise GraphQLError('You are not a staff member')
+
+        depositCategory = models.DepositCategory.objects.create(
+            title=title,
+        )
+        depositCategory.save()
+        return DepositCategoryCreate(depositCategory=depositCategory)
+
+
+class DepositCategoryUpdate(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        title = graphene.String()
+
+    depositCategory = graphene.Field(DepositCategoryNode)
+
+    def mutate(self, info, id, title=''):
+        if not info.context.user.is_staff:
+            raise GraphQLError('You are not a staff member')
+
+        depositCategory = models.DepositCategory.objects.get(
+            pk=from_global_id(id)[1])
+        if title:
+            depositCategory.title = title
+        depositCategory.save()
+
+        return DepositCategoryUpdate(depositCategory=depositCategory)
+
+
+class DepositCategoryDelete(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    status = graphene.Boolean()
+
+    def mutate(self, info, id):
+        if not info.context.user.is_staff:
+            raise GraphQLError('You are not a staff member')
+
+        try:
+            models.DepositCategory.objects.get(
+                pk=from_global_id(id)[1]).delete()
+            return DepositCategoryDelete(status=True)
+        except models.DepositCategory.DoesNotExist:
+            return DepositCategoryDelete(status=False)
+
+
 # --- Deposit --------------------------------------------------------------- #
 
 
@@ -467,11 +539,12 @@ class DepositCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        payment_id = graphene.String()
+        payment_id = graphene.String(required=True)
+        category = graphene.ID(required=True)
 
     deposit = graphene.Field(DepositNode)
 
-    def mutate(self, info, user, amount, payment_id=''):
+    def mutate(self, info, user, amount, payment_id, category):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
@@ -487,6 +560,8 @@ class DepositCreate(Mutation):
             user=user_obj,
             amount=amount,
             payment_id=payment_id,
+            category=models.DepositCategory.objects.get(
+                pk=from_global_id(category)[1]),
         )
         deposit.save()
         return DepositCreate(deposit=deposit)
@@ -498,10 +573,19 @@ class DepositUpdate(Mutation):
         user = graphene.ID()
         amount = graphene.Int()
         payment_id = graphene.String()
+        category = graphene.ID()
 
     deposit = graphene.Field(DepositNode)
 
-    def mutate(self, info, id, user=None, amount='', payment_id=''):
+    def mutate(
+            self,
+            info,
+            id,
+            user=None,
+            amount='',
+            payment_id='',
+            category=None,
+    ):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
@@ -523,6 +607,9 @@ class DepositUpdate(Mutation):
             deposit.amount = amount
         if payment_id:
             deposit.payment_id = payment_id
+        if category:
+            deposit.category = models.DepositCategory.objects.get(
+                pk=from_global_id(category)[1])
         deposit.save()
         return DepositUpdate(deposit=deposit)
 
@@ -1989,6 +2076,7 @@ class RsvpDelete(RsvpMutation):
 class Query(object):
 
     nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
+    deposit_category = relay.Node.Field(DepositCategoryNode)
     ibis_user = relay.Node.Field(IbisUserNode)
     person = relay.Node.Field(PersonNode)
     nonprofit = relay.Node.Field(NonprofitNode)
@@ -2003,6 +2091,8 @@ class Query(object):
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)
+    all_deposit_categories = DjangoFilterConnectionField(
+        DepositCategoryNode)
     all_ibis_users = DjangoFilterConnectionField(
         IbisUserNode,
         filterset_class=IbisUserFilter,
