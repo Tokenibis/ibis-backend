@@ -6,7 +6,9 @@ from django.core.management.commands import loaddata
 
 # Really ugly hack because Django doesn't provide 'raw' field for
 # m2m_changed signals.
-STATE = {}
+STATE = {
+    'LOADING_DATA': False,
+}
 
 
 class Command(loaddata.Command):

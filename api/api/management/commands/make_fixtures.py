@@ -594,10 +594,11 @@ class Command(BaseCommand):
         # make random donations
         donations = []
         for i in range(num_donation - len(nonprofits)):
+            donor = random.choice(people + nonprofit)
             donations.append(
                 model.add_donation(
-                    random.choice(people + nonprofits),
-                    random.choice(nonprofits),
+                    donor,
+                    random.choice([x for x in nonprofits if x != donor]),
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
@@ -606,10 +607,11 @@ class Command(BaseCommand):
         # make random transactions
         transactions = []
         for i in range(num_transaction):
+            sender = random.choice(people + nonprofits)
             transactions.append(
                 model.add_transaction(
-                    random.choice(people + nonprofits),
-                    random.choice(people),
+                    sender,
+                    random.choice([x for x in people if x != sender]),
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
@@ -700,8 +702,7 @@ class Command(BaseCommand):
 
         # add followers
         for i in range(num_follow):
-            source = random.choice(people + nonprofits)
-            target = random.choice(people + nonprofits)
+            source, target = random.sample(people + nonprofits, 2)
             model.add_follow(source, target)
 
         # add rsvps

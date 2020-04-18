@@ -4,7 +4,6 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from model_utils.models import TimeStampedModel
-from model_utils import FieldTracker
 
 from users.models import User
 
@@ -88,8 +87,6 @@ class IbisUser(User, Scoreable):
         choices=VISIBILITY_CHOICES,
         default=PUBLIC,
     )
-
-    tracker = FieldTracker()
 
     def __str__(self):
         return '{}{}{}'.format(

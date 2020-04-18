@@ -34,6 +34,12 @@ with open(os.path.join(DIR, 'emails/follow.json')) as fd:
     follow_templates = json.load(fd)
 
 
+def _get_submodel(instance, supermodel):
+    for submodel in supermodel.__subclasses__():
+        if submodel.objects.filter(pk=instance.pk).exists():
+            return submodel
+
+
 # @receiver(post_save, sender=ibis.models.Deposit)
 # def handlePersonCreate(sender, instance, created, **kwargs):
 #     if not created:
@@ -46,9 +52,9 @@ with open(os.path.join(DIR, 'emails/follow.json')) as fd:
 #         category=Notification.UBP_DISTRIBUTION,
 #         reference='{}:{}'.format(
 #             ibis.models.Deposit.__name__,
-#             to_global_id('DepositNode', instance.id),
+#             to_global_id('DepositNode', instance.pk),
 #         ),
-#         deduper='deposit:{}'.format(instance.id),
+#         deduper='deposit:{}'.format(instance.pk),
 #         description='Welcome to Ibis!',
 #     )
 
@@ -58,6 +64,7 @@ with open(os.path.join(DIR, 'emails/follow.json')) as fd:
 #         body=template['body'].format(user=str(user)),
 #         schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
 #     )
+
 
 @receiver(post_save, sender=ibis.models.Deposit)
 def handleDepositCreate(sender, instance, created, **kwargs):
@@ -76,9 +83,9 @@ def handleDepositCreate(sender, instance, created, **kwargs):
             category=Notification.UBP_DISTRIBUTION,
             reference='{}:{}'.format(
                 ibis.models.Deposit.__name__,
-                to_global_id('DepositNode', instance.id),
+                to_global_id('DepositNode', instance.pk),
             ),
-            deduper='deposit:{}'.format(instance.id),
+            deduper='deposit:{}'.format(instance.pk),
             description=description,
         )
 
@@ -100,9 +107,9 @@ def handleDepositCreate(sender, instance, created, **kwargs):
             category=Notification.SUCCESSFUL_DEPOSIT,
             reference='{}:{}'.format(
                 ibis.models.Deposit.__name__,
-                to_global_id('DepositNode', instance.id),
+                to_global_id('DepositNode', instance.pk),
             ),
-            deduper='deposit:{}'.format(instance.id),
+            deduper='deposit:{}'.format(instance.pk),
             description=description,
             clicked=True,  # the user should have seen the deposit
         )
@@ -118,7 +125,7 @@ def handleDepositCreate(sender, instance, created, **kwargs):
             )
 
     Notification.objects.filter(deduper=notification.deduper).exclude(
-        pk=notification.id).delete()
+        pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.Transaction)
@@ -139,9 +146,9 @@ def handleTransactionCreate(sender, instance, created, **kwargs):
         category=Notification.RECEIVED_TRANSACTION,
         reference='{}:{}'.format(
             ibis.models.Transaction.__name__,
-            to_global_id('TransactionNode', instance.id),
+            to_global_id('TransactionNode', instance.pk),
         ),
-        deduper='transaction:{}'.format(instance.id),
+        deduper='transaction:{}'.format(instance.pk),
         description=description,
     )
 
@@ -156,7 +163,7 @@ def handleTransactionCreate(sender, instance, created, **kwargs):
         )
 
     Notification.objects.filter(deduper=notification.deduper).exclude(
-        pk=notification.id).delete()
+        pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.Comment)
@@ -167,45 +174,42 @@ def handleCommentCreate(sender, instance, created, **kwargs):
     user = ibis.models.Entry.objects.get(pk=instance.pk).user
     current = instance
 
-    description = '{} replied to your comment'.format(str(user))
-
     notifications = []
 
     while hasattr(current, 'comment'):
         parent = current.comment.parent
-        if hasattr(parent.user, 'ibisuser'):
-            notifier = parent.user.ibisuser.notifier
-            if notifier not in [x.notifier for x in notifications] and \
-               notifier != user.notifier:
-                notification = Notification.objects.create(
-                    notifier=notifier,
-                    category=Notification.RECEIVED_COMMENT,
-                    deduper='comment:{}:{}'.format(
-                        instance.id,
-                        to_global_id('IbisUserNode', parent.user.ibisuser.id),
-                    ),
-                    description=description,
+        notifier = parent.user.ibisuser.notifier
+        if notifier not in [x.notifier for x in notifications
+                            ] and notifier != user.notifier:
+            description = '{} replied to your {}'.format(
+                str(user),
+                _get_submodel(parent, ibis.models.Entry).__name__.lower(),
+            )
+            notification = Notification.objects.create(
+                notifier=notifier,
+                category=Notification.RECEIVED_COMMENT,
+                deduper='comment:{}:{}'.format(
+                    instance.pk,
+                    parent.user.ibisuser.pk,
+                ),
+                description=description,
+            )
+            notifications.append(notification)
+
+            template = random.choice(comment_templates)
+
+            if not STATE['LOADING_DATA'] and notifier.email_comment:
+                Email.objects.create(
+                    notification=notification,
+                    subject=template['subject'].format(user=str(user)),
+                    body=template['body'].format(user=str(user)),
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
                 )
-                notifications.append(notification)
-
-                template = random.choice(comment_templates)
-
-                if not STATE['LOADING_DATA'] and notifier.email_comment:
-                    Email.objects.create(
-                        notification=notification,
-                        subject=template['subject'].format(user=str(user)),
-                        body=template['body'].format(user=str(user)),
-                        schedule=now() +
-                        timedelta(minutes=settings.EMAIL_DELAY),
-                    )
 
         current = parent
 
-    for Subclass in ibis.models.Entry.__subclasses__():
-        if Subclass.objects.filter(pk=current.id).exists():
-            ref_type = Subclass.__name__
-            ref_id = to_global_id('{}Node'.format(ref_type), current.id)
-            break
+    ref_type = _get_submodel(current, ibis.models.Entry).__name__
+    ref_id = to_global_id('{}Node'.format(ref_type), current.pk)
 
     if notifications:
         notifications[-1].description = '{} replied to your {}'.format(
@@ -216,7 +220,7 @@ def handleCommentCreate(sender, instance, created, **kwargs):
         notification.save()
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.id).delete()
+            pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.News)
@@ -236,17 +240,17 @@ def handleNewsCreate(sender, instance, created, **kwargs):
             category=Notification.FOLLOWING_NEWS,
             reference='{}:{}'.format(
                 ibis.models.News.__name__,
-                to_global_id('NewsNode', instance.id),
+                to_global_id('NewsNode', instance.pk),
             ),
             deduper='news:{}:{}'.format(
-                instance.id,
-                to_global_id('IbisUserNode', target.id),
+                instance.pk,
+                target.pk,
             ),
             description=description,
         )
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.id).delete()
+            pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.Event)
@@ -266,17 +270,17 @@ def handleEventCreate(sender, instance, created, **kwargs):
             category=Notification.FOLLOWING_EVENT,
             reference='{}:{}'.format(
                 ibis.models.Event.__name__,
-                to_global_id('EventNode', instance.id),
+                to_global_id('EventNode', instance.pk),
             ),
             deduper='event:{}:{}'.format(
-                instance.id,
-                to_global_id('IbisUserNode', target.id),
+                instance.pk,
+                target.pk,
             ),
             description=description,
         )
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.id).delete()
+            pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.Post)
@@ -296,60 +300,58 @@ def handlePostCreate(sender, instance, created, **kwargs):
             category=Notification.FOLLOWING_POST,
             reference='{}:{}'.format(
                 ibis.models.Post.__name__,
-                to_global_id('PostNode', instance.id),
+                to_global_id('PostNode', instance.pk),
             ),
             deduper='post:{}:{}'.format(
-                instance.id,
-                to_global_id('IbisUserNode', target.id),
+                instance.pk,
+                target.pk,
             ),
             description=description,
         )
 
         Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.id).delete()
+            pk=notification.pk).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Transaction)
 def handleTransactionDelete(sender, instance, **kwargs):
     Notification.objects.filter(
-        deduper='transaction:{}'.format(instance.id)).delete()
+        deduper='transaction:{}'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Comment)
 def handleCommentDelete(sender, instance, **kwargs):
     Notification.objects.filter(
-        deduper__startswith='comment:{}:'.format(instance.id)).delete()
+        deduper__startswith='comment:{}:'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.News)
 def handleNewsDelete(sender, instance, **kwargs):
     Notification.objects.filter(
-        deduper__startswith='news:{}:'.format(instance.id)).delete()
+        deduper__startswith='news:{}:'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Event)
 def handleEventDelete(sender, instance, **kwargs):
     Notification.objects.filter(
-        deduper__startswith='event:{}:'.format(instance.id)).delete()
+        deduper__startswith='event:{}:'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Post)
 def handlePostDelete(sender, instance, **kwargs):
     Notification.objects.filter(
-        deduper__startswith='post:{}:'.format(instance.id)).delete()
+        deduper__startswith='post:{}:'.format(instance.pk)).delete()
 
 
 @receiver(m2m_changed, sender=ibis.models.IbisUser.following.through)
 def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
+    instance = ibis.models.IbisUser.objects.get(pk=instance.pk)
     if action == 'post_add':
         for pk in pk_set:
             target = ibis.models.IbisUser.objects.get(pk=pk)
             notifier = target.notifier
 
-            submodel = [
-                x for x in ibis.models.IbisUser.__subclasses__()
-                if hasattr(instance, x.__name__.lower())
-            ][0]
+            ref_type = _get_submodel(instance, ibis.models.IbisUser).__name__
 
             description = '{} started following you'.format(str(instance))
 
@@ -357,12 +359,12 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
                 notifier=notifier,
                 category=Notification.RECEIVED_FOLLOW,
                 reference='{}:{}'.format(
-                    submodel.__name__,
-                    to_global_id('{}Node'.format(submodel.__name__), instance.id),
+                    ref_type,
+                    to_global_id('{}Node'.format(ref_type), instance.pk),
                 ),
                 deduper='follow:{}:{}'.format(
-                    instance.id,
-                    target.id,
+                    instance.pk,
+                    target.pk,
                 ),
                 description=description,
             )
@@ -378,54 +380,58 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
                 )
 
             Notification.objects.filter(deduper=notification.deduper).exclude(
-                pk=notification.id).delete()
+                pk=notification.pk).delete()
 
     elif action == 'post_remove':
         for pk in pk_set:
             target = ibis.models.IbisUser.objects.get(pk=pk)
             Notification.objects.filter(
                 deduper__startswith='follow:{}:{}'.format(
-                    instance.id,
-                    target.id,
+                    instance.pk,
+                    target.pk,
                 )).delete()
 
 
 @receiver(m2m_changed, sender=ibis.models.Entry.like.through)
 def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
+    instance = ibis.models.Entry.objects.get(pk=instance.pk)
     if action == 'post_add':
-        notifier = instance.user.notifier
-
-        submodel = [
-            x for x in ibis.models.Entry.__subclasses__()
-            if hasattr(instance, x.__name__.lower())
-        ][0]
-
+        current = instance
         for pk in pk_set:
             user = ibis.models.IbisUser.objects.get(pk=pk)
-            description = '{} liked your entry'.format(str(user))
+            notifier = current.user.notifier
+            description = '{} liked your {}'.format(
+                str(user),
+                _get_submodel(instance, ibis.models.Entry).__name__,
+            )
+
+            while hasattr(current, 'comment'):
+                current = current.comment.parent
+
+            ref_type = _get_submodel(current, ibis.models.Entry).__name__
 
             notification = Notification.objects.create(
                 notifier=notifier,
                 category=Notification.RECEIVED_LIKE,
                 reference='{}:{}'.format(
-                    submodel.__name__,
-                    to_global_id('{}Node', submodel.__name__),
+                    ref_type,
+                    to_global_id('{}Node'.format(ref_type), current.pk),
                 ),
                 deduper='like:{}:{}'.format(
-                    user.id,
-                    instance.id,
+                    user.pk,
+                    instance.pk,
                 ),
                 description=description,
             )
 
             Notification.objects.filter(deduper=notification.deduper).exclude(
-                pk=notification.id).delete()
+                pk=notification.pk).delete()
 
     elif action == 'post_remove':
         for pk in pk_set:
             user = ibis.models.IbisUser.objects.get(pk=pk)
             Notification.objects.filter(
                 deduper__startswith='like:{}:{}'.format(
-                    user.id,
-                    instance.id,
+                    user.pk,
+                    instance.pk,
                 )).delete()

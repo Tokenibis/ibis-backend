@@ -48,9 +48,8 @@ call_command(
 
 
 class APITestCase(GraphQLTestCase):
-    fixtures = sorted([
-        x.split('/')[-1] for x in os.listdir(os.path.join(DIR, 'fixtures'))
-    ])
+    fixtures = sorted(
+        [x.split('/')[-1] for x in os.listdir(os.path.join(DIR, 'fixtures'))])
     operations = [
         'BookmarkCreate',
         'BookmarkDelete',
@@ -1265,6 +1264,20 @@ class APITestCase(GraphQLTestCase):
             self._client.force_login(self.person)
             assert 'errors' not in result
 
+        def read_last_operation():
+            self._client.force_login(self.person)
+            reference = self.person.notifier.notification_set.last(
+            ).reference.split(':')
+            result = json.loads(
+                self.query(
+                    self.gql[reference[0]],
+                    op_name=reference[0],
+                    variables={
+                        'id': reference[1],
+                    }).content)
+            assert 'errors' not in result and 'id' in result['data'][
+                reference[0][0].lower() + reference[0][1:]]
+
         def query_unseen():
             self._client.force_login(self.person)
             result = json.loads(
@@ -1301,8 +1314,9 @@ class APITestCase(GraphQLTestCase):
             assert self.person.notifier.notification_set.all().count() == c + 1
             delete_operation('{}Delete'.format(op_type), id)
             assert self.person.notifier.notification_set.all().count() == c + 0
-            create_operation('{}Create'.format(op_type))
+            id = create_operation('{}Create'.format(op_type))
             assert self.person.notifier.notification_set.all().count() == c + 1
+            read_last_operation()
 
         run('Follow', count)
         run('Follow', count)
