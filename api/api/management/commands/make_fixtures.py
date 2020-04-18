@@ -594,7 +594,7 @@ class Command(BaseCommand):
         # make random donations
         donations = []
         for i in range(num_donation - len(nonprofits)):
-            donor = random.choice(people + nonprofit)
+            donor = random.choice(people + nonprofits)
             donations.append(
                 model.add_donation(
                     donor,

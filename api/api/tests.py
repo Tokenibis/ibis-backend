@@ -67,6 +67,7 @@ class APITestCase(GraphQLTestCase):
         'FollowCreate',
         'FollowDelete',
         'Home',
+        'IbisUserList',
         'LikeCreate',
         'LikeDelete',
         'News',
@@ -490,6 +491,19 @@ class APITestCase(GraphQLTestCase):
 
         result = json.loads(
             self.query(
+                self.gql['IbisUserList'],
+                op_name='IbisUserList',
+                variables={
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+        success['IbisUserList'] = 'errors' not in result and len(
+            result['data']['allIbisUsers']['edges']) > 0
+
+        result = json.loads(
+            self.query(
                 self.gql['NonprofitList'],
                 op_name='NonprofitList',
                 variables={
@@ -847,6 +861,7 @@ class APITestCase(GraphQLTestCase):
             'FollowCreate': False,
             'FollowDelete': False,
             'Home': True,
+            'IbisUserList': True,
             'LikeCreate': False,
             'LikeDelete': False,
             'News': True,
