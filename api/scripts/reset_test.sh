@@ -15,6 +15,9 @@ load_fixtures() {
 cd $DIR/.. && \
     python3 manage.py make_fixtures \
 	    --num_person 100 \
+	    --num_nonprofit 50 \
+	    --num_deposit 200 \
+	    --num_withdrawal 100 \
 	    --num_donation 400 \
 	    --num_transaction 400 \
 	    --num_news 400 \

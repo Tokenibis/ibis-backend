@@ -15,13 +15,15 @@ logging.disable(logging.CRITICAL)
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 NUM_PERSON = 10
+NUM_NONPROFIT = 10
+NUM_DEPOSIT = 30
+NUM_WITHDRAWAL = 30
 NUM_DONATION = 100
 NUM_TRANSACTION = 100
 NUM_NEWS = 100
 NUM_EVENT = 100
 NUM_POST = 100
 NUM_COMMENT = 100
-
 NUM_FOLLOW = 100
 NUM_RSVP = 100
 NUM_BOOKMARK = 100
@@ -30,6 +32,8 @@ NUM_LIKE = 100
 call_command(
     'make_fixtures',
     num_person=NUM_PERSON,
+    num_deposit=NUM_DEPOSIT,
+    num_withdrawal=NUM_WITHDRAWAL,
     num_donation=NUM_DONATION,
     num_transaction=NUM_TRANSACTION,
     num_news=NUM_NEWS,

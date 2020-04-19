@@ -20,6 +20,8 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 BIRDS = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 BIRDS_LEN = 233
 
+WINDOW = 365 * 24 * 60 * 60
+
 
 class Markov(object):
     def __init__(self, corpus):
@@ -92,6 +94,7 @@ class Model:
         self.people = []
         self.nonprofits = []
         self.deposits = []
+        self.withdrawals = []
         self.entries = []
         self.donations = []
         self.transactions = []
@@ -135,6 +138,11 @@ class Model:
                 }
             },
         ]
+
+        self.now = now()
+
+    def _random_time(self):
+        return self.now - timedelta(seconds=random.randint(0, WINDOW))
 
     def add_nonprofit_category(self, title, description):
         pk = len(self.nonprofit_categories) + 1
@@ -207,7 +215,15 @@ class Model:
 
         return pk
 
-    def add_donation(self, source, target, amount, description, score):
+    def add_donation(
+            self,
+            source,
+            target,
+            amount,
+            description,
+            score,
+            created=None,
+    ):
         assert target in [x['pk'] for x in self.nonprofits]
         pk = len(self.entries) + 1
 
@@ -218,6 +234,7 @@ class Model:
                 'user': source,
                 'description': description,
                 'like': [],
+                'created': created if created else self._random_time(),
             }
         })
         self.donations.append({
@@ -283,6 +300,7 @@ class Model:
                 'user': source,
                 'description': description,
                 'like': [],
+                'created': self._random_time(),
             }
         })
 
@@ -309,6 +327,7 @@ class Model:
                 'user': nonprofit,
                 'description': description,
                 'like': [],
+                'created': self._random_time(),
             }
         })
 
@@ -346,6 +365,7 @@ class Model:
                 'user': nonprofit,
                 'description': description,
                 'like': [],
+                'created': self._random_time(),
             }
         })
 
@@ -376,6 +396,7 @@ class Model:
                 'user': user,
                 'description': description,
                 'like': [],
+                'created': self._random_time(),
             }
         })
 
@@ -398,9 +419,16 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': user,
-                'description': description,
+                'user':
+                user,
+                'description':
+                description,
                 'like': [],
+                'created':
+                max(self._random_time(), [
+                    x['fields']['created'] for x in self.entries
+                    if x['pk'] == parent
+                ][0])
             }
         })
 
@@ -415,7 +443,7 @@ class Model:
 
         return pk
 
-    def add_deposit(self, user, amount, category):
+    def add_deposit(self, user, amount, category, created=None):
         pk = len(self.deposits) + 1
 
         sha = hashlib.sha256()
@@ -430,6 +458,22 @@ class Model:
                 'payment_id': payment_id,
                 'amount': amount,
                 'category': category,
+                'created': created if created else self._random_time(),
+            }
+        })
+
+        return pk
+
+    def add_withdrawal(self, user, amount):
+        pk = len(self.withdrawals) + 1
+
+        self.deposits.append({
+            'model': 'ibis.Withdrawal',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'amount': amount,
+                'created': self._random_time(),
             }
         })
 
@@ -455,11 +499,19 @@ class Model:
         entry_obj['fields']['like'].append(person)
 
     def get_model(self):
+        serializable_entries = copy.deepcopy(self.entries)
+        for x in serializable_entries:
+            x['fields']['created'] = str(x['fields']['created'])
+
+        serializable_deposits = copy.deepcopy(self.deposits)
+        for x in serializable_deposits:
+            x['fields']['created'] = str(x['fields']['created'])
+
         partial_ibisUsers = copy.deepcopy(self.ibisUsers)
         for x in partial_ibisUsers:
             del x['fields']['following']
 
-        partial_entries = copy.deepcopy(self.entries)
+        partial_entries = copy.deepcopy(serializable_entries)
         for x in partial_entries:
             x['fields']['like'] = []
 
@@ -471,7 +523,7 @@ class Model:
             self.nonprofits,
             self.people,
             self.ibisUsers,
-            self.deposits,
+            serializable_deposits,
             partial_entries,
             self.donations,
             self.transactions,
@@ -479,7 +531,7 @@ class Model:
             self.events,
             self.posts,
             self.comments,
-            self.entries,
+            serializable_entries,
             self.sites,
             self.socialApplications,
         ]
@@ -490,6 +542,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--num_person', type=int, required=True)
+        parser.add_argument('--num_nonprofit', type=int, required=True)
+        parser.add_argument('--num_deposit', type=int, required=True)
+        parser.add_argument('--num_withdrawal', type=int, required=True)
         parser.add_argument('--num_donation', type=int, required=True)
         parser.add_argument('--num_transaction', type=int, required=True)
         parser.add_argument('--num_news', type=int, required=True)
@@ -504,6 +559,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.run(
             num_person=options['num_person'],
+            num_nonprofit=options['num_nonprofit'],
+            num_deposit=options['num_deposit'],
+            num_withdrawal=options['num_withdrawal'],
             num_donation=options['num_donation'],
             num_transaction=options['num_transaction'],
             num_news=options['num_news'],
@@ -519,6 +577,9 @@ class Command(BaseCommand):
     def run(
             self,
             num_person,
+            num_nonprofit,
+            num_deposit,
+            num_withdrawal,
             num_donation,
             num_transaction,
             num_news,
@@ -530,6 +591,7 @@ class Command(BaseCommand):
             num_bookmark,
             num_like,
     ):
+        assert num_deposit >= num_person + num_nonprofit
 
         random.seed(0)
         model = Model()
@@ -595,7 +657,7 @@ class Command(BaseCommand):
                 x['description'],
                 random.choice(nonprofit_categories),
                 random.randint(0, 100),
-            ) for x in np_raw
+            ) for x in np_raw[:num_nonprofit]
         ]
 
         # make people
@@ -611,6 +673,7 @@ class Command(BaseCommand):
                 person,
                 1000000,
                 random.choice(deposit_categories),
+                created=model.now - timedelta(seconds=WINDOW + 2),
             )
 
         # initial donations for nonprofits
@@ -620,8 +683,31 @@ class Command(BaseCommand):
                 donor,
                 1000000,
                 random.choice(deposit_categories),
+                created=model.now - timedelta(seconds=WINDOW + 2),
             )
-            model.add_donation(donor, nonprofit, 1000000, 'initial', 0)
+            model.add_donation(
+                donor,
+                nonprofit,
+                1000000,
+                'initial',
+                0,
+                created=model.now - timedelta(seconds=WINDOW + 1),
+            )
+
+        # make random deposits
+        for i in range(num_deposit - (num_person + num_nonprofit)):
+            model.add_deposit(
+                random.choice(people),
+                random.randint(1, 10000),
+                random.choice(deposit_categories),
+            )
+
+        # make random deposits
+        for i in range(num_withdrawal):
+            model.add_withdrawal(
+                random.choice(nonprofits),
+                random.randint(1, 10000),
+            )
 
         # make random donations
         donations = []

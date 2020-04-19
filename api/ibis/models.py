@@ -254,7 +254,7 @@ class Deposit(TimeStampedModel, Valuable):
         unique=True, validators=[MinLengthValidator(1)])
 
 
-class Withdrawal(Valuable):
+class Withdrawal(TimeStampedModel, Valuable):
     user = models.ForeignKey(
         Nonprofit,
         on_delete=models.CASCADE,
