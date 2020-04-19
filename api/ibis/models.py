@@ -192,7 +192,7 @@ class Person(IbisUser):
     )
 
 
-class Nonprofit(IbisUser, TimeStampedModel):
+class Nonprofit(IbisUser):
     class Meta:
         verbose_name = "Nonprofit"
 
