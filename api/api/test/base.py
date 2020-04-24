@@ -2,9 +2,12 @@ import os
 import json
 import logging
 import random
+
 from django.core.management import call_command
+from django.utils.timezone import now, localtime, utc
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
+from freezegun import freeze_time
 
 import users.models
 import ibis.models as models
@@ -29,22 +32,34 @@ NUM_RSVP = 100
 NUM_BOOKMARK = 100
 NUM_LIKE = 100
 
-call_command(
-    'make_fixtures',
-    num_person=NUM_PERSON,
-    num_deposit=NUM_DEPOSIT,
-    num_withdrawal=NUM_WITHDRAWAL,
-    num_donation=NUM_DONATION,
-    num_transaction=NUM_TRANSACTION,
-    num_news=NUM_NEWS,
-    num_event=NUM_EVENT,
-    num_post=NUM_POST,
-    num_comment=NUM_COMMENT,
-    num_follow=NUM_FOLLOW,
-    num_rsvp=NUM_RSVP,
-    num_bookmark=NUM_BOOKMARK,
-    num_like=NUM_LIKE,
+TEST_TIME = localtime(now()).replace(
+    year=2020,
+    month=4,
+    day=5,
+    hour=0,
+    minute=0,
+    second=0,
+    microsecond=0,
 )
+
+with freeze_time(TEST_TIME.astimezone(utc).date()):
+    call_command(
+        'make_fixtures',
+        num_person=NUM_PERSON,
+        num_nonprofit=NUM_NONPROFIT,
+        num_deposit=NUM_DEPOSIT,
+        num_withdrawal=NUM_WITHDRAWAL,
+        num_donation=NUM_DONATION,
+        num_transaction=NUM_TRANSACTION,
+        num_news=NUM_NEWS,
+        num_event=NUM_EVENT,
+        num_post=NUM_POST,
+        num_comment=NUM_COMMENT,
+        num_follow=NUM_FOLLOW,
+        num_rsvp=NUM_RSVP,
+        num_bookmark=NUM_BOOKMARK,
+        num_like=NUM_LIKE,
+    )
 
 
 class BaseTestCase(GraphQLTestCase):
@@ -112,6 +127,7 @@ class BaseTestCase(GraphQLTestCase):
 
         self.assertCountEqual(self.gql.keys(), self.operations)
         assert len(models.Person.objects.all()) == NUM_PERSON
+        assert len(models.Nonprofit.objects.all()) == NUM_NONPROFIT
         assert len(models.Donation.objects.all()) == NUM_DONATION
         assert len(models.Transaction.objects.all()) == NUM_TRANSACTION
         assert len(models.News.objects.all()) == NUM_NEWS

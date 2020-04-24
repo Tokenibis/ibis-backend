@@ -31,12 +31,14 @@ cd $DIR/.. && \
     cd $DIR/.. && \
     rm db.sqlite3 -rf && \
     rm ibis/migrations/ -rf && \
+    rm distribution/migrations/ -rf && \
     rm users/migrations -rf && \
     rm tracker/migrations -rf && \
     rm notifications/migrations -rf && \
-    python3 manage.py makemigrations users ibis tracker notifications && \
+    python3 manage.py makemigrations users ibis distribution notifications tracker && \
     python3 manage.py migrate users && \
     python3 manage.py migrate ibis && \
+    python3 manage.py migrate distribution && \
     python3 manage.py migrate notifications && \
     python3 manage.py migrate tracker && \
     python3 manage.py migrate && \

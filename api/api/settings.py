@@ -22,7 +22,9 @@ with open('../config.json') as fd:
 
 ACCOUNT_UNIQUE_EMAIL = False
 
-ALLOWED_HOSTS = [CONF['ibis']['api'], CONF['ibis']['app']]
+ALLOWED_HOSTS = [
+    CONF['ibis']['endpoints']['api'], CONF['ibis']['endpoints']['app']
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -47,6 +49,7 @@ AUTH_PASSWORD_VALIDATORS = [
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 CRON_CLASSES = [
+    'distribution.crons.DistributionCron',
     'notifications.crons.EmailNotificationCron',
 ]
 
@@ -89,6 +92,7 @@ INSTALLED_APPS = [
     'api',
     'users',
     'ibis',
+    'distribution',
     'notifications',
     'tracker',
 ]
@@ -191,11 +195,13 @@ CORS_ALLOW_HEADERS = [
 ]
 
 CORS_ORIGIN_WHITELIST = (
-    'https://{}'.format(CONF['ibis']['app']),
+    'https://{}'.format(CONF['ibis']['endpoints']['app']),
     'http://localhost:3000',
 )
 
-CSRF_TRUSTED_ORIGINS = [CONF['ibis']['api'], CONF['ibis']['app']]
+CSRF_TRUSTED_ORIGINS = [
+    CONF['ibis']['endpoints']['api'], CONF['ibis']['endpoints']['app']
+]
 
 CSRF_COOKIE_DOMAIN = 'tokenibis.org'
 
@@ -216,6 +222,12 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 AVATAR_BUCKET = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 
 AVATAR_BUCKET_LEN = 233
+
+DISTRIBUTION_DAY = CONF['ibis']['distribution']['day']
+
+DISTRIBUTION_DEFAULT = CONF['ibis']['distribution']['default']
+
+DISTRIBUTION_THROUGHPUT = CONF['ibis']['distribution']['throughput']
 
 EMAIL_HOST = CONF['email']['host']
 
@@ -244,12 +256,13 @@ PAYPAL_LIVE_CLIENT_ID = CONF['payment']['paypal']['live']['client_id']
 PAYPAL_LIVE_SECRET_KEY = CONF['payment']['paypal']['live']['secret_key']
 
 REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
-    CONF['ibis']['app'])
+    CONF['ibis']['endpoints']['app'])
 
-REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(CONF['ibis']['app'])
+REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(
+    CONF['ibis']['endpoints']['app'])
 
 REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
-    CONF['ibis']['app'])
+    CONF['ibis']['endpoints']['app'])
 
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
 

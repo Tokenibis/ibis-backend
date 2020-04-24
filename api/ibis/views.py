@@ -131,7 +131,7 @@ class AnonymousLoginView(generics.GenericAPIView):
 
         login(request, person.user_ptr)
 
-        person.date_joined = localtime(now().replace(
+        person.date_joined = localtime(now()).replace(
             year=2019,
             month=4,
             day=5,
@@ -139,7 +139,7 @@ class AnonymousLoginView(generics.GenericAPIView):
             minute=0,
             second=0,
             microsecond=0,
-        ))
+        )
         person.save()
 
         return response.Response({

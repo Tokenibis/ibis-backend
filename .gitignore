@@ -8,6 +8,7 @@ api/ibis/migrations
 api/users/migrations
 api/tracker/migrations
 api/notifications/migrations
+api/distribution/migrations
 
 api/api/fixtures
 

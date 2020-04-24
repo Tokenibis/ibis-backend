@@ -20,7 +20,7 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 BIRDS = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 BIRDS_LEN = 233
 
-WINDOW = 365 * 24 * 60 * 60
+WINDOW = 365 * 24 * 60 * 60 - 3
 
 
 class Markov(object):

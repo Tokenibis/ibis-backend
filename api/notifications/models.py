@@ -60,7 +60,7 @@ class Notifier(models.Model):
     )
 
     last_seen = models.DateTimeField(
-        default=localtime(now().replace(
+        default=localtime(now()).replace(
             year=2019,
             month=4,
             day=5,
@@ -68,7 +68,7 @@ class Notifier(models.Model):
             minute=0,
             second=0,
             microsecond=0,
-        )))
+        ))
 
     def unseen_count(self):
         return self.notification_set.filter(created__gt=self.last_seen).count()

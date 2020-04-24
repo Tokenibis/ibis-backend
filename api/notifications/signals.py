@@ -9,7 +9,7 @@ from django.conf import settings
 from graphql_relay.node.node import to_global_id
 
 from notifications.models import Notification, Email
-from notifications.management.commands.loaddata import STATE
+from api.management.commands.loaddata import STATE
 
 import ibis.models
 
