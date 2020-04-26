@@ -267,6 +267,19 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
+                self.gql['NonprofitSettingsUpdate'],
+                op_name='NonprofitSettingsUpdate',
+                variables={
+                    'id': self.nonprofit.gid,
+                    'visibilityDonation': models.IbisUser.PUBLIC,
+                    'visibilityTransaction': models.IbisUser.PUBLIC,
+                },
+            ).content)
+        success['NonprofitSettingsUpdate'] = 'errors' not in result and result[
+            'data']['updateNonprofit']['nonprofit']['id']
+
+        result = json.loads(
+            self.query(
                 self.gql['PersonList'],
                 op_name='PersonList',
                 variables={
@@ -488,8 +501,8 @@ class PermissionTestCase(BaseTestCase):
                 op_name='PersonSettingsUpdate',
                 variables={
                     'id': user.gid,
-                    'visibilityDonation': models.Person.PUBLIC,
-                    'visibilityTransaction': models.Person.PUBLIC,
+                    'visibilityDonation': models.IbisUser.PUBLIC,
+                    'visibilityTransaction': models.IbisUser.PUBLIC,
                 },
             ).content)
         success['PersonSettingsUpdate'] = 'errors' not in result and result[
@@ -584,13 +597,14 @@ class PermissionTestCase(BaseTestCase):
     # logged in users can see all of their own information
     def test_person(self):
         self._client.force_login(self.me_person)
-        assert all(self.run_all(self.me_person).values())
+        assert all(x[0] for x in self.run_all(self.me_nonprofit).items()
+                   if x[1] not in ['NonprofitSettingsUpdate'])
 
     # logged in users can see all of their own information
     def test_nonprofit(self):
         self._client.force_login(self.me_nonprofit)
         assert all(x[0] for x in self.run_all(self.me_nonprofit).items()
-                   if x[1] not in ['Person', 'PersonSettingsUpdate'])
+                   if x[1] not in ['PersonSettingsUpdate'])
 
     # logged in users can see some of other people's information
     def test_other_public(self):
@@ -617,6 +631,7 @@ class PermissionTestCase(BaseTestCase):
             'NewsList': True,
             'Nonprofit': True,
             'NonprofitList': True,
+            'NonprofitSettingsUpdate': False,
             'NotificationClicked': False,
             'NotificationList': False,
             'Notifier': False,
@@ -638,8 +653,8 @@ class PermissionTestCase(BaseTestCase):
             'TransactionList': True,
         }
 
-        self.person.visibility_donation = models.Person.PUBLIC
-        self.person.visibility_transaction = models.Person.PUBLIC
+        self.person.visibility_donation = models.IbisUser.PUBLIC
+        self.person.visibility_transaction = models.IbisUser.PUBLIC
         self.person.save()
 
         self._client.force_login(self.me_person)
@@ -648,8 +663,8 @@ class PermissionTestCase(BaseTestCase):
 
     # anyone can see public visibility
     def test_privacy_public(self):
-        self.person.visibility_donation = models.Person.PUBLIC
-        self.person.visibility_transaction = models.Person.PUBLIC
+        self.person.visibility_donation = models.IbisUser.PUBLIC
+        self.person.visibility_transaction = models.IbisUser.PUBLIC
         self.person.save()
 
         self._client.force_login(self.me_person)
@@ -657,8 +672,8 @@ class PermissionTestCase(BaseTestCase):
 
     # nobody can see private visibility except self
     def test_privacy_private(self):
-        self.person.visibility_donation = models.Person.PRIVATE
-        self.person.visibility_transaction = models.Person.PRIVATE
+        self.person.visibility_donation = models.IbisUser.PRIVATE
+        self.person.visibility_transaction = models.IbisUser.PRIVATE
         self.person.save()
 
         self._client.force_login(self.me_person)
@@ -669,8 +684,8 @@ class PermissionTestCase(BaseTestCase):
 
     # only people being followed have visibility if set to 'following'
     def test_privacy_following(self):
-        self.person.visibility_donation = models.Person.FOLLOWING
-        self.person.visibility_transaction = models.Person.FOLLOWING
+        self.person.visibility_donation = models.IbisUser.FOLLOWING
+        self.person.visibility_transaction = models.IbisUser.FOLLOWING
         self.person.save()
 
         self._client.force_login(self.me_person)

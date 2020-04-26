@@ -800,8 +800,8 @@ class DonationNode(EntryNode):
             return queryset
 
         return queryset.filter(
-            Q(user__visibility_donation=models.Person.PUBLIC)
-            | (Q(user__visibility_donation=models.Person.FOLLOWING)
+            Q(user__visibility_donation=models.IbisUser.PUBLIC)
+            | (Q(user__visibility_donation=models.IbisUser.FOLLOWING)
                & Q(user__following__id__exact=info.context.user.id))
             | (Q(user_id=info.context.user.id)
                | Q(target_id=info.context.user.id))).distinct()
@@ -1488,9 +1488,9 @@ class PersonCreate(Mutation):
             email,
             first_name,
             last_name,
-            visibility_follow=models.Person.PUBLIC,
-            visibility_donation=models.Person.PUBLIC,
-            visibility_transaction=models.Person.PUBLIC,
+            visibility_follow=models.IbisUser.PUBLIC,
+            visibility_donation=models.IbisUser.PUBLIC,
+            visibility_transaction=models.IbisUser.PUBLIC,
             score=0,
     ):
         if not info.context.user.is_staff:
@@ -1498,18 +1498,18 @@ class PersonCreate(Mutation):
 
         if visibility_follow:
             assert visibility_follow in [
-                models.Person.PUBLIC, models.Person.FOLLOWING,
-                models.Person.PRIVATE
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
             ]
         if visibility_donation:
             assert visibility_donation in [
-                models.Person.PUBLIC, models.Person.FOLLOWING,
-                models.Person.PRIVATE
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
             ]
         if visibility_transaction:
             assert visibility_transaction in [
-                models.Person.PUBLIC, models.Person.FOLLOWING,
-                models.Person.PRIVATE
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
             ]
 
         person = models.Person.objects.create(
@@ -1568,20 +1568,20 @@ class PersonUpdate(Mutation):
             person.first_name = last_name
         if visibility_follow:
             assert visibility_follow in [
-                models.Person.PUBLIC, models.Person.FOLLOWING,
-                models.Person.PRIVATE
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
             ]
             person.visibility_follow = visibility_follow
         if visibility_donation:
             assert visibility_donation in [
-                models.Person.PUBLIC, models.Person.FOLLOWING,
-                models.Person.PRIVATE
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
             ]
             person.visibility_donation = visibility_donation
         if visibility_transaction:
             assert visibility_transaction in [
-                models.Person.PUBLIC, models.Person.FOLLOWING,
-                models.Person.PRIVATE
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
             ]
             person.visibility_transaction = visibility_transaction
         if type(score) == int:
@@ -1636,6 +1636,9 @@ class NonprofitCreate(Mutation):
         description = graphene.String(required=True)
         last_name = graphene.String(required=True)
         link = graphene.String(required=True)
+        visibility_follow = graphene.String()
+        visibility_donation = graphene.String()
+        visibility_transaction = graphene.String()
         score = graphene.Int()
 
     nonprofit = graphene.Field(NonprofitNode)
@@ -1649,10 +1652,29 @@ class NonprofitCreate(Mutation):
             description,
             last_name,
             link,
+            visibility_follow=models.IbisUser.PUBLIC,
+            visibility_donation=models.IbisUser.PUBLIC,
+            visibility_transaction=models.IbisUser.PUBLIC,
             score=0,
     ):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
+
+        if visibility_follow:
+            assert visibility_follow in [
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
+            ]
+        if visibility_donation:
+            assert visibility_donation in [
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
+            ]
+        if visibility_transaction:
+            assert visibility_transaction in [
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
+            ]
 
         nonprofit = models.Nonprofit.objects.create(
             username=username,
@@ -1678,6 +1700,9 @@ class NonprofitUpdate(Mutation):
         description = graphene.String()
         last_name = graphene.String()
         link = graphene.String()
+        visibility_follow = graphene.String()
+        visibility_donation = graphene.String()
+        visibility_transaction = graphene.String()
         score = graphene.Int()
 
     nonprofit = graphene.Field(NonprofitNode)
@@ -1692,10 +1717,14 @@ class NonprofitUpdate(Mutation):
             description='',
             last_name='',
             link='',
+            visibility_follow='',
+            visibility_donation='',
+            visibility_transaction='',
             score=0,
     ):
-        if not info.context.user.is_staff:
-            raise GraphQLError('You are not a staff member')
+        if not (info.context.user.is_staff
+                or info.context.user.id == int(from_global_id(id)[1])):
+            raise GraphQLError('You do not have sufficient permission')
 
         nonprofit = models.Nonprofit.objects.get(pk=from_global_id(id)[1])
         if username:
@@ -1711,6 +1740,24 @@ class NonprofitUpdate(Mutation):
             nonprofit.description = description
         if link:
             nonprofit.link = link
+        if visibility_follow:
+            assert visibility_follow in [
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
+            ]
+            nonprofit.visibility_follow = visibility_follow
+        if visibility_donation:
+            assert visibility_donation in [
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
+            ]
+            nonprofit.visibility_donation = visibility_donation
+        if visibility_transaction:
+            assert visibility_transaction in [
+                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
+                models.IbisUser.PRIVATE
+            ]
+            nonprofit.visibility_transaction = visibility_transaction
         if type(score) == int:
             nonprofit.score = score
 

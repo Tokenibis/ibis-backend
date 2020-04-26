@@ -91,6 +91,7 @@ class BaseTestCase(GraphQLTestCase):
         'NewsList',
         'Nonprofit',
         'NonprofitList',
+        'NonprofitSettingsUpdate',
         'NotificationClicked',
         'NotificationList',
         'Notifier',
