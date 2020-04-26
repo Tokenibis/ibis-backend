@@ -28,10 +28,5 @@ class DistributionCron(CronJobBase):
     code = 'distribution.distribution_cron'
 
     def do(self):
-        try:
-            if STATE['UPCOMING'] < localtime(now()):
-                STATE['UPCOMING'] = models.Distributor.distribute_all_safe()
-        except Exception as e:
-            print(e)
-            import sys, traceback
-            traceback.print_exc(file=sys.stdout)
+        if STATE['UPCOMING'] < localtime(now()):
+            STATE['UPCOMING'] = models.Distributor.distribute_all_safe()

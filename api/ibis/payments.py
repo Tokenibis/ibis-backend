@@ -1,9 +1,12 @@
+import logging
 from django.conf import settings
 
 from paypalcheckoutsdk.core import PayPalHttpClient
 from paypalcheckoutsdk.core import SandboxEnvironment, LiveEnvironment
 from paypalcheckoutsdk.orders import OrdersGetRequest
 from braintreehttp.http_error import HttpError
+
+logger = logging.getLogger(__name__)
 
 
 class PayPalClient:
@@ -34,7 +37,7 @@ class PayPalClient:
             request = OrdersGetRequest(order_id)
             response = self.client.execute(request)
         except HttpError as e:
-            print('HttpError while fetching PayPal order: {}'.format(e))
+            logger.error('HttpError while fetching PayPal order: {}'.format(e))
             return '', 0
 
         try:
@@ -68,7 +71,8 @@ class PayPalClient:
             assert payment_id, 'missing paypal TransactionID'
 
         except AssertionError as e:
-            print('AssertionError while fetching PayPal order: {}'.format(e))
+            logger.error(
+                'AssertionError while fetching PayPal order: {}'.format(e))
             return '', 0
 
         return payment_id, net, fee

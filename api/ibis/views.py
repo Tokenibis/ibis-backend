@@ -4,6 +4,7 @@ import random
 import json
 import requests
 import ftfy
+import logging
 
 from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
@@ -16,6 +17,8 @@ from django.utils.timezone import localtime, now
 import ibis.models as models
 from .serializers import PasswordLoginSerializer, PaymentSerializer
 from .payments import PayPalClient
+
+logger = logging.getLogger(__name__)
 
 QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
 FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
@@ -194,7 +197,7 @@ class PaymentView(generics.GenericAPIView):
             request.data['orderID'])
 
         if not (payment_id and net):
-            print('Error fetching order information')
+            logger.error('Error fetching order information')
             return response.Response({
                 'depositID': '',
             })
