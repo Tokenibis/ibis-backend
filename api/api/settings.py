@@ -127,7 +127,7 @@ REST_FRAMEWORK = {
 ROOT_URLCONF = 'api.urls'
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '%e)(pn+njk-@&iv3nd&+t$vdkpjmreg3@7#z6z0&)wh(zb&au2'
+SECRET_KEY = CONF['ibis']['secret_key']
 
 STATIC_URL = '/static/'
 
