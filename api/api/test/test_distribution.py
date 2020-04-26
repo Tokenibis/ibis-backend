@@ -30,7 +30,7 @@ class DistributionTestCase(BaseTestCase):
             microsecond=0,
         )
 
-        settings.DISTRIBUTION_DAY = CONF['ibis']['distribution']['day']
+        settings.DISTRIBUTION_DAY = 'Friday'
         settings.DISTRIBUTION_DEFAULT = CONF['ibis']['distribution']['default']
         settings.DISTRIBUTION_THROUGHPUT = CONF['ibis']['distribution'][
             'throughput']
