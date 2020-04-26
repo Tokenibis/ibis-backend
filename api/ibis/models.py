@@ -3,13 +3,13 @@ import re
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
+from django.conf import settings
 from model_utils.models import TimeStampedModel
 
 from users.models import User
 
 MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 15
-RESERVED_USERNAMES = ['admin', 'anonymous']
 
 
 def username_validator(value):
@@ -23,7 +23,7 @@ def username_validator(value):
         raise ValidationError(
             '{} has non lower alphanumeric or \'_\' characters'.format(value))
 
-    if value in RESERVED_USERNAMES:
+    if value in settings.RESERVED_USERNAMES:
         raise ValidationError('{} is a reserved username'.format(value))
 
 
@@ -240,6 +240,8 @@ class DepositCategory(models.Model):
 
     title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
 
+    def __str__(self):
+        return '{} ({})'.format(self.title, self.id)
 
 class Deposit(TimeStampedModel, Valuable):
     user = models.ForeignKey(

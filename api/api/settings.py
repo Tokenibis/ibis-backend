@@ -23,7 +23,9 @@ with open('../config.json') as fd:
 ACCOUNT_UNIQUE_EMAIL = False
 
 ALLOWED_HOSTS = [
-    CONF['ibis']['endpoints']['api'], CONF['ibis']['endpoints']['app']
+    CONF['ibis']['endpoints']['api'],
+    CONF['ibis']['endpoints']['app'],
+    CONF['ibis']['endpoints']['app'],
 ]
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -196,11 +198,14 @@ CORS_ALLOW_HEADERS = [
 
 CORS_ORIGIN_WHITELIST = (
     'https://{}'.format(CONF['ibis']['endpoints']['app']),
+    'https://{}'.format(CONF['ibis']['endpoints']['dash']),
     'http://localhost:3000',
 )
 
 CSRF_TRUSTED_ORIGINS = [
-    CONF['ibis']['endpoints']['api'], CONF['ibis']['endpoints']['app']
+    CONF['ibis']['endpoints']['api'],
+    CONF['ibis']['endpoints']['app'],
+    CONF['ibis']['endpoints']['dash'],
 ]
 
 CSRF_COOKIE_DOMAIN = 'tokenibis.org'
@@ -263,6 +268,8 @@ REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(
 
 REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
     CONF['ibis']['endpoints']['app'])
+
+RESERVED_USERNAMES = ['admin', 'anonymous', 'dashboard']
 
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
 

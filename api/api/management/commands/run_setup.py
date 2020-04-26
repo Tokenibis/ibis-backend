@@ -18,7 +18,7 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
             nonprofit_categories = json.load(fd)
 
-        with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
+        with open(os.path.join(DIR, 'data/deposit.json')) as fd:
             deposit_categories = json.load(fd)
 
         for cat in sorted(nonprofit_categories.keys()):
