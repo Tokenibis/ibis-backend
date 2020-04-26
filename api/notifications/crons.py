@@ -18,11 +18,14 @@ class EmailNotificationCron(CronJobBase):
         for email in Email.objects.all():
             if email.status == Email.SCHEDULED:
                 if email.schedule < now() - timedelta(minutes=FREQUENCY * 2):
+                    email.status = Email.STALE
                     print('WARNING: stale scheduled emails detected')
                 elif email.schedule < now():
                     email.status = Email.ATTEMPTING
                     destination = email.notification.notifier.user.email
-                    if destination.split('@')[-1] == 'example.com':
+                    if email.notification.clicked:
+                        email.status = Email.UNNEEDED
+                    elif destination.split('@')[-1] == 'example.com':
                         print('Processed fake email to {}'.format(destination))
                         email.status = Email.SUCCEEDED
                     else:
@@ -44,6 +47,7 @@ class EmailNotificationCron(CronJobBase):
                                       e,
                                   ))
                             email.status = Email.FAILED
-                    email.save()
+                email.save()
 
         Email.objects.filter(status=Email.SUCCEEDED).delete()
+        Email.objects.filter(status=Email.UNNEEDED).delete()

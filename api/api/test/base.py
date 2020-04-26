@@ -4,6 +4,7 @@ import logging
 import random
 
 from django.core.management import call_command
+from django.conf import settings
 from django.utils.timezone import now, localtime, utc
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
@@ -123,6 +124,8 @@ class BaseTestCase(GraphQLTestCase):
                     cls.gql[filename.split('.')[0]] = fd.read()
 
     def setUp(self):
+        settings.EMAIL_HOST = ''
+
         random.seed(0)
 
         self.assertCountEqual(self.gql.keys(), self.operations)

@@ -1,9 +1,14 @@
 import json
 import ibis.models as models
+import notifications.models
+import notifications.crons
 
-from django.utils.timezone import now
+from django.core import management
+from django.utils.timezone import now, timedelta
+from django.conf import settings
 from api.test.base import BaseTestCase
 from graphql_relay.node.node import to_global_id
+from freezegun import freeze_time
 
 
 class NotificationTestCase(BaseTestCase):
@@ -148,8 +153,6 @@ class NotificationTestCase(BaseTestCase):
 
         self.person.notifier.save()
 
-        count = self.person.notifier.notification_set.all().count()
-
         models.Deposit.objects.create(
             user=self.me_person,
             amount=200,
@@ -162,73 +165,113 @@ class NotificationTestCase(BaseTestCase):
 
         def run(op_type, c):
             id = create_operation('{}Create'.format(op_type))
-            assert self.person.notifier.notification_set.all().count() == c + 1
+            assert self.person.notifier.notification_set.count() == c + 1
             delete_operation('{}Delete'.format(op_type), id)
-            assert self.person.notifier.notification_set.all().count() == c + 0
+            assert self.person.notifier.notification_set.count() == c + 0
             id = create_operation('{}Create'.format(op_type))
-            assert self.person.notifier.notification_set.all().count() == c + 1
+            assert self.person.notifier.notification_set.count() == c + 1
             read_last_operation()
 
-        run('Follow', count)
-        run('Follow', count)
-        run('Like', count + 1)
-        run('Like', count + 1)
-        run('Transaction', count + 2)
-        run('Transaction', count + 3)
-        run('Comment', count + 4)
-        run('Comment', count + 5)
-        run('News', count + 6)
-        run('News', count + 7)
-        run('Event', count + 8)
-        run('Event', count + 9)
-        run('Post', count + 10)
-        run('Post', count + 11)
+        count = self.person.notifier.notification_set.count()
+        email_count = notifications.models.Email.objects.count()
 
-        assert query_unseen() == count + 12
+        with freeze_time(now()) as frozen_datetime:
+            frozen_datetime.tick(
+                delta=timedelta(minutes=settings.EMAIL_DELAY +
+                                2 * notifications.crons.FREQUENCY))
+            run('Follow', count)
+            run('Follow', count)
+            run('Like', count + 1)
+            run('Like', count + 1)
+            run('Transaction', count + 2)
+            run('Transaction', count + 3)
+            run('Comment', count + 4)
+            run('Comment', count + 5)
+            run('News', count + 6)
+            run('News', count + 7)
+            run('Event', count + 8)
+            run('Event', count + 9)
+            run('Post', count + 10)
+            run('Post', count + 11)
 
-        self._client.force_login(self.person)
-        assert 'errors' not in json.loads(
-            self.query(
-                self.gql['CommentCreate'],
-                op_name='CommentCreate',
-                variables={
-                    'user':
-                    self.person.gid,
-                    'parent':
-                    to_global_id(
-                        'DonationNode',
-                        models.Donation.objects.filter(
-                            user=self.person).first().id,
-                    ),
-                    'description':
-                    'This is a description',
-                    'self':
-                    self.person.gid,
-                },
-            ).content)
-        assert self.person.notifier.notification_set.all().count(
-        ) == count + 12
+            assert query_unseen() == count + 12
 
-        self._client.force_login(self.person)
-        assert 'errors' not in json.loads(
-            self.query(
-                self.gql['NotifierSeen'],
-                op_name='NotifierSeen',
-                variables={
-                    'id': to_global_id('NotifierNode', self.person.id),
-                    'lastSeen': str(now()),
-                },
-            ).content)
-        assert query_unseen() == 0
+            self._client.force_login(self.person)
+            assert 'errors' not in json.loads(
+                self.query(
+                    self.gql['CommentCreate'],
+                    op_name='CommentCreate',
+                    variables={
+                        'user':
+                        self.person.gid,
+                        'parent':
+                        to_global_id(
+                            'DonationNode',
+                            models.Donation.objects.filter(
+                                user=self.person).first().id,
+                        ),
+                        'description':
+                        'This is a description',
+                        'self':
+                        self.person.gid,
+                    },
+                ).content)
+            assert self.person.notifier.notification_set.count() == count + 12
 
-        follow_id = create_operation('FollowCreate')
-        like_id = create_operation('LikeCreate')
-        delete_operation('FollowDelete', follow_id)
-        delete_operation('LikeDelete', like_id)
-        follow_id = create_operation('FollowCreate')
-        like_id = create_operation('LikeCreate')
-        assert query_unseen() == 2
+            self._client.force_login(self.person)
+            assert 'errors' not in json.loads(
+                self.query(
+                    self.gql['NotifierSeen'],
+                    op_name='NotifierSeen',
+                    variables={
+                        'id': to_global_id('NotifierNode', self.person.id),
+                        'lastSeen': str(now()),
+                    },
+                ).content)
 
-        delete_operation('FollowDelete', follow_id)
-        delete_operation('LikeDelete', like_id)
-        assert query_unseen() == 0
+            frozen_datetime.tick(delta=timedelta(seconds=1))
+            assert query_unseen() == 0
+
+            follow_id = create_operation('FollowCreate')
+            like_id = create_operation('LikeCreate')
+            delete_operation('FollowDelete', follow_id)
+            delete_operation('LikeDelete', like_id)
+            follow_id = create_operation('FollowCreate')
+            like_id = create_operation('LikeCreate')
+            assert query_unseen() == 2
+
+            delete_operation('FollowDelete', follow_id)
+            delete_operation('LikeDelete', like_id)
+            assert query_unseen() == 0
+
+            assert 'errors' not in json.loads(
+                self.query(
+                    self.gql['NotificationClicked'],
+                    op_name='NotificationClicked',
+                    variables={
+                        'id':
+                        to_global_id(
+                            'NotificationNode',
+                            notifications.models.Email.objects.last().
+                            notification.id),
+                    },
+                ).content)
+
+            assert notifications.models.Email.objects.count(
+            ) == email_count + 4
+
+            # make sure we don't spam real email addresses
+            assert all(x for x in notifications.models.Email.objects.all()
+                       if x.notification.notifier.user.email.split('@')[1] ==
+                       'example.com')
+
+            frozen_datetime.tick(delta=timedelta(minutes=settings.EMAIL_DELAY))
+            management.call_command(
+                'runcrons',
+                'notifications.crons.EmailNotificationCron',
+                '--force',
+            )
+
+            assert notifications.models.Email.objects.count() == email_count
+            assert all(x.status == notifications.models.Email.STALE
+                       for x in notifications.models.Email.objects.all())

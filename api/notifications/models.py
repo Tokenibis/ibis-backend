@@ -143,13 +143,17 @@ class Notification(TimeStampedModel):
 class Email(models.Model):
 
     SCHEDULED = 'SC'
+    STALE = 'ST'
     ATTEMPTING = 'SC'
     FAILED = 'FA'
+    UNNEEDED = 'SU'
     SUCCEEDED = 'SU'
 
     EMAIL_STATUS = (
         (SCHEDULED, 'Scheduled'),
+        (STALE, 'Stale'),
         (FAILED, 'Failed'),
+        (UNNEEDED, 'Unneeded'),
         (SUCCEEDED, 'Succeeded'),
     )
 
