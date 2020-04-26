@@ -74,7 +74,7 @@ class Notifier(models.Model):
         return self.notification_set.filter(created__gt=self.last_seen).count()
 
     def _create_link(self, link):
-        username, token = self.TimestampSigner().sign(
+        username, token = TimestampSigner().sign(
             self.user.username).split(":", 1)
         return reverse(
             link, kwargs={
