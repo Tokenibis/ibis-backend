@@ -1,69 +1,22 @@
 import os
-import json
-import random
+import logging
+import ibis.models
+import notifications.models as models
 
 from django.utils.timezone import now, timedelta
 from django.db.models.signals import post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 from django.conf import settings
 from graphql_relay.node.node import to_global_id
-
-from notifications.models import Notification, Email
 from api.management.commands.loaddata import STATE
 
-import ibis.models
-
-DIR = os.path.dirname(os.path.realpath(__file__))
-
-with open(os.path.join(DIR, 'emails/welcome.json')) as fd:
-    welcome_templates = json.load(fd)
-
-with open(os.path.join(DIR, 'emails/deposit.json')) as fd:
-    deposit_templates = json.load(fd)
-
-with open(os.path.join(DIR, 'emails/ubp.json')) as fd:
-    ubp_templates = json.load(fd)
-
-with open(os.path.join(DIR, 'emails/transaction.json')) as fd:
-    transaction_templates = json.load(fd)
-
-with open(os.path.join(DIR, 'emails/comment.json')) as fd:
-    comment_templates = json.load(fd)
-
-with open(os.path.join(DIR, 'emails/follow.json')) as fd:
-    follow_templates = json.load(fd)
+logger = logging.getLogger(__name__)
 
 
 def _get_submodel(instance, supermodel):
     for submodel in supermodel.__subclasses__():
         if submodel.objects.filter(pk=instance.pk).exists():
             return submodel
-
-
-# @receiver(post_save, sender=ibis.models.Deposit)
-# def handlePersonCreate(sender, instance, created, **kwargs):
-#     if not created:
-#         return
-
-#     notifier = instance.notifier
-
-#     notification = Notification.objects.create(
-#         notifier=notifier,
-#         category=Notification.UBP_DISTRIBUTION,
-#         reference='{}:{}'.format(
-#             ibis.models.Deposit.__name__,
-#             to_global_id('DepositNode', instance.pk),
-#         ),
-#         deduper='deposit:{}'.format(instance.pk),
-#         description='Welcome to Ibis!',
-#     )
-
-#     Email.objects.create(
-#         notification=notification,
-#         subject=template['subject'].format(user=str(user)),
-#         body=template['body'].format(user=str(user)),
-#         schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-#     )
 
 
 @receiver(post_save, sender=ibis.models.Deposit)
@@ -78,9 +31,9 @@ def handleDepositCreate(sender, instance, created, **kwargs):
         description = 'You have a fresh ${:.2f} waiting for you'.format(
             instance.amount / 100)
 
-        notification = Notification.objects.create(
+        notification = models.Notification.objects.create(
             notifier=notifier,
-            category=Notification.UBP_DISTRIBUTION,
+            category=models.Notification.UBP_DISTRIBUTION,
             reference='{}:{}'.format(
                 ibis.models.Deposit.__name__,
                 to_global_id('DepositNode', instance.pk),
@@ -89,42 +42,67 @@ def handleDepositCreate(sender, instance, created, **kwargs):
             description=description,
         )
 
-        template = random.choice(ubp_templates)
-
         if not STATE['LOADING_DATA'] and notifier.email_ubp:
-            Email.objects.create(
-                notification=notification,
-                subject=template['subject'].format(user=str(user)),
-                body=template['body'].format(user=str(user)),
-                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-            )
+            if notifier.email_ubp and user.deposit_set.filter(
+                    category=ibis.models.DepositCategory.objects.get(
+                        title='ubp')).count() == 1:
+                try:
+                    subject, body, html = models.EmailTemplateWelcome.choose(
+                    ).make_email(notification, instance)
+                    models.Email.objects.create(
+                        notification=notification,
+                        subject=subject,
+                        body=body,
+                        html=html,
+                        schedule=now() +
+                        timedelta(minutes=settings.EMAIL_DELAY),
+                    )
+                except IndexError:
+                    logger.error('No email template found')
+            else:
+                try:
+                    subject, body, html = models.EmailTemplateUBP.choose(
+                    ).make_email(notification, instance)
+                    models.Email.objects.create(
+                        notification=notification,
+                        subject=subject,
+                        body=body,
+                        html=html,
+                        schedule=now() +
+                        timedelta(minutes=settings.EMAIL_DELAY),
+                    )
+                except IndexError:
+                    logger.error('No email template found')
     else:
         description = 'Your deposit of ${:.2f} was successful'.format(
             instance.amount / 100)
 
-        notification = Notification.objects.create(
+        notification = models.Notification.objects.create(
             notifier=notifier,
-            category=Notification.SUCCESSFUL_DEPOSIT,
+            category=models.Notification.SUCCESSFUL_DEPOSIT,
             reference='{}:{}'.format(
                 ibis.models.Deposit.__name__,
                 to_global_id('DepositNode', instance.pk),
             ),
             deduper='deposit:{}'.format(instance.pk),
             description=description,
-            clicked=True,  # the user should have seen the deposit
         )
 
-        template = random.choice(deposit_templates)
+        try:
+            if not STATE['LOADING_DATA'] and notifier.email_deposit:
+                subject, body, html = models.EmailTemplateDeposit.choose(
+                ).make_email(notification, instance)
+                models.Email.objects.create(
+                    notification=notification,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
 
-        if notifier.email_deposit:
-            Email.objects.create(
-                notification=notification,
-                subject=template['subject'].format(user=str(user)),
-                body=template['body'].format(user=str(user)),
-                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-            )
-
-    Notification.objects.filter(deduper=notification.deduper).exclude(
+    models.Notification.objects.filter(deduper=notification.deduper).exclude(
         pk=notification.pk).delete()
 
 
@@ -141,9 +119,9 @@ def handleTransactionCreate(sender, instance, created, **kwargs):
         instance.amount / 100,
     )
 
-    notification = Notification.objects.create(
+    notification = models.Notification.objects.create(
         notifier=notifier,
-        category=Notification.RECEIVED_TRANSACTION,
+        category=models.Notification.RECEIVED_TRANSACTION,
         reference='{}:{}'.format(
             ibis.models.Transaction.__name__,
             to_global_id('TransactionNode', instance.pk),
@@ -152,17 +130,21 @@ def handleTransactionCreate(sender, instance, created, **kwargs):
         description=description,
     )
 
-    template = random.choice(transaction_templates)
+    try:
+        if not STATE['LOADING_DATA'] and notifier.email_transaction:
+            subject, body, html = models.EmailTemplateTransaction.choose(
+            ).make_email(notification, instance)
+            models.Email.objects.create(
+                notification=notification,
+                subject=subject,
+                body=body,
+                html=html,
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+            )
+    except IndexError:
+        logger.error('No email template found')
 
-    if not STATE['LOADING_DATA'] and notifier.email_transaction:
-        Email.objects.create(
-            notification=notification,
-            subject=template['subject'].format(user=str(user)),
-            body=template['body'].format(user=str(user)),
-            schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-        )
-
-    Notification.objects.filter(deduper=notification.deduper).exclude(
+    models.Notification.objects.filter(deduper=notification.deduper).exclude(
         pk=notification.pk).delete()
 
 
@@ -185,9 +167,9 @@ def handleCommentCreate(sender, instance, created, **kwargs):
                 str(user),
                 _get_submodel(parent, ibis.models.Entry).__name__.lower(),
             )
-            notification = Notification.objects.create(
+            notification = models.Notification.objects.create(
                 notifier=notifier,
-                category=Notification.RECEIVED_COMMENT,
+                category=models.Notification.RECEIVED_COMMENT,
                 deduper='comment:{}:{}'.format(
                     instance.pk,
                     parent.user.ibisuser.pk,
@@ -196,15 +178,20 @@ def handleCommentCreate(sender, instance, created, **kwargs):
             )
             notifications.append(notification)
 
-            template = random.choice(comment_templates)
-
-            if not STATE['LOADING_DATA'] and notifier.email_comment:
-                Email.objects.create(
-                    notification=notification,
-                    subject=template['subject'].format(user=str(user)),
-                    body=template['body'].format(user=str(user)),
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-                )
+            try:
+                if not STATE['LOADING_DATA'] and notifier.email_comment:
+                    subject, body, html = models.EmailTemplateComment.choose(
+                    ).make_email(notification, parent)
+                    models.Email.objects.create(
+                        notification=notification,
+                        subject=subject,
+                        body=body,
+                        html=html,
+                        schedule=now() +
+                        timedelta(minutes=settings.EMAIL_DELAY),
+                    )
+            except IndexError:
+                logger.error('No email template found')
 
         current = parent
 
@@ -219,8 +206,8 @@ def handleCommentCreate(sender, instance, created, **kwargs):
         notification.reference = '{}:{}'.format(ref_type, ref_id)
         notification.save()
 
-        Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.pk).delete()
+        models.Notification.objects.filter(
+            deduper=notification.deduper).exclude(pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.News)
@@ -235,9 +222,9 @@ def handleNewsCreate(sender, instance, created, **kwargs):
 
         description = '{} released a news story'.format(str(user))
 
-        notification = Notification.objects.create(
+        notification = models.Notification.objects.create(
             notifier=notifier,
-            category=Notification.FOLLOWING_NEWS,
+            category=models.Notification.FOLLOWING_NEWS,
             reference='{}:{}'.format(
                 ibis.models.News.__name__,
                 to_global_id('NewsNode', instance.pk),
@@ -249,8 +236,8 @@ def handleNewsCreate(sender, instance, created, **kwargs):
             description=description,
         )
 
-        Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.pk).delete()
+        models.Notification.objects.filter(
+            deduper=notification.deduper).exclude(pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.Event)
@@ -265,9 +252,9 @@ def handleEventCreate(sender, instance, created, **kwargs):
 
         description = '{} planned an new event'.format(str(user))
 
-        notification = Notification.objects.create(
+        notification = models.Notification.objects.create(
             notifier=notifier,
-            category=Notification.FOLLOWING_EVENT,
+            category=models.Notification.FOLLOWING_EVENT,
             reference='{}:{}'.format(
                 ibis.models.Event.__name__,
                 to_global_id('EventNode', instance.pk),
@@ -279,8 +266,8 @@ def handleEventCreate(sender, instance, created, **kwargs):
             description=description,
         )
 
-        Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.pk).delete()
+        models.Notification.objects.filter(
+            deduper=notification.deduper).exclude(pk=notification.pk).delete()
 
 
 @receiver(post_save, sender=ibis.models.Post)
@@ -295,9 +282,9 @@ def handlePostCreate(sender, instance, created, **kwargs):
 
         description = '{} made a new post'.format(str(user))
 
-        notification = Notification.objects.create(
+        notification = models.Notification.objects.create(
             notifier=notifier,
-            category=Notification.FOLLOWING_POST,
+            category=models.Notification.FOLLOWING_POST,
             reference='{}:{}'.format(
                 ibis.models.Post.__name__,
                 to_global_id('PostNode', instance.pk),
@@ -309,37 +296,37 @@ def handlePostCreate(sender, instance, created, **kwargs):
             description=description,
         )
 
-        Notification.objects.filter(deduper=notification.deduper).exclude(
-            pk=notification.pk).delete()
+        models.Notification.objects.filter(
+            deduper=notification.deduper).exclude(pk=notification.pk).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Transaction)
 def handleTransactionDelete(sender, instance, **kwargs):
-    Notification.objects.filter(
+    models.Notification.objects.filter(
         deduper='transaction:{}'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Comment)
 def handleCommentDelete(sender, instance, **kwargs):
-    Notification.objects.filter(
+    models.Notification.objects.filter(
         deduper__startswith='comment:{}:'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.News)
 def handleNewsDelete(sender, instance, **kwargs):
-    Notification.objects.filter(
+    models.Notification.objects.filter(
         deduper__startswith='news:{}:'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Event)
 def handleEventDelete(sender, instance, **kwargs):
-    Notification.objects.filter(
+    models.Notification.objects.filter(
         deduper__startswith='event:{}:'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Post)
 def handlePostDelete(sender, instance, **kwargs):
-    Notification.objects.filter(
+    models.Notification.objects.filter(
         deduper__startswith='post:{}:'.format(instance.pk)).delete()
 
 
@@ -355,9 +342,9 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
 
             description = '{} started following you'.format(str(instance))
 
-            notification = Notification.objects.create(
+            notification = models.Notification.objects.create(
                 notifier=notifier,
-                category=Notification.RECEIVED_FOLLOW,
+                category=models.Notification.RECEIVED_FOLLOW,
                 reference='{}:{}'.format(
                     ref_type,
                     to_global_id('{}Node'.format(ref_type), instance.pk),
@@ -369,23 +356,29 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
                 description=description,
             )
 
-            template = random.choice(follow_templates)
+            try:
+                if not STATE['LOADING_DATA'] and notifier.email_follow:
+                    subject, body, html = models.EmailTemplateFollow.choose(
+                    ).make_email(notification, target)
+                    models.Email.objects.create(
+                        notification=notification,
+                        subject=subject,
+                        body=body,
+                        html=html,
+                        schedule=now() +
+                        timedelta(minutes=settings.EMAIL_DELAY),
+                    )
+            except IndexError:
+                logger.error('No email template found')
 
-            if not STATE['LOADING_DATA'] and notifier.email_follow:
-                Email.objects.create(
-                    notification=notification,
-                    subject=template['subject'].format(user=str(target)),
-                    body=template['body'].format(user=str(target)),
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
-                )
-
-            Notification.objects.filter(deduper=notification.deduper).exclude(
-                pk=notification.pk).delete()
+            models.Notification.objects.filter(
+                deduper=notification.deduper).exclude(
+                    pk=notification.pk).delete()
 
     elif action == 'post_remove':
         for pk in pk_set:
             target = ibis.models.IbisUser.objects.get(pk=pk)
-            Notification.objects.filter(
+            models.Notification.objects.filter(
                 deduper__startswith='follow:{}:{}'.format(
                     instance.pk,
                     target.pk,
@@ -410,9 +403,9 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
 
             ref_type = _get_submodel(current, ibis.models.Entry).__name__
 
-            notification = Notification.objects.create(
+            notification = models.Notification.objects.create(
                 notifier=notifier,
-                category=Notification.RECEIVED_LIKE,
+                category=models.Notification.RECEIVED_LIKE,
                 reference='{}:{}'.format(
                     ref_type,
                     to_global_id('{}Node'.format(ref_type), current.pk),
@@ -424,13 +417,14 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
                 description=description,
             )
 
-            Notification.objects.filter(deduper=notification.deduper).exclude(
-                pk=notification.pk).delete()
+            models.Notification.objects.filter(
+                deduper=notification.deduper).exclude(
+                    pk=notification.pk).delete()
 
     elif action == 'post_remove':
         for pk in pk_set:
             user = ibis.models.IbisUser.objects.get(pk=pk)
-            Notification.objects.filter(
+            models.Notification.objects.filter(
                 deduper__startswith='like:{}:{}'.format(
                     user.pk,
                     instance.pk,

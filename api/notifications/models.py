@@ -1,3 +1,9 @@
+import os
+import string
+import random
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.core.validators import MinLengthValidator
@@ -7,6 +13,20 @@ from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 
 import ibis.models
+
+DIR = os.path.dirname(os.path.realpath(__file__))
+
+with open(os.path.join(DIR, 'top_email_templates/body.txt')) as fd:
+    top_body_template = fd.read()
+
+with open(os.path.join(DIR, 'top_email_templates/html.html')) as fd:
+    top_html_template = fd.read()
+
+
+def _get_submodel(instance, supermodel):
+    for submodel in supermodel.__subclasses__():
+        if submodel.objects.filter(pk=instance.pk).exists():
+            return submodel
 
 
 class Notifier(models.Model):
@@ -74,8 +94,8 @@ class Notifier(models.Model):
         return self.notification_set.filter(created__gt=self.last_seen).count()
 
     def _create_link(self, link):
-        username, token = TimestampSigner().sign(
-            self.user.username).split(":", 1)
+        username, token = TimestampSigner().sign(self.user.username).split(
+            ":", 1)
         return reverse(
             link, kwargs={
                 'pk': self.pk,
@@ -146,7 +166,7 @@ class Email(models.Model):
     STALE = 'ST'
     ATTEMPTING = 'SC'
     FAILED = 'FA'
-    UNNEEDED = 'SU'
+    UNNEEDED = 'UN'
     SUCCEEDED = 'SU'
 
     EMAIL_STATUS = (
@@ -164,9 +184,185 @@ class Email(models.Model):
 
     subject = models.TextField()
     body = models.TextField()
+    html = models.TextField()
     schedule = models.DateTimeField()
     status = models.CharField(
         max_length=2,
         choices=EMAIL_STATUS,
         default=SCHEDULED,
     )
+
+
+class EmailTemplate(models.Model):
+    class Meta:
+        abstract = True
+
+    subject = models.TextField()
+    body = models.TextField()
+    html = models.TextField()
+    active = models.BooleanField(default=True)
+
+    def make_email(*args, **kwargs):
+        raise NotImplementedError
+
+    def _check_keys(self, subject_keys, content_keys):
+        if set([
+                x[1] for x in string.Formatter().parse(self.subject)
+                if x[1] is not None
+        ]) == set(subject_keys):
+            raise ValidationError('Subject template has invalid key set')
+
+        if set([
+                x[1] for x in string.Formatter().parse(self.body)
+                if x[1] is not None
+        ]) == set(content_keys):
+            raise ValidationError('Body template has invalid key set')
+
+        if set([
+                x[1] for x in string.Formatter().parse(self.html)
+                if x[1] is not None
+        ]) == set(content_keys):
+            raise ValidationError('HTML template has invalid key set')
+
+    @classmethod
+    def choose(cls):
+        return random.choice(list(cls.objects.filter(active=True)))
+
+    @staticmethod
+    def _apply_top_template(notifier, subject, body, html):
+        return (
+            subject,
+            top_body_template.format(
+                content=body,
+                settings_link=notifier.create_settings_link(),
+                unsubscribe_link=notifier.create_unsubscribe_link(),
+            ),
+            top_html_template.format(
+                subject=subject,
+                content=body,
+                settings_link=notifier.create_settings_link(),
+                unsubscribe_link=notifier.create_unsubscribe_link(),
+            ),
+        )
+
+
+class EmailTemplateWelcome(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['user'])
+
+    def make_email(self, notification, deposit):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(user=str(deposit.user)),
+            self.html.format(user=str(deposit.user)),
+        )
+
+
+class EmailTemplateFollow(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['user', 'link'])
+
+    def make_email(self, notification, user):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                user=str(user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                user=str(user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateDeposit(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['user', 'amount', 'link'])
+
+    def make_email(self, notification, deposit):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                user=str(deposit.user),
+                amount='${:.2f}'.format(deposit.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                user=str(deposit.user),
+                amount='${:.2f}'.format(deposit.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateUBP(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['user', 'amount', 'link'])
+
+    def make_email(self, notification, deposit):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                user=str(deposit.user),
+                amount='${:.2f}'.format(deposit.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                user=str(deposit.user),
+                amount='${:.2f}'.format(deposit.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateTransaction(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['user', 'sender', 'link'])
+
+    def make_email(self, notification, transaction):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                user=str(transaction.target),
+                sender=str(transaction.user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                user=str(transaction.user),
+                sender=str(transaction.user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateComment(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['user', 'entry_type', 'link'])
+
+    def make_email(self, notification, parent):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                user=str(parent.user),
+                entry_type=_get_submodel(
+                    parent,
+                    ibis.models.Entry,
+                ).__name__.lower(),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                user=str(parent.user),
+                entry_type=_get_submodel(
+                    parent,
+                    ibis.models.Entry,
+                ).__name__.lower(),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )

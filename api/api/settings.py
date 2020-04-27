@@ -224,6 +224,11 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 # Custom Ibis Settings
 # ------------------------------------------------------------ #
 
+
+def APP_LINK_RESOLVER(reference):
+    return ''
+
+
 AVATAR_BUCKET = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 
 AVATAR_BUCKET_LEN = 233

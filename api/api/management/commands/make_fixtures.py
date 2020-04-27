@@ -11,6 +11,8 @@ import random
 import json
 import hashlib
 
+from api.management.commands.run_setup import make_email_templates
+
 from django.utils.timezone import now, timedelta
 
 from django.core.management.base import BaseCommand
@@ -89,6 +91,7 @@ class Model:
     def __init__(self):
         self.nonprofit_categories = []
         self.deposit_categories = []
+        self.email_templates = []
         self.ibisUsers = []
         self.users = []
         self.people = []
@@ -170,6 +173,22 @@ class Model:
         })
 
         return pk
+
+    def add_email_template(self, template_type, subject, body, html):
+        pk = len(self.email_templates) + 1
+
+        self.email_templates.append({
+            'model':
+            'notifications.EmailTemplate{}'.format(template_type),
+            'pk':
+            pk,
+            'fields': {
+                'subject': subject,
+                'body': body,
+                'html': html,
+                'active': True,
+            }
+        })
 
     def add_nonprofit(self, name, description, category, score):
         pk = len(self.users) + 1
@@ -520,6 +539,7 @@ class Model:
             partial_ibisUsers,
             self.nonprofit_categories,
             self.deposit_categories,
+            self.email_templates,
             self.nonprofits,
             self.people,
             self.ibisUsers,
@@ -605,6 +625,8 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
             dp_cat_raw = json.load(fd)
 
+        email_templates = make_email_templates()
+
         with open(os.path.join(DIR, 'data/nonprofits.json')) as fd:
             np_raw = sorted(json.load(fd), key=lambda x: x['name'])
 
@@ -649,6 +671,15 @@ class Command(BaseCommand):
         deposit_categories = [
             model.add_deposit_category(x) for x in dp_cat_raw
         ]
+
+        for template_type, templates in email_templates.items():
+            for template in templates:
+                model.add_email_template(
+                    template_type,
+                    template['subject'],
+                    template['body'],
+                    template['html'],
+                )
 
         # make nonprofits from scraped list of real nonprofits
         nonprofits = [

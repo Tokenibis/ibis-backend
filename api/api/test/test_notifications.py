@@ -9,6 +9,7 @@ from django.conf import settings
 from api.test.base import BaseTestCase
 from graphql_relay.node.node import to_global_id
 from freezegun import freeze_time
+from lxml import etree
 
 
 class NotificationTestCase(BaseTestCase):
@@ -257,8 +258,9 @@ class NotificationTestCase(BaseTestCase):
                     },
                 ).content)
 
-            assert notifications.models.Email.objects.count(
-            ) == email_count + 4
+            # make sure all html emails are well-formed
+            for email in notifications.models.Email.objects.all():
+                etree.HTML(email.html)
 
             # make sure we don't spam real email addresses
             assert all(x for x in notifications.models.Email.objects.all()
@@ -272,6 +274,11 @@ class NotificationTestCase(BaseTestCase):
                 '--force',
             )
 
-            assert notifications.models.Email.objects.count() == email_count
-            assert all(x.status == notifications.models.Email.STALE
-                       for x in notifications.models.Email.objects.all())
+            assert notifications.models.Email.objects.count(
+            ) == email_count + 4
+            assert notifications.models.Email.objects.filter(
+                status=notifications.models.Email.STALE).count() == email_count
+            assert notifications.models.Email.objects.filter(
+                status=notifications.models.Email.SUCCEEDED).count() == 3
+            assert notifications.models.Email.objects.filter(
+                status=notifications.models.Email.UNNEEDED).count() == 1
