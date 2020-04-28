@@ -1,3 +1,10 @@
+Hello {user},
+
 {content}
 
-Token Ibis tries very hard not to spam you. If we're not doing a good job, feel free to [unsubscribe](link) or update your [settings](link).
+----------
+
+Token Ibis Inc. | P.O. Box 51804, Albuquerque NM 87181
+
+Email Settings: {settings_link}
+Unsubscribe: {unsubscribe_link}

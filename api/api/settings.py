@@ -226,7 +226,21 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 
 
 def APP_LINK_RESOLVER(reference):
-    return ''
+    lookup = {
+        'Nonprofit': '/Nonprofit/Nonprofit?id={}',
+        'Donation': '/Donation/Donation?id={}',
+        'Person': '/Person/Person?id={}',
+        'Transaction': '/Transaction/Transaction?id={}',
+        'News': '/News/News?id={}',
+        'Event': '/Event/Event?id={}',
+        'Post': '/Post/Post?id={}',
+        'Deposit': '/_/Deposit?id={}',
+    }
+
+    return 'https://{}/#{}'.format(
+        CONF['ibis']['endpoints']['app'],
+        lookup[reference.split(':')[0]].format(reference.split(':')[1]),
+    )
 
 
 AVATAR_BUCKET = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
@@ -275,6 +289,8 @@ REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
     CONF['ibis']['endpoints']['app'])
 
 RESERVED_USERNAMES = ['admin', 'anonymous', 'dashboard']
+
+ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
 
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
 

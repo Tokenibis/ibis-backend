@@ -176,22 +176,7 @@ def handleCommentCreate(sender, instance, created, **kwargs):
                 ),
                 description=description,
             )
-            notifications.append(notification)
-
-            try:
-                if not STATE['LOADING_DATA'] and notifier.email_comment:
-                    subject, body, html = models.EmailTemplateComment.choose(
-                    ).make_email(notification, parent)
-                    models.Email.objects.create(
-                        notification=notification,
-                        subject=subject,
-                        body=body,
-                        html=html,
-                        schedule=now() +
-                        timedelta(minutes=settings.EMAIL_DELAY),
-                    )
-            except IndexError:
-                logger.error('No email template found')
+            notifications.append([notification, parent])
 
         current = parent
 
@@ -199,13 +184,27 @@ def handleCommentCreate(sender, instance, created, **kwargs):
     ref_id = to_global_id('{}Node'.format(ref_type), current.pk)
 
     if notifications:
-        notifications[-1].description = '{} replied to your {}'.format(
+        notifications[-1][0].description = '{} replied to your {}'.format(
             str(user), ref_type.lower())
 
-    for notification in notifications:
+    for notification, parent in notifications:
         notification.reference = '{}:{}'.format(ref_type, ref_id)
-        notification.save()
 
+        try:
+            if not STATE['LOADING_DATA'] and notifier.email_comment:
+                subject, body, html = models.EmailTemplateComment.choose(
+                ).make_email(notification, parent)
+                models.Email.objects.create(
+                    notification=notification,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+        notification.save()
         models.Notification.objects.filter(
             deduper=notification.deduper).exclude(pk=notification.pk).delete()
 
@@ -410,9 +409,10 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
                     ref_type,
                     to_global_id('{}Node'.format(ref_type), current.pk),
                 ),
-                deduper='like:{}:{}'.format(
+                deduper='like:{}:{}:{}'.format(
                     user.pk,
                     instance.pk,
+                    instance.user.pk,
                 ),
                 description=description,
             )

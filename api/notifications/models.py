@@ -233,15 +233,21 @@ class EmailTemplate(models.Model):
         return (
             subject,
             top_body_template.format(
+                user=str(notifier.user),
                 content=body,
-                settings_link=notifier.create_settings_link(),
-                unsubscribe_link=notifier.create_unsubscribe_link(),
+                settings_link=settings.ROOT_PATH +
+                notifier.create_settings_link(),
+                unsubscribe_link=settings.ROOT_PATH +
+                notifier.create_unsubscribe_link(),
             ),
             top_html_template.format(
+                user=str(notifier.user),
                 subject=subject,
-                content=body,
-                settings_link=notifier.create_settings_link(),
-                unsubscribe_link=notifier.create_unsubscribe_link(),
+                content=html,
+                settings_link=settings.ROOT_PATH +
+                notifier.create_settings_link(),
+                unsubscribe_link=settings.ROOT_PATH +
+                notifier.create_unsubscribe_link(),
             ),
         )
 
@@ -261,18 +267,16 @@ class EmailTemplateWelcome(EmailTemplate):
 
 class EmailTemplateFollow(EmailTemplate):
     def clean(self):
-        super()._check_keys([], ['user', 'link'])
+        super()._check_keys([], ['link'])
 
     def make_email(self, notification, user):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
             self.body.format(
-                user=str(user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                user=str(user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )
@@ -280,19 +284,17 @@ class EmailTemplateFollow(EmailTemplate):
 
 class EmailTemplateDeposit(EmailTemplate):
     def clean(self):
-        super()._check_keys([], ['user', 'amount', 'link'])
+        super()._check_keys([], ['amount', 'link'])
 
     def make_email(self, notification, deposit):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
             self.body.format(
-                user=str(deposit.user),
                 amount='${:.2f}'.format(deposit.amount / 100),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                user=str(deposit.user),
                 amount='${:.2f}'.format(deposit.amount / 100),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
@@ -301,19 +303,17 @@ class EmailTemplateDeposit(EmailTemplate):
 
 class EmailTemplateUBP(EmailTemplate):
     def clean(self):
-        super()._check_keys([], ['user', 'amount', 'link'])
+        super()._check_keys([], ['amount', 'link'])
 
     def make_email(self, notification, deposit):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
             self.body.format(
-                user=str(deposit.user),
                 amount='${:.2f}'.format(deposit.amount / 100),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                user=str(deposit.user),
                 amount='${:.2f}'.format(deposit.amount / 100),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
@@ -322,19 +322,17 @@ class EmailTemplateUBP(EmailTemplate):
 
 class EmailTemplateTransaction(EmailTemplate):
     def clean(self):
-        super()._check_keys([], ['user', 'sender', 'link'])
+        super()._check_keys([], ['sender', 'link'])
 
     def make_email(self, notification, transaction):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
             self.body.format(
-                user=str(transaction.target),
                 sender=str(transaction.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                user=str(transaction.user),
                 sender=str(transaction.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
@@ -343,14 +341,13 @@ class EmailTemplateTransaction(EmailTemplate):
 
 class EmailTemplateComment(EmailTemplate):
     def clean(self):
-        super()._check_keys([], ['user', 'entry_type', 'link'])
+        super()._check_keys([], ['entry_type', 'link'])
 
     def make_email(self, notification, parent):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
             self.body.format(
-                user=str(parent.user),
                 entry_type=_get_submodel(
                     parent,
                     ibis.models.Entry,
@@ -358,7 +355,6 @@ class EmailTemplateComment(EmailTemplate):
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                user=str(parent.user),
                 entry_type=_get_submodel(
                     parent,
                     ibis.models.Entry,
