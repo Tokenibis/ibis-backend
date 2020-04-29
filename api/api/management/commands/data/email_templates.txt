@@ -1,6 +1,6 @@
-***Welcome:New Notification***
+***Welcome:Welcome to Token Ibis***
 
-You wonderfully thoughtful and warm-hearted human! Welcome to Token Ibis!
+You wonderfully thoughtful and warm-hearted human!
 
 Just by creating a profile on our app, you have taken your first big step in democratizing social impact.
 
@@ -52,6 +52,8 @@ Head over [here](link) to start using it.
 
 You are basically a perfect human specimen (not that we’re experimenting on you...) for depositing {amount} for future philanthropic purposes! You go!
 
+Head over [here](link) to start using it.
+
 ---
 
 I think I’m in love with you... for depositing {amount} for future philanthropic purposes!
@@ -72,6 +74,8 @@ Head over [here](link) to start using it.
 ---
 
 Bless my stars, it can’t be... but wait, it is! You’ve received your weekly gift of {amount}!
+
+Head over [here](link) to start using it.
 
 ---
 

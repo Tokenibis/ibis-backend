@@ -191,6 +191,7 @@ class Email(models.Model):
         choices=EMAIL_STATUS,
         default=SCHEDULED,
     )
+    force = models.BooleanField(default=False)
 
 
 class EmailTemplate(models.Model):
@@ -209,19 +210,19 @@ class EmailTemplate(models.Model):
         if set([
                 x[1] for x in string.Formatter().parse(self.subject)
                 if x[1] is not None
-        ]) == set(subject_keys):
+        ]) != set(subject_keys):
             raise ValidationError('Subject template has invalid key set')
 
         if set([
                 x[1] for x in string.Formatter().parse(self.body)
                 if x[1] is not None
-        ]) == set(content_keys):
+        ]) != set(content_keys):
             raise ValidationError('Body template has invalid key set')
 
         if set([
                 x[1] for x in string.Formatter().parse(self.html)
                 if x[1] is not None
-        ]) == set(content_keys):
+        ]) != set(content_keys):
             raise ValidationError('HTML template has invalid key set')
 
     @classmethod
@@ -254,7 +255,7 @@ class EmailTemplate(models.Model):
 
 class EmailTemplateWelcome(EmailTemplate):
     def clean(self):
-        super()._check_keys([], ['user'])
+        super()._check_keys([], [])
 
     def make_email(self, notification, deposit):
         return EmailTemplate._apply_top_template(

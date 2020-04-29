@@ -56,6 +56,7 @@ def handleDepositCreate(sender, instance, created, **kwargs):
                         html=html,
                         schedule=now() +
                         timedelta(minutes=settings.EMAIL_DELAY),
+                        force=True,
                     )
                 except IndexError:
                     logger.error('No email template found')

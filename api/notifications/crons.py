@@ -26,7 +26,7 @@ class EmailNotificationCron(CronJobBase):
             elif email.schedule < now():
                 email.status = Email.ATTEMPTING
                 destination = email.notification.notifier.user.email
-                if email.notification.clicked:
+                if email.notification.clicked and not email.force:
                     email.status = Email.UNNEEDED
                 elif destination.split('@')[-1] == 'example.com':
                     logger.info(

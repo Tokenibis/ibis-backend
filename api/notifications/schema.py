@@ -106,11 +106,12 @@ class NotifierUpdate(Mutation):
         id = graphene.ID(required=True)
         email_follow = graphene.Boolean()
         email_transaction = graphene.Boolean()
+        email_donation = graphene.Boolean()
+        email_deposit = graphene.Boolean()
+        email_ubp = graphene.Boolean()
         email_comment = graphene.Boolean()
         email_like = graphene.Boolean()
-        email_news = graphene.Boolean()
-        email_event = graphene.Boolean()
-        email_post = graphene.Boolean()
+        email_feed = graphene.String()
         last_seen = graphene.String()
 
     notifier = graphene.Field(NotifierNode)
@@ -121,11 +122,12 @@ class NotifierUpdate(Mutation):
             id,
             email_follow=None,
             email_transaction=None,
+            email_donation=None,
+            email_deposit=None,
+            email_ubp=None,
             email_comment=None,
             email_like=None,
-            email_news=None,
-            email_event=None,
-            email_post=None,
+            email_feed=None,
             last_seen='',
     ):
 
@@ -139,16 +141,18 @@ class NotifierUpdate(Mutation):
             notifier.email_follow = email_follow
         if type(email_transaction) == bool:
             notifier.email_transaction = email_transaction
+        if type(email_donation) == bool:
+            notifier.email_donation = email_donation
+        if type(email_deposit) == bool:
+            notifier.email_deposit = email_deposit
+        if type(email_ubp) == bool:
+            notifier.email_ubp = email_ubp
         if type(email_comment) == bool:
             notifier.email_comment = email_comment
         if type(email_like) == bool:
             notifier.email_like = email_like
-        if type(email_news) == bool:
-            notifier.email_news = email_news
-        if type(email_event) == bool:
-            notifier.email_event = email_event
-        if type(email_post) == bool:
-            notifier.email_post = email_post
+        if email_feed:
+            notifier.email_feed = email_feed
         if last_seen:
             notifier.last_seen = last_seen
 

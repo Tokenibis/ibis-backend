@@ -13,8 +13,6 @@ class SettingsView(UpdateView):
         'email_transaction',
         'email_comment',
         'email_deposit',
-        'email_like',
-        'email_feed',
     )
 
     def get(self, *args, **kwargs):
