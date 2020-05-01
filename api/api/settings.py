@@ -295,3 +295,5 @@ ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
 
 SIGNAL_SCORE_NONPROFIT_IGNORE = ['tokenibis', 'oneabq']
+
+UNSUBSCRIBE_EMAIL = 'unsubscribe@tokenibis.org?subject=unsubscribe'

@@ -253,8 +253,11 @@ class NotificationTestCase(BaseTestCase):
                         'id':
                         to_global_id(
                             'NotificationNode',
-                            notifications.models.Email.objects.last().
-                            notification.id),
+                            list(x for x in
+                                 notifications.models.Email.objects.all()
+                                 if x.notification.notifier.pk ==
+                                 self.person.id)[-1].notification.id,
+                        ),
                     },
                 ).content)
 
@@ -275,10 +278,10 @@ class NotificationTestCase(BaseTestCase):
             )
 
             assert notifications.models.Email.objects.count(
-            ) == email_count + 4
+            ) == email_count + 7
             assert notifications.models.Email.objects.filter(
                 status=notifications.models.Email.STALE).count() == email_count
             assert notifications.models.Email.objects.filter(
-                status=notifications.models.Email.SUCCEEDED).count() == 3
+                status=notifications.models.Email.SUCCEEDED).count() == 6
             assert notifications.models.Email.objects.filter(
                 status=notifications.models.Email.UNNEEDED).count() == 1

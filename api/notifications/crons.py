@@ -1,7 +1,7 @@
 import logging
 
 from django.utils.timezone import now, timedelta
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django_cron import CronJobBase, Schedule
 from django.conf import settings
 
@@ -34,20 +34,27 @@ class EmailNotificationCron(CronJobBase):
                     email.status = Email.SUCCEEDED
                 else:
                     try:
-                        assert send_mail(
+                        msg = EmailMultiAlternatives(
                             email.subject,
                             email.body,
-                            'Token Ibis<{}>'.format(
-                                settings.EMAIL_HOST_USER),
+                            'Token Ibis<{}>'.format(settings.EMAIL_HOST_USER),
                             [email.notification.notifier.user.email],
-                            fail_silently=False,
-                            html_message=email.html,
+                            headers={
+                                'List-Unsubscribe':
+                                '<mailto: {}>, <{}{}>'.format(
+                                    settings.UNSUBSCRIBE_EMAIL,
+                                    settings.ROOT_PATH,
+                                    email.notification.notifier.
+                                    create_unsubscribe_link(),
+                                ),
+                            },
                         )
+                        msg.attach_alternative(email.html, 'text/html')
+                        msg.send()
                         email.status = Email.SUCCEEDED
                     except Exception as e:
                         logger.error(
-                            'ERROR: exception sending to {}: {}: {}'.
-                            format(
+                            'ERROR: exception sending to {}: {}: {}'.format(
                                 email.notification.notifier.user.email,
                                 type(e),
                                 e,

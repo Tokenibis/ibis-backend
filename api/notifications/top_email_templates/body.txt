@@ -2,6 +2,10 @@ Hello {user},
 
 {content}
 
+Sincerely,
+The Token Ibis Team
+info@tokenibis.org
+
 ----------
 
 Token Ibis Inc. | P.O. Box 51804, Albuquerque NM 87181

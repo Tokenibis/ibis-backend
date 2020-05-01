@@ -54,8 +54,7 @@ def handleDepositCreate(sender, instance, created, **kwargs):
                         subject=subject,
                         body=body,
                         html=html,
-                        schedule=now() +
-                        timedelta(minutes=settings.EMAIL_DELAY),
+                        schedule=now(),
                         force=True,
                     )
                 except IndexError:
@@ -161,23 +160,29 @@ def handleCommentCreate(sender, instance, created, **kwargs):
 
     while hasattr(current, 'comment'):
         parent = current.comment.parent
-        notifier = parent.user.ibisuser.notifier
-        if notifier not in [x.notifier for x in notifications
-                            ] and notifier != user.notifier:
-            description = '{} replied to your {}'.format(
-                str(user),
-                _get_submodel(parent, ibis.models.Entry).__name__.lower(),
-            )
-            notification = models.Notification.objects.create(
-                notifier=notifier,
-                category=models.Notification.RECEIVED_COMMENT,
-                deduper='comment:{}:{}'.format(
-                    instance.pk,
-                    parent.user.ibisuser.pk,
-                ),
-                description=description,
-            )
-            notifications.append([notification, parent])
+        notifiers = [parent.user.ibisuser.notifier]
+        if _get_submodel(parent, ibis.models.Entry) == ibis.models.Donation:
+            notifiers.append(parent.donation.target.ibisuser.notifier)
+        if _get_submodel(parent, ibis.models.Entry) == ibis.models.Transaction:
+            notifiers.append(parent.transaction.target.ibisuser.notifier)
+
+        for notifier in notifiers:
+            if notifier not in [x[0].notifier for x in notifications
+                                ] and notifier != user.notifier:
+                description = '{} replied to your {}'.format(
+                    str(user),
+                    _get_submodel(parent, ibis.models.Entry).__name__.lower(),
+                )
+                notification = models.Notification.objects.create(
+                    notifier=notifier,
+                    category=models.Notification.RECEIVED_COMMENT,
+                    deduper='comment:{}:{}'.format(
+                        instance.pk,
+                        notifier.pk,
+                    ),
+                    description=description,
+                )
+                notifications.append([notification, parent])
 
         current = parent
 
