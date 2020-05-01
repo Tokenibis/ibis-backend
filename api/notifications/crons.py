@@ -43,7 +43,7 @@ class EmailNotificationCron(CronJobBase):
                                 'List-Unsubscribe':
                                 '<mailto: {}>, <{}{}>'.format(
                                     settings.UNSUBSCRIBE_EMAIL,
-                                    settings.ROOT_PATH,
+                                    settings.API_ROOT_PATH,
                                     email.notification.notifier.
                                     create_unsubscribe_link(),
                                 ),

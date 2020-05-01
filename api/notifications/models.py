@@ -236,18 +236,18 @@ class EmailTemplate(models.Model):
             top_body_template.format(
                 user=str(notifier.user),
                 content=body,
-                settings_link=settings.ROOT_PATH +
+                settings_link=settings.API_ROOT_PATH +
                 notifier.create_settings_link(),
-                unsubscribe_link=settings.ROOT_PATH +
+                unsubscribe_link=settings.API_ROOT_PATH +
                 notifier.create_unsubscribe_link(),
             ),
             top_html_template.format(
                 user=str(notifier.user),
                 subject=subject,
                 content=html,
-                settings_link=settings.ROOT_PATH +
+                settings_link=settings.API_ROOT_PATH +
                 notifier.create_settings_link(),
-                unsubscribe_link=settings.ROOT_PATH +
+                unsubscribe_link=settings.API_ROOT_PATH +
                 notifier.create_unsubscribe_link(),
             ),
         )
@@ -255,14 +255,20 @@ class EmailTemplate(models.Model):
 
 class EmailTemplateWelcome(EmailTemplate):
     def clean(self):
-        super()._check_keys([], [])
+        super()._check_keys([], ['link'])
 
     def make_email(self, notification, deposit):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
-            self.body.format(user=str(deposit.user)),
-            self.html.format(user=str(deposit.user)),
+            self.body.format(
+                user=str(deposit.user),
+                link=settings.APP_ROOT_PATH,
+            ),
+            self.html.format(
+                user=str(deposit.user),
+                link=settings.APP_ROOT_PATH,
+            ),
         )
 
 
@@ -275,11 +281,9 @@ class EmailTemplateFollow(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
+                link=settings.APP_LINK_RESOLVER(notification.reference), ),
             self.html.format(
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
+                link=settings.APP_LINK_RESOLVER(notification.reference), ),
         )
 
 

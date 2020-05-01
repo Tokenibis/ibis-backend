@@ -290,7 +290,9 @@ REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
 
 RESERVED_USERNAMES = ['admin', 'anonymous', 'dashboard']
 
-ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
+API_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
+
+APP_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['app'])
 
 SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
 
