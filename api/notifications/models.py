@@ -234,7 +234,7 @@ class EmailTemplate(models.Model):
         return (
             subject,
             top_body_template.format(
-                user=str(notifier.user),
+                user=notifier.user.first_name,
                 content=body,
                 settings_link=settings.API_ROOT_PATH +
                 notifier.create_settings_link(),
@@ -242,7 +242,7 @@ class EmailTemplate(models.Model):
                 notifier.create_unsubscribe_link(),
             ),
             top_html_template.format(
-                user=str(notifier.user),
+                user=notifier.user.first_name,
                 subject=subject,
                 content=html,
                 settings_link=settings.API_ROOT_PATH +
@@ -262,11 +262,9 @@ class EmailTemplateWelcome(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                user=str(deposit.user),
                 link=settings.APP_ROOT_PATH,
             ),
             self.html.format(
-                user=str(deposit.user),
                 link=settings.APP_ROOT_PATH,
             ),
         )
@@ -276,7 +274,7 @@ class EmailTemplateFollow(EmailTemplate):
     def clean(self):
         super()._check_keys([], ['link'])
 
-    def make_email(self, notification, user):
+    def make_email(self, notification):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
