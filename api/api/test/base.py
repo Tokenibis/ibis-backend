@@ -14,7 +14,7 @@ import users.models
 import ibis.models as models
 import api.schema
 
-#logging.disable(logging.CRITICAL)
+logging.disable(logging.CRITICAL)
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 

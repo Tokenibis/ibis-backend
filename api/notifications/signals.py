@@ -197,7 +197,8 @@ def handleCommentCreate(sender, instance, created, **kwargs):
         notification.reference = '{}:{}'.format(ref_type, ref_id)
 
         try:
-            if not STATE['LOADING_DATA'] and notifier.email_comment:
+            if not STATE[
+                    'LOADING_DATA'] and notification.notifier.email_comment:
                 subject, body, html = models.EmailTemplateComment.choose(
                 ).make_email(notification, parent)
                 models.Email.objects.create(
@@ -364,7 +365,7 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
             try:
                 if not STATE['LOADING_DATA'] and notifier.email_follow:
                     subject, body, html = models.EmailTemplateFollow.choose(
-                    ).make_email(notification, target)
+                    ).make_email(notification)
                     models.Email.objects.create(
                         notification=notification,
                         subject=subject,
