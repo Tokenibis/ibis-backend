@@ -3,8 +3,6 @@ from django.conf import settings
 
 import ibis.models as models
 
-INITIAL_UBP_DEFAULT = 1000
-
 
 def scoreFundraisedDescending(sender, instance, created, raw, **kwargs):
     if raw or not created:
