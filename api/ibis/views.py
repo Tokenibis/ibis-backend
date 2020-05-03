@@ -60,6 +60,14 @@ class LoginView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
+
+        # if account already exists with same email (person OR nonprofit) that has a different user
+        # - if no FB in old but yes FB in new, then update picture
+        # - add social account to the old user
+        # - delete the new user
+        # else
+        # - create a new person like below
+
         exists = models.Person.objects.filter(id=request.user.id).exists()
         if not exists:
             social_accounts = SocialAccount.objects.filter(

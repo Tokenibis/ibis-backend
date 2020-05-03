@@ -474,9 +474,7 @@ class DepositCategoryCreate(Mutation):
         if not info.context.user.is_staff:
             raise GraphQLError('You are not a staff member')
 
-        depositCategory = models.DepositCategory.objects.create(
-            title=title,
-        )
+        depositCategory = models.DepositCategory.objects.create(title=title, )
         depositCategory.save()
         return DepositCategoryCreate(depositCategory=depositCategory)
 
@@ -1116,8 +1114,11 @@ class NewsCreate(Mutation):
             link='',
             score=0,
     ):
-        if not info.context.user.is_staff:
-            raise GraphQLError('You are not a staff member')
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Nonprofit.objects.filter(
+                    id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
 
         news = models.News.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -1156,8 +1157,11 @@ class NewsUpdate(Mutation):
             image='',
             score=0,
     ):
-        if not info.context.user.is_staff:
-            raise GraphQLError('You are not a staff member')
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Nonprofit.objects.filter(
+                    id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
 
         news = models.News.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1255,8 +1259,11 @@ class EventCreate(Mutation):
             link='',
             score=0,
     ):
-        if not info.context.user.is_staff:
-            raise GraphQLError('You are not a staff member')
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Nonprofit.objects.filter(
+                    id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
 
         event = models.Event.objects.create(
             user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
@@ -1291,8 +1298,8 @@ class EventUpdate(Mutation):
 
     def mutate(
             self,
-            id,
             info,
+            id,
             user=None,
             description='',
             title='',
@@ -1303,8 +1310,11 @@ class EventUpdate(Mutation):
             address='',
             score=0,
     ):
-        if not info.context.user.is_staff:
-            raise GraphQLError('You are not a staff member')
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Nonprofit.objects.filter(
+                    id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
 
         event = models.Event.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -1816,8 +1826,10 @@ class PostCreate(Mutation):
     post = graphene.Field(PostNode)
 
     def mutate(self, info, user, title, description):
-        if not (info.context.user.is_staff
-                or info.context.user.id == int(from_global_id(user)[1])):
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Person.objects.filter(
+                    id=info.context.user.id).exists()):
             raise GraphQLError('You do not have sufficient permission')
 
         post = models.Post.objects.create(
@@ -1845,8 +1857,11 @@ class PostUpdate(Mutation):
             title='',
             description='',
     ):
-        if not info.context.user.is_staff:
-            raise GraphQLError('You are not a staff member')
+        if not (info.context.user.is_staff or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Person.objects.filter(
+                    id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
 
         post = models.Post.objects.get(pk=from_global_id(id)[1])
         if user:
@@ -2138,8 +2153,7 @@ class Query(object):
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)
-    all_deposit_categories = DjangoFilterConnectionField(
-        DepositCategoryNode)
+    all_deposit_categories = DjangoFilterConnectionField(DepositCategoryNode)
     all_ibis_users = DjangoFilterConnectionField(
         IbisUserNode,
         filterset_class=IbisUserFilter,

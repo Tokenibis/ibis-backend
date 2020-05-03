@@ -44,6 +44,80 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
+                self.gql['NewsCreate'],
+                op_name='NewsCreate',
+                variables={
+                    'user': user.gid,
+                    'title': 'This is a title',
+                    'image': 'This is an image',
+                    'link': 'This is a link',
+                    'description': 'This is a description',
+                },
+            ).content)
+        success['NewsCreate'] = 'errors' not in result and result['data'][
+            'createNews']['news']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['NewsUpdate'],
+                op_name='NewsUpdate',
+                variables={
+                    'id': to_global_id(
+                        'NewsNode',
+                        models.News.objects.last().id,
+                    ),
+                    'user': user.gid,
+                    'title': 'This is a different title',
+                    'image': 'This is a different image',
+                    'link': 'This is a different link',
+                    'description': 'This is a different description',
+                },
+            ).content)
+        success['NewsUpdate'] = 'errors' not in result and result['data'][
+            'updateNews']['news']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['EventCreate'],
+                op_name='EventCreate',
+                variables={
+                    'user': user.gid,
+                    'title': 'This is a title',
+                    'image': 'This is an image',
+                    'link': 'This is a link',
+                    'description': 'This is a description',
+                    'address': 'This is an address',
+                    'date': str(now()),
+                    'duration': 1,
+                },
+            ).content)
+        success['EventCreate'] = 'errors' not in result and result['data'][
+            'createEvent']['event']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['EventUpdate'],
+                op_name='EventUpdate',
+                variables={
+                    'id': to_global_id(
+                        'EventNode',
+                        models.Event.objects.last().id,
+                    ),
+                    'user': user.gid,
+                    'title': 'This is a different title',
+                    'image': 'This is a different image',
+                    'link': 'This is a different link',
+                    'description': 'This is a different description',
+                    'address': 'This is a different address',
+                    'date': str(now()),
+                    'duration': 2,
+                },
+            ).content)
+        success['EventUpdate'] = 'errors' not in result and result['data'][
+            'updateEvent']['event']['id']
+
+        result = json.loads(
+            self.query(
                 self.gql['PostCreate'],
                 op_name='PostCreate',
                 variables={
@@ -132,7 +206,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['Person'],
                 op_name='Person',
                 variables={
-                    'id': user.gid,
+                    'id': self.person.gid,
                 },
             ).content)
         success['Person'] = 'errors' not in result and bool(
@@ -270,7 +344,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['NonprofitSettingsUpdate'],
                 op_name='NonprofitSettingsUpdate',
                 variables={
-                    'id': self.nonprofit.gid,
+                    'id': self.me_nonprofit.gid,
                     'visibilityDonation': models.IbisUser.PUBLIC,
                     'visibilityTransaction': models.IbisUser.PUBLIC,
                 },
@@ -500,7 +574,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['PersonSettingsUpdate'],
                 op_name='PersonSettingsUpdate',
                 variables={
-                    'id': user.gid,
+                    'id': self.me_person.gid,
                     'visibilityDonation': models.IbisUser.PUBLIC,
                     'visibilityTransaction': models.IbisUser.PUBLIC,
                 },
@@ -596,15 +670,28 @@ class PermissionTestCase(BaseTestCase):
 
     # logged in users can see all of their own information
     def test_person(self):
+        expected_fail = [
+            'NonprofitSettingsUpdate',
+            'NewsCreate',
+            'NewsUpdate',
+            'EventCreate',
+            'EventUpdate',
+        ]
         self._client.force_login(self.me_person)
-        assert all(x[0] for x in self.run_all(self.me_nonprofit).items()
-                   if x[1] not in ['NonprofitSettingsUpdate'])
+        results = self.run_all(self.me_person)
+        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
+        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
 
     # logged in users can see all of their own information
     def test_nonprofit(self):
+        expected_fail = [
+            'PersonSettingsUpdate',
+            'PostCreate',
+        ]
         self._client.force_login(self.me_nonprofit)
-        assert all(x[0] for x in self.run_all(self.me_nonprofit).items()
-                   if x[1] not in ['PersonSettingsUpdate'])
+        results = self.run_all(self.me_nonprofit)
+        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
+        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
 
     # logged in users can see some of other people's information
     def test_other_public(self):
