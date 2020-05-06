@@ -395,7 +395,7 @@ class NonprofitCategoryCreate(Mutation):
     nonprofitCategory = graphene.Field(NonprofitCategoryNode)
 
     def mutate(self, info, title, description):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         nonprofitCategory = models.NonprofitCategory.objects.create(
@@ -415,7 +415,7 @@ class NonprofitCategoryUpdate(Mutation):
     nonprofitCategory = graphene.Field(NonprofitCategoryNode)
 
     def mutate(self, info, id, title='', description=''):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         nonprofitCategory = models.NonprofitCategory.objects.get(
@@ -436,7 +436,7 @@ class NonprofitCategoryDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -471,7 +471,7 @@ class DepositCategoryCreate(Mutation):
     depositCategory = graphene.Field(DepositCategoryNode)
 
     def mutate(self, info, title):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         depositCategory = models.DepositCategory.objects.create(title=title, )
@@ -487,7 +487,7 @@ class DepositCategoryUpdate(Mutation):
     depositCategory = graphene.Field(DepositCategoryNode)
 
     def mutate(self, info, id, title=''):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         depositCategory = models.DepositCategory.objects.get(
@@ -506,7 +506,7 @@ class DepositCategoryDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -528,7 +528,7 @@ class DepositNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_staff:
+        if info.context.user.is_superuser:
             return queryset
         return queryset.filter(user=info.context.user)
 
@@ -543,7 +543,7 @@ class DepositCreate(Mutation):
     deposit = graphene.Field(DepositNode)
 
     def mutate(self, info, user, amount, payment_id, category):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -584,7 +584,7 @@ class DepositUpdate(Mutation):
             payment_id='',
             category=None,
     ):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -619,7 +619,7 @@ class DepositDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -640,7 +640,7 @@ class WithdrawalNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_staff:
+        if info.context.user.is_superuser:
             return queryset
         return queryset.filter(user=info.context.user)
 
@@ -653,7 +653,7 @@ class WithdrawalCreate(Mutation):
     withdrawal = graphene.Field(WithdrawalNode)
 
     def mutate(self, info, user, amount):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -687,7 +687,7 @@ class WithdrawalUpdate(Mutation):
     withdrawal = graphene.Field(WithdrawalNode)
 
     def mutate(self, info, id, user=None, amount=''):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -718,7 +718,7 @@ class WithdrawalDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -794,7 +794,7 @@ class DonationNode(EntryNode):
         if not info.context.user.is_authenticated:
             raise GraphQLError('You are not  logged in')
 
-        if info.context.user.is_staff:
+        if info.context.user.is_superuser:
             return queryset
 
         return queryset.filter(
@@ -819,7 +819,7 @@ class DonationCreate(Mutation):
     donation = graphene.Field(DonationNode)
 
     def mutate(self, info, user, description, target, amount, score=0):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -872,7 +872,7 @@ class DonationUpdate(Mutation):
             target=None,
             amount=0,
     ):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             return
 
         try:
@@ -908,7 +908,7 @@ class DonationDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -937,7 +937,7 @@ class TransactionNode(EntryNode):
         if not info.context.user.is_authenticated:
             raise GraphQLError('You are not  logged in')
 
-        if info.context.user.is_staff:
+        if info.context.user.is_superuser:
             return queryset
 
         return queryset.filter(
@@ -970,7 +970,7 @@ class TransactionCreate(Mutation):
             amount,
             score=0,
     ):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -1023,7 +1023,7 @@ class TransactionUpdate(Mutation):
             target=None,
             amount=0,
     ):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1059,7 +1059,7 @@ class TransactionDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1114,7 +1114,7 @@ class NewsCreate(Mutation):
             link='',
             score=0,
     ):
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
                 and models.Nonprofit.objects.filter(
                     id=info.context.user.id).exists()):
@@ -1157,7 +1157,7 @@ class NewsUpdate(Mutation):
             image='',
             score=0,
     ):
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
                 and models.Nonprofit.objects.filter(
                     id=info.context.user.id).exists()):
@@ -1187,7 +1187,7 @@ class NewsDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1259,7 +1259,7 @@ class EventCreate(Mutation):
             link='',
             score=0,
     ):
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
                 and models.Nonprofit.objects.filter(
                     id=info.context.user.id).exists()):
@@ -1310,7 +1310,7 @@ class EventUpdate(Mutation):
             address='',
             score=0,
     ):
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
                 and models.Nonprofit.objects.filter(
                     id=info.context.user.id).exists()):
@@ -1345,7 +1345,7 @@ class EventDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1460,17 +1460,17 @@ class PersonNode(IbisUserNode, UserNode):
         return self.donated()
 
     def resolve_visibility_following(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff or info.context.user.id == self.id):
+        if not (info.context.user.is_superuser or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_following
 
     def resolve_visibility_donation(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff or info.context.user.id == self.id):
+        if not (info.context.user.is_superuser or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_donation
 
     def resolve_visibility_transaction(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff or info.context.user.id == self.id):
+        if not (info.context.user.is_superuser or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_transaction
 
@@ -1503,7 +1503,7 @@ class PersonCreate(Mutation):
             visibility_transaction=models.IbisUser.PUBLIC,
             score=0,
     ):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         if visibility_follow:
@@ -1563,7 +1563,7 @@ class PersonUpdate(Mutation):
             visibility_transaction='',
             score=None,
     ):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(id)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -1607,7 +1607,7 @@ class PersonDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1667,7 +1667,7 @@ class NonprofitCreate(Mutation):
             visibility_transaction=models.IbisUser.PUBLIC,
             score=0,
     ):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         if visibility_follow:
@@ -1732,7 +1732,7 @@ class NonprofitUpdate(Mutation):
             visibility_transaction='',
             score=0,
     ):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(id)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -1782,7 +1782,7 @@ class NonprofitDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1826,7 +1826,7 @@ class PostCreate(Mutation):
     post = graphene.Field(PostNode)
 
     def mutate(self, info, user, title, description):
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
                 and models.Person.objects.filter(
                     id=info.context.user.id).exists()):
@@ -1857,7 +1857,7 @@ class PostUpdate(Mutation):
             title='',
             description='',
     ):
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
                 and models.Person.objects.filter(
                     id=info.context.user.id).exists()):
@@ -1881,7 +1881,7 @@ class PostDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1918,7 +1918,7 @@ class CommentCreate(Mutation):
     def mutate(self, info, user, description, parent):
         parent_obj = models.Entry.objects.get(pk=from_global_id(parent)[1])
 
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
                  and hasattr(info.context.user, 'ibisuser')
                  and info.context.user.ibisuser.can_see(parent_obj))):
@@ -1949,7 +1949,7 @@ class CommentUpdate(Mutation):
             description='',
             parent=None,
     ):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         comment = models.Comment.objects.get(pk=from_global_id(id)[1])
@@ -1972,7 +1972,7 @@ class CommentDelete(Mutation):
     status = graphene.Boolean()
 
     def mutate(self, info, id):
-        if not info.context.user.is_staff:
+        if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
         try:
@@ -1994,7 +1994,7 @@ class FollowMutation(Mutation):
 
     @classmethod
     def mutate(cls, info, operation, user, target):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -2031,7 +2031,7 @@ class LikeMutation(Mutation):
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
         entry_obj = models.Entry.objects.get(pk=from_global_id(target)[1])
 
-        if not (info.context.user.is_staff or
+        if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
                  and hasattr(info.context.user, 'ibisuser')
                  and info.context.user.ibisuser.can_see(entry_obj))):
@@ -2065,7 +2065,7 @@ class BookmarkMutation(Mutation):
 
     @classmethod
     def mutate(cls, info, operation, user, target):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -2110,7 +2110,7 @@ class RsvpMutation(Mutation):
 
     @classmethod
     def mutate(cls, info, operation, user, target):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 

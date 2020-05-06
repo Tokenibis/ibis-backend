@@ -148,7 +148,7 @@ class BaseTestCase(GraphQLTestCase):
             first_name='Staffy',
             last_name='McStaffface',
             email='staff@example.come',
-            is_staff=True,
+            is_superuser=True,
         )
 
         self.me_person = models.Person.objects.create(

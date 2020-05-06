@@ -32,68 +32,68 @@ class NotifierNode(DjangoObjectType):
         interfaces = (relay.Node, )
 
     def resolve_email_following(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_following
 
     def resolve_email_transaction(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_transaction
 
     def resolve_email_donation(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_transaction
 
     def resolve_email_comment(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_comment
 
     def resolve_email_ubp(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_ubp
 
     def resolve_email_deposit(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_deposit
 
     def resolve_email_like(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_like
 
     def resolve_email_feed(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_feed
 
     def resolve_last_seen(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.last_seen
 
     def resolve_unseen_count(self, info, *args, **kwargs):
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.unseen_count()
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_staff:
+        if info.context.user.is_superuser:
             return queryset
         return queryset.filter(user=info.context.user)
 
@@ -133,7 +133,7 @@ class NotifierUpdate(Mutation):
 
         notifier = models.Notifier.objects.get(pk=from_global_id(id)[1])
 
-        if not (info.context.user.is_staff
+        if not (info.context.user.is_superuser
                 or info.context.user.id == notifier.user.id):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -187,7 +187,7 @@ class NotificationNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if info.context.user.is_staff:
+        if info.context.user.is_superuser:
             return queryset
         if not info.context.user.is_authenticated:
             raise GraphQLError('You are not  logged in')
@@ -223,19 +223,19 @@ class NotificationUpdate(Mutation):
             pk=from_global_id(id)[1])
 
         if type(clicked) == bool:
-            if not (info.context.user.is_staff
+            if not (info.context.user.is_superuser
                     or info.context.user.id == notification.notifier.user.id):
                 raise GraphQLError('You do not have sufficient permission')
             notification.clicked = clicked
 
         if notifier:
-            if not info.context.user.is_staff:
+            if not info.context.user.is_superuser:
                 raise GraphQLError('You are not a staff member')
             notification.notifier = models.Notifier.objects.get(
                 pk=from_global_id(notifier)[1])
 
         if category:
-            if not info.context.user.is_staff:
+            if not info.context.user.is_superuser:
                 raise GraphQLError('You are not a staff member')
             assert category in [
                 x[0] for x in models.Notification.NOTIFICATION_CATEGORY
@@ -243,12 +243,12 @@ class NotificationUpdate(Mutation):
             notification.category = category
 
         if reference:
-            if not info.context.user.is_staff:
+            if not info.context.user.is_superuser:
                 raise GraphQLError('You are not a staff member')
             notification.reference = reference
 
         if description:
-            if not info.context.user.is_staff:
+            if not info.context.user.is_superuser:
                 raise GraphQLError('You are not a staff member')
             notification.description = description
 
