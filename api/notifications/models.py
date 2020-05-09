@@ -176,6 +176,7 @@ class Notification(TimeStampedModel):
             self.notifier.user.username,
         )
 
+
 class Email(models.Model):
 
     SCHEDULED = 'SC'
