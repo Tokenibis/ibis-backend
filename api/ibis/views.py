@@ -6,6 +6,9 @@ import requests
 import ftfy
 import logging
 
+from django.contrib.auth import update_session_auth_hash
+from django.core.exceptions import ValidationError
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
 from rest_framework import generics, response, exceptions, serializers
@@ -15,7 +18,8 @@ from graphql_relay.node.node import to_global_id
 from django.utils.timezone import localtime, now
 
 import ibis.models as models
-from .serializers import PasswordLoginSerializer, PaymentSerializer
+from .serializers import PasswordLoginSerializer, PasswordChangeSerializer
+from .serializers import PaymentSerializer
 from .payments import PayPalClient
 
 logger = logging.getLogger(__name__)
@@ -61,15 +65,7 @@ class LoginView(generics.GenericAPIView):
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
 
-        # if account already exists with same email (person OR nonprofit) that has a different user
-        # - if no FB in old but yes FB in new, then update picture
-        # - add social account to the old user
-        # - delete the new user
-        # else
-        # - create a new person like below
-
-        exists = models.Person.objects.filter(id=request.user.id).exists()
-        if not exists:
+        if not models.Person.objects.filter(id=request.user.id).exists():
             social_accounts = SocialAccount.objects.filter(
                 user=request.user.id)
             assert len(social_accounts) == 1, \
@@ -99,8 +95,6 @@ class LoginView(generics.GenericAPIView):
             to_global_id('IbisUserNode', str(request.user.id)),
             'user_type':
             'person',
-            'is_new_account':
-            not exists,
         })
 
 
@@ -110,17 +104,61 @@ class PasswordLoginView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
-            raise exceptions.ParseError(detail="No valid values")
+            raise exceptions.ParseError(detail='No valid values')
 
         user = authenticate(
             username=request.data['username'],
             password=request.data['password'],
         )
+
         if user is not None:
             login(request, user)
-            return response.Response({'success': True})
+            return response.Response({
+                'user_id':
+                to_global_id('IbisUserNode', str(user.id)),
+                'user_type':
+                'person' if models.Person.objects.filter(
+                    id=user.id) else 'nonprofit',
+            })
         else:
-            return response.Response({'success': False})
+            return response.Response({
+                'user_id': '',
+                'user_type': '',
+            })
+
+
+class PasswordChangeView(generics.GenericAPIView):
+    serializer_class = PasswordChangeSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail='No valid values')
+
+        if not request.user.check_password(
+                serializerform.data['password_old']):
+            return response.Response({
+                'success': False,
+                'message': 'current password is wrong',
+            })
+
+        try:
+            validate_password(serializerform.data['password_new'])
+        except ValidationError as e:
+            return response.Response({
+                'success': False,
+                'message': e.messages[0],
+            })
+
+        # set_password also hashes the password that the user will get
+        request.user.set_password(serializerform.data['password_new'])
+        request.user.save()
+        update_session_auth_hash(request, request.user)
+
+        return response.Response({
+            'success': True,
+            'message': 'Password successfully updated',
+        })
 
 
 class AnonymousLoginView(generics.GenericAPIView):
@@ -158,8 +196,6 @@ class AnonymousLoginView(generics.GenericAPIView):
             to_global_id('IbisUserNode', str(person.user_ptr.id)),
             'user_type':
             'person',
-            'is_new_account':
-            not exists,
         })
 
 
