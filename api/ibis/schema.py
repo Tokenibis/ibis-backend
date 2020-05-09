@@ -1385,6 +1385,7 @@ class IbisUserNode(UserNode):
 
     class Meta:
         model = models.IbisUser
+        exclude = ['email', 'password']
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -1453,6 +1454,7 @@ class PersonNode(IbisUserNode, UserNode):
 
     class Meta:
         model = models.Person
+        exclude = ['email', 'password']
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -1628,6 +1630,7 @@ class NonprofitNode(IbisUserNode):
 
     class Meta:
         model = models.Nonprofit
+        exclude = ['email', 'password']
         filter_fields = []
         interfaces = (relay.Node, )
 
