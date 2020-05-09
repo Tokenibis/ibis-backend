@@ -16,6 +16,17 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
+                self.gql['Balance'],
+                op_name='Balance',
+                variables={
+                    'id': to_global_id('IbisUserNode', user.id),
+                },
+            ).content)
+        success['Balance'] = 'errors' not in result and bool(
+            result['data']['ibisUser']['id'])
+
+        result = json.loads(
+            self.query(
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
                 variables={
@@ -99,18 +110,27 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['EventUpdate'],
                 op_name='EventUpdate',
                 variables={
-                    'id': to_global_id(
+                    'id':
+                    to_global_id(
                         'EventNode',
                         models.Event.objects.last().id,
                     ),
-                    'user': user.gid,
-                    'title': 'This is a different title',
-                    'image': 'This is a different image',
-                    'link': 'This is a different link',
-                    'description': 'This is a different description',
-                    'address': 'This is a different address',
-                    'date': str(now()),
-                    'duration': 2,
+                    'user':
+                    user.gid,
+                    'title':
+                    'This is a different title',
+                    'image':
+                    'This is a different image',
+                    'link':
+                    'This is a different link',
+                    'description':
+                    'This is a different description',
+                    'address':
+                    'This is a different address',
+                    'date':
+                    str(now()),
+                    'duration':
+                    2,
                 },
             ).content)
         success['EventUpdate'] = 'errors' not in result and result['data'][
@@ -461,17 +481,6 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Deposit'],
-                op_name='Deposit',
-                variables={
-                    'id': to_global_id('IbisUserNode', user.id),
-                },
-            ).content)
-        success['Deposit'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['id'])
-
-        result = json.loads(
-            self.query(
                 self.gql['DepositList'],
                 op_name='DepositList',
                 variables={
@@ -622,6 +631,19 @@ class PermissionTestCase(BaseTestCase):
         success['NotificationClicked'] = 'errors' not in result and result[
             'data']['updateNotification']['notification']['id']
 
+        result = json.loads(
+            self.query(
+                self.gql['WithdrawalList'],
+                op_name='WithdrawalList',
+                variables={
+                    'byUser': self.me_nonprofit.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                },
+            ).content)
+        success['WithdrawalList'] = 'errors' not in result and bool(
+            len(result['data']['allWithdrawals']['edges']) > 0)
+
         assert len(tracker.models.Log.objects.all()) - init_tracker_len == len(
             success)
 
@@ -676,6 +698,7 @@ class PermissionTestCase(BaseTestCase):
             'NewsUpdate',
             'EventCreate',
             'EventUpdate',
+            'WithdrawalList',
         ]
         self._client.force_login(self.me_person)
         results = self.run_all(self.me_person)
@@ -696,6 +719,7 @@ class PermissionTestCase(BaseTestCase):
     # logged in users can see some of other people's information
     def test_other_public(self):
         expected = {
+            'Balance': True,
             'BookmarkCreate': False,
             'BookmarkDelete': False,
             'CommentCreate': False,

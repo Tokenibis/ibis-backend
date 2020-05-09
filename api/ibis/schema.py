@@ -98,6 +98,14 @@ class DepositFilter(django_filters.FilterSet):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
+class WithdrawalFilter(django_filters.FilterSet):
+    by_user = django_filters.CharFilter(method='filter_by_user')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+
+    def filter_by_user(self, qs, name, value):
+        return qs.filter(Q(user_id=from_global_id(value)[1]))
+
+
 class TransferFilter(django_filters.FilterSet):
     by_user = django_filters.CharFilter(method='filter_by_user')
     by_following = django_filters.CharFilter(method='filter_by_following')
@@ -649,10 +657,11 @@ class WithdrawalCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
         amount = graphene.Int(required=True)
+        description = graphene.String()
 
     withdrawal = graphene.Field(WithdrawalNode)
 
-    def mutate(self, info, user, amount):
+    def mutate(self, info, user, amount, description=''):
         if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
@@ -673,6 +682,7 @@ class WithdrawalCreate(Mutation):
         withdrawal = models.Withdrawal.objects.create(
             user=user_obj.nonprofit,
             amount=amount,
+            description=description,
         )
         withdrawal.save()
         return WithdrawalCreate(withdrawal=withdrawal)
@@ -683,10 +693,11 @@ class WithdrawalUpdate(Mutation):
         id = graphene.ID(required=True)
         user = graphene.ID()
         amount = graphene.Int()
+        description = graphene.String()
 
     withdrawal = graphene.Field(WithdrawalNode)
 
-    def mutate(self, info, id, user=None, amount=''):
+    def mutate(self, info, id, user=None, amount=None, description=''):
         if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
@@ -700,13 +711,15 @@ class WithdrawalUpdate(Mutation):
         if user:
             withdrawal.user = models.Nonprofit.objects.get(
                 pk=from_global_id(user)[1])
-        if amount:
+        if type(amount) == int:
             try:
                 assert hasattr(withdrawal.user, 'nonprofit')
                 assert withdrawal.user.balance() - amount >= 0
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             withdrawal.amount = amount
+        if description:
+            withdrawal.description = description
         withdrawal.save()
         return WithdrawalUpdate(withdrawal=withdrawal)
 
@@ -1462,17 +1475,20 @@ class PersonNode(IbisUserNode, UserNode):
         return self.donated()
 
     def resolve_visibility_following(self, info, *args, **kwargs):
-        if not (info.context.user.is_superuser or info.context.user.id == self.id):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_following
 
     def resolve_visibility_donation(self, info, *args, **kwargs):
-        if not (info.context.user.is_superuser or info.context.user.id == self.id):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_donation
 
     def resolve_visibility_transaction(self, info, *args, **kwargs):
-        if not (info.context.user.is_superuser or info.context.user.id == self.id):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.visibility_transaction
 
@@ -2173,7 +2189,10 @@ class Query(object):
         DepositNode,
         filterset_class=DepositFilter,
     )
-    all_withdrawals = DjangoFilterConnectionField(WithdrawalNode)
+    all_withdrawals = DjangoFilterConnectionField(
+        WithdrawalNode,
+        filterset_class=WithdrawalFilter,
+    )
     all_donations = DjangoFilterConnectionField(
         DonationNode,
         filterset_class=DonationFilter,

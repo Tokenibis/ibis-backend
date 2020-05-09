@@ -262,6 +262,7 @@ class Withdrawal(TimeStampedModel, Valuable):
         Nonprofit,
         on_delete=models.CASCADE,
     )
+    description = models.TextField(blank=True)
 
 
 class Donation(Entry, Valuable, Scoreable):

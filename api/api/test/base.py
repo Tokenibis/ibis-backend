@@ -68,11 +68,11 @@ class BaseTestCase(GraphQLTestCase):
         x.split('/')[-1] for x in os.listdir(os.path.join(DIR, '../fixtures'))
     ])
     operations = [
+        'Balance',
         'BookmarkCreate',
         'BookmarkDelete',
         'CommentCreate',
         'CommentTree',
-        'Deposit',
         'DepositList',
         'Donation',
         'DonationCreate',
@@ -115,6 +115,7 @@ class BaseTestCase(GraphQLTestCase):
         'TransactionCreate',
         'TransactionForm',
         'TransactionList',
+        'WithdrawalList',
     ]
 
     GRAPHQL_SCHEMA = api.schema.schema
@@ -130,6 +131,7 @@ class BaseTestCase(GraphQLTestCase):
 
     def setUp(self):
         settings.EMAIL_HOST = ''
+        assert 'api.middleware.AuthenticateAllMiddleware' not in settings.MIDDLEWARE
 
         random.seed(0)
 
@@ -177,7 +179,7 @@ class BaseTestCase(GraphQLTestCase):
 
         models.Deposit.objects.create(
             user=self.me_nonprofit,
-            amount=300,
+            amount=400,
             payment_id='unique_2',
             category=models.DepositCategory.objects.first(),
         )
@@ -220,6 +222,13 @@ class BaseTestCase(GraphQLTestCase):
             target=self.nonprofit,
             amount=100,
             description='Person\'s donation',
+        )
+
+        # make sure me_nonprofit has one withdrawal
+        models.Withdrawal.objects.create(
+            user=self.me_nonprofit,
+            amount=100,
+            description='This is a withdrawal',
         )
 
         self._client.force_login(self.person)
