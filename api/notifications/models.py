@@ -52,6 +52,10 @@ class Notifier(models.Model):
         verbose_name='follow',
         default=True,
     )
+    email_donation = models.BooleanField(
+        verbose_name='donation',
+        default=True,
+    )
     email_transaction = models.BooleanField(
         verbose_name='transaction',
         default=True,
@@ -125,6 +129,7 @@ class Notification(TimeStampedModel):
     UBP_DISTRIBUTION = 'UD'
     SUCCESSFUL_DEPOSIT = 'SD'
     RECEIVED_FOLLOW = 'RF'
+    RECEIVED_DONATION = 'RD'
     RECEIVED_TRANSACTION = 'RT'
     RECEIVED_COMMENT = 'RC'
     RECEIVED_LIKE = 'RL'
@@ -138,6 +143,7 @@ class Notification(TimeStampedModel):
         (UBP_DISTRIBUTION, 'UBP Distribution'),
         (SUCCESSFUL_DEPOSIT, 'Successful Deposit'),
         (RECEIVED_FOLLOW, 'Received Follow'),
+        (RECEIVED_DONATION, 'Received Donation'),
         (RECEIVED_TRANSACTION, 'Received Transaction'),
         (RECEIVED_COMMENT, 'Received Comment'),
         (RECEIVED_LIKE, 'Received Like'),
@@ -317,6 +323,25 @@ class EmailTemplateUBP(EmailTemplate):
             ),
             self.html.format(
                 amount='${:.2f}'.format(deposit.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateDonation(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['sender', 'link'])
+
+    def make_email(self, notification, donation):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                sender=str(donation.user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                sender=str(donation.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )

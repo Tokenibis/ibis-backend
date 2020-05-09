@@ -87,6 +87,10 @@ Eureka! You’ve received your weekly gift of {amount}!
 
 Head over [here](link) to start using it.
 
+***Donation:New Notification***
+
+You have a new donation from {sender}! Take a look [here](link).
+
 ***Transaction:New Notification***
 
 Your account was just sitting quietly when, lo and behold, {sender} sent you some money to donate on Token Ibis!

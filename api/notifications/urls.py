@@ -8,6 +8,11 @@ urlpatterns = [
         name='settings',
     ),
     path(
+        'nonprofit_settings/<int:pk>/<str:token>/',
+        views.NonprofitSettingsView.as_view(),
+        name='nonprofit_settings',
+    ),
+    path(
         'unsubscribe/<int:pk>/<str:token>/',
         views.UnsubscribeView.as_view(),
         name='unsubscribe',

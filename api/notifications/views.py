@@ -1,3 +1,5 @@
+import ibis.models as models
+
 from django.urls import reverse
 from django.views.generic import UpdateView, TemplateView
 from django.http import HttpResponseRedirect
@@ -19,6 +21,12 @@ class SettingsView(UpdateView):
         notifier = Notifier.objects.get(pk=kwargs['pk'])
         if not notifier.check_link_token(kwargs['token']):
             return HttpResponseRedirect(settings.REDIRECT_URL_NOTIFICATIONS)
+        if self.request.path.split(
+                '/'
+        )[-4] != 'nonprofit_settings' and models.Nonprofit.objects.filter(
+                id=notifier.user.id).exists():
+            return HttpResponseRedirect(
+                reverse('nonprofit_settings', kwargs=kwargs))
 
         return super().post(*args, **kwargs)
 
@@ -31,6 +39,15 @@ class SettingsView(UpdateView):
 
     def get_success_url(self):
         return reverse('settings_success')
+
+
+class NonprofitSettingsView(SettingsView):
+    fields = (
+        'email_follow',
+        'email_donation',
+        'email_comment',
+        'email_deposit',
+    )
 
 
 class SettingsSuccess(TemplateView):

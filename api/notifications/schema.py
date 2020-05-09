@@ -15,8 +15,8 @@ import ibis.models
 class NotifierNode(DjangoObjectType):
 
     email_follow = graphene.Boolean()
-    email_transaction = graphene.Boolean()
     email_donation = graphene.Boolean()
+    email_transaction = graphene.Boolean()
     email_comment = graphene.Boolean()
     email_ubp = graphene.Boolean()
     email_deposit = graphene.Boolean()
@@ -37,13 +37,13 @@ class NotifierNode(DjangoObjectType):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_following
 
-    def resolve_email_transaction(self, info, *args, **kwargs):
+    def resolve_email_donation(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
-        return self.email_transaction
+        return self.email_donation
 
-    def resolve_email_donation(self, info, *args, **kwargs):
+    def resolve_email_transaction(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')

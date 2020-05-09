@@ -106,6 +106,48 @@ def handleDepositCreate(sender, instance, created, **kwargs):
         pk=notification.pk).delete()
 
 
+@receiver(post_save, sender=ibis.models.Donation)
+def handleDonationCreate(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    user = ibis.models.Entry.objects.get(pk=instance.pk).user
+    notifier = instance.target.notifier
+
+    description = '{} sent you ${:.2f}'.format(
+        str(user),
+        instance.amount / 100,
+    )
+
+    notification = models.Notification.objects.create(
+        notifier=notifier,
+        category=models.Notification.RECEIVED_DONATION,
+        reference='{}:{}'.format(
+            ibis.models.Donation.__name__,
+            to_global_id('DonationNode', instance.pk),
+        ),
+        deduper='donation:{}'.format(instance.pk),
+        description=description,
+    )
+
+    try:
+        if not STATE['LOADING_DATA'] and notifier.email_donation:
+            subject, body, html = models.EmailTemplateDonation.choose(
+            ).make_email(notification, instance)
+            models.Email.objects.create(
+                notification=notification,
+                subject=subject,
+                body=body,
+                html=html,
+                schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+            )
+    except IndexError:
+        logger.error('No email template found')
+
+    models.Notification.objects.filter(deduper=notification.deduper).exclude(
+        pk=notification.pk).delete()
+
+
 @receiver(post_save, sender=ibis.models.Transaction)
 def handleTransactionCreate(sender, instance, created, **kwargs):
     if not created:
@@ -304,6 +346,12 @@ def handlePostCreate(sender, instance, created, **kwargs):
 
         models.Notification.objects.filter(
             deduper=notification.deduper).exclude(pk=notification.pk).delete()
+
+
+@receiver(post_delete, sender=ibis.models.Donation)
+def handleDonationDelete(sender, instance, **kwargs):
+    models.Notification.objects.filter(
+        deduper='donation:{}'.format(instance.pk)).delete()
 
 
 @receiver(post_delete, sender=ibis.models.Transaction)
