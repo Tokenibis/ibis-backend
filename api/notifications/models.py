@@ -93,11 +93,12 @@ class Notifier(models.Model):
     def unseen_count(self):
         return self.notification_set.filter(created__gt=self.last_seen).count()
 
-    def _create_link(self, link):
-        username, token = TimestampSigner().sign(self.user.username).split(
-            ":", 1)
+    def _create_link(self, page):
+        assert ':' not in page
+        _, _, token = TimestampSigner().sign('notifications:{}'.format(
+            self.user.id)).split(":", 2)
         return reverse(
-            link, kwargs={
+            page, kwargs={
                 'pk': self.pk,
                 'token': token,
             })
@@ -110,9 +111,9 @@ class Notifier(models.Model):
 
     def check_link_token(self, token):
         try:
-            key = '%s:%s' % (self.user.username, token)
             TimestampSigner().unsign(
-                key, max_age=60 * 60 * 48)  # Valid for 2 days
+                'notifications:{}:{}'.format(self.user.id, token),
+                max_age=60 * 60 * 48)  # Valid for 2 days
         except (BadSignature, SignatureExpired):
             return False
         return True
