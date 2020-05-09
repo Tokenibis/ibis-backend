@@ -114,7 +114,7 @@ def handleDonationCreate(sender, instance, created, **kwargs):
     user = ibis.models.Entry.objects.get(pk=instance.pk).user
     notifier = instance.target.notifier
 
-    description = '{} sent you ${:.2f}'.format(
+    description = '{} donated ${:.2f}'.format(
         str(user),
         instance.amount / 100,
     )
