@@ -256,6 +256,13 @@ class Deposit(TimeStampedModel, Valuable):
     payment_id = models.TextField(
         unique=True, validators=[MinLengthValidator(1)])
 
+    def __str__(self):
+        return '{}:{}:{:.2f}'.format(
+            self.pk,
+            self.user,
+            self.amount / 100,
+        )
+
 
 class Withdrawal(TimeStampedModel, Valuable):
     user = models.ForeignKey(
@@ -264,6 +271,13 @@ class Withdrawal(TimeStampedModel, Valuable):
     )
     description = models.TextField(blank=True)
 
+    def __str__(self):
+        return '{}:{}:{:.2f}'.format(
+            self.pk,
+            self.user,
+            self.amount / 100,
+        )
+
 
 class Donation(Entry, Valuable, Scoreable):
     target = models.ForeignKey(
@@ -271,12 +285,28 @@ class Donation(Entry, Valuable, Scoreable):
         on_delete=models.CASCADE,
     )
 
+    def __str__(self):
+        return '{}:{}->{}:{:.2f}'.format(
+            self.pk,
+            self.user,
+            self.target,
+            self.amount / 100,
+        )
+
 
 class Transaction(Entry, Valuable, Scoreable):
     target = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
     )
+
+    def __str__(self):
+        return '{}:{}->{}:{:.2f}'.format(
+            self.pk,
+            self.user,
+            self.target,
+            self.amount / 100,
+        )
 
 
 class News(Entry, Bookmarkable, Scoreable):
@@ -313,6 +343,13 @@ class Comment(Entry, Scoreable):
         related_name='parent_of',
         on_delete=models.CASCADE,
     )
+
+    def __str__(self):
+        return '{}:{}->{}'.format(
+            self.pk,
+            self.user,
+            self.parent.user,
+        )
 
     def get_root(self):
         current = Entry.objects.get(pk=self.pk)

@@ -16,3 +16,10 @@ class Log(TimeStampedModel):
     graphql_variables = models.TextField(blank=True, null=True)
     user_agent = models.TextField(blank=True, null=True)
     pwa_standalone = models.NullBooleanField(blank=True, null=True)
+
+    def __str__(self):
+        return '{}:{}:{}'.format(
+            self.pk,
+            self.user.username,
+            self.graphql_operation,
+        )

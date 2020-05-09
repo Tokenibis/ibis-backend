@@ -94,6 +94,9 @@ class Notifier(models.Model):
             microsecond=0,
         ))
 
+    def __str__(self):
+        return str(self.user)
+
     def unseen_count(self):
         return self.notification_set.filter(created__gt=self.last_seen).count()
 
@@ -166,6 +169,12 @@ class Notification(TimeStampedModel):
     deduper = models.TextField(blank=True, null=True)
     description = models.TextField(validators=[MinLengthValidator(1)])
 
+    def __str__(self):
+        return '{}:{}:{}'.format(
+            self.pk,
+            self.category,
+            self.notifier.user.username,
+        )
 
 class Email(models.Model):
 
@@ -199,6 +208,13 @@ class Email(models.Model):
         default=SCHEDULED,
     )
     force = models.BooleanField(default=False)
+
+    def __str__(self):
+        return '{}:{}:{}'.format(
+            self.pk,
+            self.notification.category,
+            self.notification.notifier.user.email,
+        )
 
 
 class EmailTemplate(models.Model):
