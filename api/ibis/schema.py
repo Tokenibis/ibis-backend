@@ -1253,7 +1253,7 @@ class EventCreate(Mutation):
         image = graphene.String(required=True)
         date = graphene.String(required=True)
         duration = graphene.Int(required=True)
-        address = graphene.String(required=True)
+        address = graphene.String()
         link = graphene.String()
         score = graphene.Int()
 
@@ -1268,7 +1268,7 @@ class EventCreate(Mutation):
             image,
             date,
             duration,
-            address,
+            address='',
             link='',
             score=0,
     ):
@@ -1285,9 +1285,10 @@ class EventCreate(Mutation):
             image=image,
             date=dateutil.parser.parse(date),
             duration=duration,
-            address=address,
             score=score,
         )
+        if address:
+            event.address = address
         if link:
             event.link = link
         event.save()

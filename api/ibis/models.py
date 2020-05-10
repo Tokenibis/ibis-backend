@@ -324,7 +324,7 @@ class News(Entry, Bookmarkable, Scoreable):
 class Event(Entry, Bookmarkable, Rsvpable, Scoreable):
     title = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
-    address = models.TextField(validators=[MinLengthValidator(1)])
+    address = models.TextField(blank=True)
     date = models.DateTimeField()
     duration = models.PositiveIntegerField()
     link = models.TextField(blank=True)
