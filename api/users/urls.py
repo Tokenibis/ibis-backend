@@ -37,10 +37,27 @@ facebook_urlpatterns = [
     ),
 ]
 
+
+# url routes for Microsoft authentication
+microsoft_urlpatterns = [
+    path('auth-server/', views.MicrosoftLogin.as_view(), name='microsoft_auth_server'),
+    path(
+        'login/',
+        views.MicrosoftCallbackCreate.as_view(),
+        name='microsoft_callback_login',
+    ),
+    path(
+        'connect/',
+        views.MicrosoftCallbackConnect.as_view(),
+        name='microsoft_callback_connect',
+    ),
+]
+
 # redirect to site-specific authentication
 urlpatterns = [
     path('social/google/', include(google_urlpatterns)),
     path('social/facebook/', include(facebook_urlpatterns)),
+    path('social/microsoft/', include(microsoft_urlpatterns)),
     path(
         'user/accounts/<int:pk>/disconnect/',
         SocialAccountDisconnectView.as_view(),

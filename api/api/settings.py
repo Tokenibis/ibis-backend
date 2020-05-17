@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.microsoft',
     'rest_auth',
     'rest_auth.registration',
     'corsheaders',
@@ -283,6 +284,9 @@ REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
     CONF['ibis']['endpoints']['app'])
 
 REDIRECT_URL_GOOGLE = 'https://{}/redirect/google/'.format(
+    CONF['ibis']['endpoints']['app'])
+
+REDIRECT_URL_MICROSOFT = 'https://{}/redirect/microsoft/'.format(
     CONF['ibis']['endpoints']['app'])
 
 REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(

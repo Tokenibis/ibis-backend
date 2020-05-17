@@ -19,6 +19,7 @@ from rest_framework.permissions import AllowAny
 from .serializers import CallbackSerializer
 from .adapters import GoogleOAuth2AdapterCustom
 from .adapters import FacebookOAuth2AdapterCustom
+from .adapters import MicrosoftOAuth2AdapterCustom
 
 
 class CallbackMixin:
@@ -91,6 +92,10 @@ class FacebookLogin(Login):
     adapter_class = FacebookOAuth2AdapterCustom
 
 
+class MicrosoftLogin(Login):
+    adapter_class = MicrosoftOAuth2AdapterCustom
+
+
 class GoogleCallbackCreate(CallbackMixin, SocialLoginView):
     """
     View for creating/logging in a user into the Ibis app
@@ -117,9 +122,26 @@ class FacebookCallbackCreate(CallbackMixin, SocialLoginView):
     adapter_class = FacebookOAuth2AdapterCustom
 
 
+class MicrosoftCallbackCreate(CallbackMixin, SocialLoginView):
+    """
+    View for creating/logging in a user into the Ibis app
+
+    After the user obtains logs into Microsoft and obtains an oauth code,
+    they should be directed here. The post request to CallbackCreate
+    consumes the code and state, completes the authentication process
+    with Microsoft, and returns a token to authenticate the user. A new
+    account is automatically created if the user is new.
+    """
+    adapter_class = MicrosoftOAuth2AdapterCustom
+
+
 class GoogleCallbackConnect(CallbackConnect):
     adapter_class = GoogleOAuth2AdapterCustom
 
 
 class FacebookCallbackConnect(CallbackConnect):
     adapter_class = FacebookOAuth2AdapterCustom
+
+
+class MicrosoftCallbackConnect(CallbackConnect):
+    adapter_class = MicrosoftOAuth2AdapterCustom

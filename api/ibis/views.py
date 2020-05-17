@@ -68,11 +68,21 @@ class LoginView(generics.GenericAPIView):
         if not models.Person.objects.filter(id=request.user.id).exists():
             social_accounts = SocialAccount.objects.filter(
                 user=request.user.id)
-            assert len(social_accounts) == 1, \
-                'New Ibis Users must be authenticated through social accounts'
+            if len(social_accounts) != 1:
+                raise exceptions.AuthenticationFailed(
+                    detail=
+                    'New Ibis Users must be authenticated through social accounts'
+                )
 
             social_account = social_accounts[0]
             user = User.objects.get(id=request.user.id)
+
+            # return error message
+            if social_account.provider == 'microsoft' and user.email.rsplit(
+                    '@')[-1] != 'unm.edu':
+                raise exceptions.AuthenticationFailed(
+                    detail='Please use a valid unm.edu email address')
+
             person = models.Person(user_ptr_id=request.user.id)
             person.__dict__.update(user.__dict__)
 
