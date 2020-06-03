@@ -190,6 +190,7 @@ class Person(IbisUser):
         through='Transaction',
         symmetrical=False,
     )
+    is_bot = models.BooleanField(default=False)
 
 
 class Nonprofit(IbisUser):
