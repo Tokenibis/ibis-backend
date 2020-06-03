@@ -20,6 +20,8 @@ def TrackerMiddleware(get_response):
                 log.graphql_operation = body['operationName']
             if 'variables' in body:
                 log.graphql_variables = body['variables']
+            if 'query' in body:
+                log.mutation = body['query'].startswith('mutation')
             if hasattr(request, 'headers'):
                 if 'User-Agent' in request.headers:
                     log.user_agent = request.headers['User-Agent']
