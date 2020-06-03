@@ -20,6 +20,6 @@ class Log(TimeStampedModel):
     def __str__(self):
         return '{}:{}:{}'.format(
             self.pk,
-            self.user.username,
+            self.user.username if hasattr(self.user, 'username') else 'None',
             self.graphql_operation,
         )
