@@ -72,7 +72,7 @@ class BaseTestCase(GraphQLTestCase):
         'BookmarkCreate',
         'BookmarkDelete',
         'CommentCreate',
-        'CommentTree',
+        'CommentList',
         'DepositList',
         'Donation',
         'DonationCreate',
@@ -123,7 +123,7 @@ class BaseTestCase(GraphQLTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.gql = {}
-        gql_dir = 'graphql/operations'
+        gql_dir = 'graphql/app'
         for filename in os.listdir(os.path.join(DIR, gql_dir)):
             if filename.split('.')[-1] == 'gql':
                 with open(os.path.join(DIR, gql_dir, filename)) as fd:

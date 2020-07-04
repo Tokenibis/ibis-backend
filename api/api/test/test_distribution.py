@@ -223,7 +223,7 @@ class DistributionTestCase(BaseTestCase):
                 assert all(balances[x] == x.balance()
                            for x in ibis.models.Person.objects.all())
 
-                # first distribution - verify boostrap
+                # first distribution - verify bootstrap
                 self._fast_forward_cron(frozen_datetime, 6, days=1)
                 for x in [y for y in active if y != inactive]:
                     balances[x] += settings.DISTRIBUTION_DEFAULT

@@ -470,14 +470,14 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['CommentTree'],
-                op_name='CommentTree',
+                self.gql['CommentList'],
+                op_name='CommentList',
                 variables={
                     'hasParent': self.donation.gid,
                     'self': user.gid,
                 },
             ).content)
-        success['CommentTree'] = 'errors' not in result and len(result) > 0
+        success['CommentList'] = 'errors' not in result and len(result) > 0
 
         result = json.loads(
             self.query(
@@ -723,7 +723,7 @@ class PermissionTestCase(BaseTestCase):
             'BookmarkCreate': False,
             'BookmarkDelete': False,
             'CommentCreate': False,
-            'CommentTree': True,
+            'CommentList': True,
             'DepositList': False,
             'Donation': True,
             'DonationCreate': False,
