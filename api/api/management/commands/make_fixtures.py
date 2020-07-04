@@ -190,7 +190,7 @@ class Model:
             }
         })
 
-    def add_nonprofit(self, name, description, category, score):
+    def add_nonprofit(self, name, description, category, score, date_joined=None):
         pk = len(self.users) + 1
 
         unique_name = re.sub(r'\W+', '_', name).lower()[:15]
@@ -208,6 +208,7 @@ class Model:
                 'first_name': '',
                 'last_name': unique_name,
                 'email': '{}@example.com'.format(unique_name),
+                'date_joined': date_joined if date_joined else self._random_time(),
             }
         })
 
@@ -268,7 +269,7 @@ class Model:
 
         return pk
 
-    def add_person(self, first, last, score):
+    def add_person(self, first, last, score, date_joined=None):
         pk = len(self.users) + 1
         username = '{}_{}_{}'.format(pk, first, last)[:15].lower()
 
@@ -280,6 +281,7 @@ class Model:
                 'first_name': first,
                 'last_name': last,
                 'email': '{}@example.com'.format(username),
+                'date_joined': date_joined if date_joined else self._random_time(),
             }
         })
 
@@ -526,6 +528,10 @@ class Model:
         for x in serializable_deposits:
             x['fields']['created'] = str(x['fields']['created'])
 
+        serializable_users = copy.deepcopy(self.users)
+        for x in serializable_users:
+            x['fields']['date_joined'] = str(x['fields']['date_joined'])
+
         partial_ibisUsers = copy.deepcopy(self.ibisUsers)
         for x in partial_ibisUsers:
             del x['fields']['following']
@@ -535,7 +541,7 @@ class Model:
             x['fields']['like'] = []
 
         return [
-            self.users,
+            serializable_users,
             partial_ibisUsers,
             self.nonprofit_categories,
             self.deposit_categories,
