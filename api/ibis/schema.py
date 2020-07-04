@@ -1374,6 +1374,7 @@ class EventDelete(Mutation):
 
 class IbisUserNode(UserNode):
     name = graphene.String()
+    short_name = graphene.String()
     balance = graphene.Int()
     following = DjangoFilterConnectionField(
         lambda: IbisUserNode,
@@ -1405,6 +1406,9 @@ class IbisUserNode(UserNode):
 
     def resolve_name(self, *args, **kwargs):
         return str(self)
+
+    def resolve_short_name(self, *args, **kwargs):
+        return self.first_name if self.first_name else self.last_name
 
     def resolve_balance(self, *args, **kwargs):
         return self.balance()
@@ -1560,6 +1564,7 @@ class PersonUpdate(Mutation):
         id = graphene.ID(required=True)
         username = graphene.String()
         email = graphene.String()
+        description = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
         visibility_follow = graphene.String()
@@ -1575,6 +1580,7 @@ class PersonUpdate(Mutation):
             id,
             username='',
             email='',
+            description='',
             first_name='',
             last_name='',
             visibility_follow='',
@@ -1591,6 +1597,8 @@ class PersonUpdate(Mutation):
             person.username = username
         if email:
             person.email = email
+        if description:
+            person.description = description
         if first_name:
             person.first_name = first_name
         if last_name:

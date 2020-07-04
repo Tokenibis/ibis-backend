@@ -75,6 +75,7 @@ class IbisUser(User, Scoreable):
     )
 
     avatar = models.TextField(validators=[MinLengthValidator(1)])
+    description = models.TextField(validators=[MinLengthValidator(1)])
 
     visibility_donation = models.CharField(
         max_length=2,
@@ -201,7 +202,6 @@ class Nonprofit(IbisUser):
         NonprofitCategory,
         on_delete=models.CASCADE,
     )
-    description = models.TextField(validators=[MinLengthValidator(1)])
     link = models.TextField(validators=[MinLengthValidator(1)])
     banner = models.TextField(validators=[MinLengthValidator(1)])
 

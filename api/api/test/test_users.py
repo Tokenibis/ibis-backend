@@ -361,15 +361,15 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['NonprofitSettingsUpdate'],
-                op_name='NonprofitSettingsUpdate',
+                self.gql['NonprofitUpdate'],
+                op_name='NonprofitUpdate',
                 variables={
                     'id': self.me_nonprofit.gid,
                     'visibilityDonation': models.IbisUser.PUBLIC,
                     'visibilityTransaction': models.IbisUser.PUBLIC,
                 },
             ).content)
-        success['NonprofitSettingsUpdate'] = 'errors' not in result and result[
+        success['NonprofitUpdate'] = 'errors' not in result and result[
             'data']['updateNonprofit']['nonprofit']['id']
 
         result = json.loads(
@@ -580,21 +580,21 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['PersonSettingsUpdate'],
-                op_name='PersonSettingsUpdate',
+                self.gql['PersonUpdate'],
+                op_name='PersonUpdate',
                 variables={
                     'id': self.me_person.gid,
                     'visibilityDonation': models.IbisUser.PUBLIC,
                     'visibilityTransaction': models.IbisUser.PUBLIC,
                 },
             ).content)
-        success['PersonSettingsUpdate'] = 'errors' not in result and result[
+        success['PersonUpdate'] = 'errors' not in result and result[
             'data']['updatePerson']['person']['id']
 
         result = json.loads(
             self.query(
-                self.gql['NotifierSettingsUpdate'],
-                op_name='NotifierSettingsUpdate',
+                self.gql['NotifierUpdate'],
+                op_name='NotifierUpdate',
                 variables={
                     'id': user.gid,
                     'emailFollow': True,
@@ -602,7 +602,7 @@ class PermissionTestCase(BaseTestCase):
                     'emailTransaction': True,
                 },
             ).content)
-        success['NotifierSettingsUpdate'] = 'errors' not in result and result[
+        success['NotifierUpdate'] = 'errors' not in result and result[
             'data']['updateNotifier']['notifier']['id']
 
         result = json.loads(
@@ -693,7 +693,7 @@ class PermissionTestCase(BaseTestCase):
     # logged in users can see all of their own information
     def test_person(self):
         expected_fail = [
-            'NonprofitSettingsUpdate',
+            'NonprofitUpdate',
             'NewsCreate',
             'NewsUpdate',
             'EventCreate',
@@ -708,7 +708,7 @@ class PermissionTestCase(BaseTestCase):
     # logged in users can see all of their own information
     def test_nonprofit(self):
         expected_fail = [
-            'PersonSettingsUpdate',
+            'PersonUpdate',
             'PostCreate',
         ]
         self._client.force_login(self.me_nonprofit)
@@ -742,15 +742,15 @@ class PermissionTestCase(BaseTestCase):
             'NewsList': True,
             'Nonprofit': True,
             'NonprofitList': True,
-            'NonprofitSettingsUpdate': False,
+            'NonprofitUpdate': False,
             'NotificationClicked': False,
             'NotificationList': False,
             'Notifier': False,
             'NotifierSeen': False,
-            'NotifierSettingsUpdate': False,
+            'NotifierUpdate': False,
             'Person': True,
             'PersonList': True,
-            'PersonSettingsUpdate': False,
+            'PersonUpdate': False,
             'Post': True,
             'PostCreate': False,
             'PostList': True,
