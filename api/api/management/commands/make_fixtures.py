@@ -190,7 +190,14 @@ class Model:
             }
         })
 
-    def add_nonprofit(self, name, description, category, score, date_joined=None):
+    def add_nonprofit(
+            self,
+            name,
+            description,
+            category,
+            score,
+            date_joined=None,
+    ):
         pk = len(self.users) + 1
 
         unique_name = re.sub(r'\W+', '_', name).lower()[:15]
@@ -208,7 +215,8 @@ class Model:
                 'first_name': '',
                 'last_name': unique_name,
                 'email': '{}@example.com'.format(unique_name),
-                'date_joined': date_joined if date_joined else self._random_time(),
+                'date_joined':
+                date_joined if date_joined else self._random_time(),
             }
         })
 
@@ -217,6 +225,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
+                'description': description,
                 'score': score,
                 'following': [],
             },
@@ -227,7 +236,6 @@ class Model:
             'pk': pk,
             'fields': {
                 'category': category,
-                'description': description,
                 'banner': BIRDS.format(hash(name + '_') % BIRDS_LEN),
                 'link': 'https://{}.org'.format(unique_name.replace(' ', '_')),
             }
@@ -269,7 +277,7 @@ class Model:
 
         return pk
 
-    def add_person(self, first, last, score, date_joined=None):
+    def add_person(self, first, last, description, score, date_joined=None):
         pk = len(self.users) + 1
         username = '{}_{}_{}'.format(pk, first, last)[:15].lower()
 
@@ -281,7 +289,8 @@ class Model:
                 'first_name': first,
                 'last_name': last,
                 'email': '{}@example.com'.format(username),
-                'date_joined': date_joined if date_joined else self._random_time(),
+                'date_joined':
+                date_joined if date_joined else self._random_time(),
             }
         })
 
@@ -291,6 +300,7 @@ class Model:
             'fields': {
                 'following': [],
                 'avatar': BIRDS.format(hash(first + ' ' + last) % BIRDS_LEN),
+                'description': description,
                 'score': score,
             }
         })
@@ -700,8 +710,12 @@ class Command(BaseCommand):
         # make people
         people_raw = people_raw * (int((num_person - 1) / len(people_raw)) + 1)
         people = [
-            model.add_person(x[0], x[1], random.randint(0, 100))
-            for x in people_raw[:num_person]
+            model.add_person(
+                x[0],
+                x[1],
+                markov.generate_markov_text(size=200),
+                random.randint(0, 100),
+            ) for x in people_raw[:num_person]
         ]
 
         # make deposit money for all users

@@ -75,7 +75,7 @@ class IbisUser(User, Scoreable):
     )
 
     avatar = models.TextField(validators=[MinLengthValidator(1)])
-    description = models.TextField(validators=[MinLengthValidator(1)])
+    description = models.TextField(blank=True, null=True)
 
     visibility_donation = models.CharField(
         max_length=2,
