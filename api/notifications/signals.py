@@ -1,4 +1,3 @@
-import os
 import logging
 import ibis.models
 import notifications.models as models
@@ -17,6 +16,58 @@ def _get_submodel(instance, supermodel):
     for submodel in supermodel.__subclasses__():
         if submodel.objects.filter(pk=instance.pk).exists():
             return submodel
+
+
+# def _handleMentionCreate(instance):
+#     for user in instance.mention.exclude(id=instance.user.pk).distinct():
+#         root_submodel = _get_submodel(
+#             instance.get_root(), ibis.models.Entry
+#         ) if instance.__class__ == ibis.models.Comment else instance.__class__
+
+#         description = '{} mentioned you in a {}'.format(
+#             instance.user,
+#             instance.__class__.__name__.lower(),
+#         )
+
+#         notification = models.Notification.objects.create(
+#             notifier=user.notifier,
+#             category=models.Notification.RECEIVED_MENTION,
+#             reference='{}:{}'.format(
+#                 instance.__class__.__name__,
+#                 to_global_id('{}Node'.format(
+#                     root_submodel.__name__,
+#                     instance.pk,
+#                 )),
+#             ),
+#             deduper='mention:{}:{}'.format(instance.pk, user.pk),
+#             description=description,
+#         )
+
+#         try:
+#             if not STATE['LOADING_DATA'] and user.notifier.email_mention:
+#                 subject, body, html = models.EmailTemplateMention.choose(
+#                 ).make_email(notification, instance)
+#                 models.Email.objects.create(
+#                     notification=notification,
+#                     subject=subject,
+#                     body=body,
+#                     html=html,
+#                     schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+#                 )
+#         except IndexError:
+#             logger.error('No email template found')
+
+#         models.Notification.objects.filter(
+#             deduper=notification.deduper).exclude(pk=notification.pk).delete()
+
+
+# def _handleMentionDelete(instance):
+#     for user in instance.mention.exclude(id=instance.user.pk).distinct():
+#         models.Notification.objects.filter(
+#             deduper__startswith='mention:{}:{}'.format(
+#                 instance.pk,
+#                 user.pk,
+#             )).delete()
 
 
 @receiver(post_save, sender=ibis.models.Deposit)

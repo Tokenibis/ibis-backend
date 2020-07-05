@@ -234,6 +234,12 @@ class Entry(TimeStampedModel):
         blank=True,
     )
 
+    mention = models.ManyToManyField(
+        IbisUser,
+        related_name='mentioned_by',
+        blank=True,
+    )
+
 
 class DepositCategory(models.Model):
     class Meta:

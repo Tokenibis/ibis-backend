@@ -124,3 +124,9 @@ Click [here](link) to see who has commented on your {entry_type}.
 ---
 
 Talking to you is a treat! Check out what someone commented on your {entry_type} by heading [here](link).
+
+***Mention:New Notification***
+
+Someone out there was thinking about you as they mentioned you in their {entry_type!
+
+Check it out [here](link}.

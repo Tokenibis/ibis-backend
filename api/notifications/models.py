@@ -64,6 +64,10 @@ class Notifier(models.Model):
         verbose_name='comment',
         default=True,
     )
+    email_mention = models.BooleanField(
+        verbose_name='mention',
+        default=True,
+    )
     email_ubp = models.BooleanField(
         verbose_name='ubp',
         default=True,
@@ -136,6 +140,7 @@ class Notification(TimeStampedModel):
     RECEIVED_TRANSACTION = 'RT'
     RECEIVED_COMMENT = 'RC'
     RECEIVED_LIKE = 'RL'
+    RECEIVED_MENTION = 'RM'
     FOLLOWING_NEWS = 'FN'
     FOLLOWING_EVENT = 'FE'
     FOLLOWING_POST = 'FP'
@@ -150,6 +155,7 @@ class Notification(TimeStampedModel):
         (RECEIVED_TRANSACTION, 'Received Transaction'),
         (RECEIVED_COMMENT, 'Received Comment'),
         (RECEIVED_LIKE, 'Received Like'),
+        (RECEIVED_MENTION, 'Received Mention'),
         (FOLLOWING_NEWS, 'Following News'),
         (FOLLOWING_EVENT, 'Following Event'),
         (FOLLOWING_POST, 'Following Post'),
@@ -401,6 +407,31 @@ class EmailTemplateComment(EmailTemplate):
             self.html.format(
                 entry_type=_get_submodel(
                     parent,
+                    ibis.models.Entry,
+                ).__name__.lower(),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateMention(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['entry_type', 'link'])
+
+    def make_email(self, notification, entry):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                entry_type=_get_submodel(
+                    entry,
+                    ibis.models.Entry,
+                ).__name__.lower(),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+            self.html.format(
+                entry_type=_get_submodel(
+                    entry,
                     ibis.models.Entry,
                 ).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
