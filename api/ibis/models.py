@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from django.conf import settings
 from model_utils.models import TimeStampedModel
+from graphql_relay.node.node import to_global_id
 
 from users.models import User
 
@@ -239,6 +240,57 @@ class Entry(TimeStampedModel):
         related_name='mentioned_by',
         blank=True,
     )
+
+    def save(self, *args, **kwargs):
+        mention = set(
+            IbisUser.objects.get(username=x[2:-1]) for x in re.findall(
+                r'\W@\w{{{},{}}}\W'.format(
+                    MIN_USERNAME_LEN,
+                    MAX_USERNAME_LEN,
+                ),
+                ' ' + self.description + ' ',
+            ) if IbisUser.objects.filter(username=x[2:-1]).exists())
+
+        for x in mention:
+            self.description = re.sub(
+                r'(\W)@{}(\W)'.format(x.username),
+                r'\1@{}\2'.format(to_global_id('IbisUserNode', str(x.id))),
+                ' ' + self.description + ' ',
+            )[1:-1]
+
+        super().save(*args, **kwargs)
+
+        for x in self.mention.all():
+            if x not in mention and not re.findall(
+                    r'\W@{}\W'.format(
+                        re.escape(to_global_id(
+                            'IbisUserNode',
+                            str(x.id),
+                        ))),
+                    ' ' + self.description + ' ',
+            ):
+                print('removing for some reason')
+                self.mention.remove(x)
+
+        for user in [
+                x for x in mention
+                if not self.mention.filter(id=x.id).exists()
+        ]:
+            self.mention.add(user)
+
+    def resolve_description(self):
+        description = self.description
+        for x in self.mention.all():
+            description = re.sub(
+                r'(\W)@{}(\W)'.format(
+                    re.escape(to_global_id(
+                        'IbisUserNode',
+                        str(x.id),
+                    ))),
+                r'\1@{}\2'.format(x.username),
+                ' ' + description + ' ',
+            )[1:-1]
+        return description
 
 
 class DepositCategory(models.Model):

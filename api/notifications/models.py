@@ -1,20 +1,25 @@
 import os
 import string
 import random
+import logging
 
 from django.conf import settings
+from django.utils.timezone import now, timedelta
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.core.validators import MinLengthValidator
-from django.utils.timezone import localtime, now
+from django.utils.timezone import localtime
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
+from api.management.commands.loaddata import STATE
 
 import ibis.models
 
 DIR = os.path.dirname(os.path.realpath(__file__))
+
+logger = logging.getLogger(__name__)
 
 with open(os.path.join(DIR, 'top_email_templates/body.txt')) as fd:
     top_body_template = fd.read()
@@ -23,7 +28,7 @@ with open(os.path.join(DIR, 'top_email_templates/html.html')) as fd:
     top_html_template = fd.read()
 
 
-def _get_submodel(instance, supermodel):
+def get_submodel(instance, supermodel):
     for submodel in supermodel.__subclasses__():
         if submodel.objects.filter(pk=instance.pk).exists():
             return submodel
@@ -132,43 +137,9 @@ class Notifier(models.Model):
 
 class Notification(TimeStampedModel):
 
-    GENERAL_ANNOUNCEMENT = 'GA'
-    UBP_DISTRIBUTION = 'UD'
-    SUCCESSFUL_DEPOSIT = 'SD'
-    RECEIVED_FOLLOW = 'RF'
-    RECEIVED_DONATION = 'RD'
-    RECEIVED_TRANSACTION = 'RT'
-    RECEIVED_COMMENT = 'RC'
-    RECEIVED_LIKE = 'RL'
-    RECEIVED_MENTION = 'RM'
-    FOLLOWING_NEWS = 'FN'
-    FOLLOWING_EVENT = 'FE'
-    FOLLOWING_POST = 'FP'
-    UPCOMING_EVENT = 'UE'
-
-    NOTIFICATION_CATEGORY = (
-        (GENERAL_ANNOUNCEMENT, 'General Announcement'),
-        (UBP_DISTRIBUTION, 'UBP Distribution'),
-        (SUCCESSFUL_DEPOSIT, 'Successful Deposit'),
-        (RECEIVED_FOLLOW, 'Received Follow'),
-        (RECEIVED_DONATION, 'Received Donation'),
-        (RECEIVED_TRANSACTION, 'Received Transaction'),
-        (RECEIVED_COMMENT, 'Received Comment'),
-        (RECEIVED_LIKE, 'Received Like'),
-        (RECEIVED_MENTION, 'Received Mention'),
-        (FOLLOWING_NEWS, 'Following News'),
-        (FOLLOWING_EVENT, 'Following Event'),
-        (FOLLOWING_POST, 'Following Post'),
-        (UPCOMING_EVENT, 'Upcoming Event'),
-    )
-
     notifier = models.ForeignKey(
         Notifier,
         on_delete=models.CASCADE,
-    )
-    category = models.CharField(
-        max_length=2,
-        choices=NOTIFICATION_CATEGORY,
     )
     clicked = models.BooleanField(default=False)
     reference = models.TextField(blank=True, null=True)
@@ -178,9 +149,273 @@ class Notification(TimeStampedModel):
     def __str__(self):
         return '{}:{}:{}'.format(
             self.pk,
-            self.category,
             self.notifier.user.username,
         )
+
+    def save(self, *args, **kwargs):
+        if STATE['LOADING_DATA']:
+            self.clicked = True
+        super().save(*args, **kwargs)
+
+
+class UbpNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Deposit,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        if not STATE['LOADING_DATA'] and self.notifier.email_ubp:
+            if self.notifier.email_ubp and self.subject.user.ibisuser.deposit_set.filter(
+                    category=ibis.models.DepositCategory.objects.get(
+                        title='ubp')).count() == 1:
+                try:
+                    subject, body, html = EmailTemplateWelcome.choose(
+                    ).make_email(self, self.subject)
+                    Email.objects.create(
+                        notification=self,
+                        subject=subject,
+                        body=body,
+                        html=html,
+                        schedule=now(),
+                        force=True,
+                    )
+                except IndexError:
+                    logger.error('No email template found')
+            else:
+                try:
+                    subject, body, html = EmailTemplateUBP.choose().make_email(
+                        self, self.subject)
+                    Email.objects.create(
+                        notification=self,
+                        subject=subject,
+                        body=body,
+                        html=html,
+                        schedule=now() +
+                        timedelta(minutes=settings.EMAIL_DELAY),
+                    )
+                except IndexError:
+                    logger.error('No email template found')
+
+
+class DepositNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Deposit,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
+                subject, body, html = EmailTemplateDeposit.choose().make_email(
+                    self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class DonationNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Donation,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_donation:
+                subject, body, html = EmailTemplateDonation.choose(
+                ).make_email(self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class TransactionNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Transaction,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_transaction:
+                subject, body, html = EmailTemplateTransaction.choose(
+                ).make_email(self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class NewsNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.News,
+        on_delete=models.CASCADE,
+    )
+
+
+class EventNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Event,
+        on_delete=models.CASCADE,
+    )
+
+
+class PostNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Post,
+        on_delete=models.CASCADE,
+    )
+
+
+class CommentNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Comment,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_comment:
+                subject, body, html = EmailTemplateComment.choose().make_email(
+                    self, self.subject.parent)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class FollowNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.IbisUser,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        previous = FollowNotification.objects.exclude(id=self.id).filter(
+            notifier=self.notifier,
+            subject=self.subject,
+        )
+
+        if previous.exists():
+            previous.delete()
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_follow:
+                subject, body, html = EmailTemplateFollow.choose().make_email(
+                    self)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class LikeNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Entry,
+        on_delete=models.CASCADE,
+    )
+    user = models.ForeignKey(
+        ibis.models.IbisUser,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        LikeNotification.objects.exclude(id=self.id).filter(
+            notifier=self.notifier,
+            subject=self.subject,
+            user=self.user,
+        ).delete()
+
+
+class MentionNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Entry,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_mention:
+                subject, body, html = EmailTemplateMention.choose().make_email(
+                    self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
 
 
 class Email(models.Model):
@@ -219,7 +454,6 @@ class Email(models.Model):
     def __str__(self):
         return '{}:{}:{}'.format(
             self.pk,
-            self.notification.category,
             self.notification.notifier.user.email,
         )
 
@@ -398,14 +632,14 @@ class EmailTemplateComment(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                entry_type=_get_submodel(
+                entry_type=get_submodel(
                     parent,
                     ibis.models.Entry,
                 ).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                entry_type=_get_submodel(
+                entry_type=get_submodel(
                     parent,
                     ibis.models.Entry,
                 ).__name__.lower(),
@@ -423,14 +657,14 @@ class EmailTemplateMention(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                entry_type=_get_submodel(
+                entry_type=get_submodel(
                     entry,
                     ibis.models.Entry,
                 ).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                entry_type=_get_submodel(
+                entry_type=get_submodel(
                     entry,
                     ibis.models.Entry,
                 ).__name__.lower(),

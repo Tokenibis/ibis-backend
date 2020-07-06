@@ -13,9 +13,8 @@ from lxml import etree
 
 
 class NotificationTestCase(BaseTestCase):
-    # test notifications, especially deduping behavior
     def test_notifications(self):
-        def create_operation(op_name):
+        def create_operation(op_name, mention=False):
             variables = {'user': self.me_person.gid}
             types = {}
 
@@ -58,29 +57,17 @@ class NotificationTestCase(BaseTestCase):
             else:
                 raise KeyError
 
-            try:
-                query = self.gql[op_name]
-            except KeyError:
-                # this must be a nonprofit-only action (news or event)
-                variables = {x: variables[x] for x in variables if x != 'user'}
-                query = '''
-                    mutation {op_name}($user: ID! {vt}) {{
-                        create{op_type}(user: $user {vm}) {{
-                            {op_lower} {{
-                                id
-                            }}
-                        }}
-                    }}
-                '''.format(
-                    op_name=op_name,
-                    op_type=op_name.replace('Create', ''),
-                    op_lower=op_name.replace('Create', '').lower(),
-                    vt=' '.join('${}: {}'.format(
-                        x, types[x] if x in types else 'String!')
-                                for x in variables),
-                    vm=' '.join('{}: ${}'.format(x, x) for x in variables),
-                )
-                variables['user'] = self.nonprofit.gid
+            if mention:
+                assert 'description' in variables
+                variables[
+                    'description'] += '\n\n@{}--email@example.com) and @{}'.format(
+                        models.Person.objects.exclude(
+                            id=self.person.id).first().username,
+                        models.Nonprofit.objects.exclude(
+                            id=self.nonprofit.id).first().username,
+                    )
+
+            query = self.gql[op_name]
 
             self._client.force_login(self.staff)
             result = json.loads(
@@ -164,38 +151,44 @@ class NotificationTestCase(BaseTestCase):
         self.person.following.add(self.nonprofit)
         self.person.following.add(self.me_person)
 
-        def run(op_type, c):
-            id = create_operation('{}Create'.format(op_type))
+        def run(op_type, c, mention=False):
+            id = create_operation('{}Create'.format(op_type), mention)
             assert self.person.notifier.notification_set.count() == c + 1
             delete_operation('{}Delete'.format(op_type), id)
             assert self.person.notifier.notification_set.count() == c + 0
-            id = create_operation('{}Create'.format(op_type))
+            id = create_operation('{}Create'.format(op_type), mention)
             assert self.person.notifier.notification_set.count() == c + 1
             read_last_operation()
-
-        count = self.person.notifier.notification_set.count()
-        email_count = notifications.models.Email.objects.count()
 
         with freeze_time(now()) as frozen_datetime:
             frozen_datetime.tick(
                 delta=timedelta(minutes=settings.EMAIL_DELAY +
                                 2 * notifications.crons.FREQUENCY))
+
+            count = self.person.notifier.notification_set.count()
+            mention_count = notifications.models.MentionNotification.objects.count(
+            )
+            email_count = notifications.models.Email.objects.count()
+
             run('Follow', count)
             run('Follow', count)
             run('Like', count + 1)
             run('Like', count + 1)
             run('Transaction', count + 2)
-            run('Transaction', count + 3)
+            run('Transaction', count + 3, mention=True)
             run('Comment', count + 4)
-            run('Comment', count + 5)
+            run('Comment', count + 5, mention=True)
             run('News', count + 6)
-            run('News', count + 7)
+            run('News', count + 7, mention=True)
             run('Event', count + 8)
-            run('Event', count + 9)
+            run('Event', count + 9, mention=True)
             run('Post', count + 10)
-            run('Post', count + 11)
+            run('Post', count + 11, mention=True)
 
             assert query_unseen() == count + 12
+
+            assert notifications.models.MentionNotification.objects.count(
+            ) == mention_count + 10
 
             self._client.force_login(self.person)
             assert 'errors' not in json.loads(
@@ -277,11 +270,16 @@ class NotificationTestCase(BaseTestCase):
                 '--force',
             )
 
+            # this for loop should have no effect
+            for submodel in notifications.models.Notification.__subclasses__():
+                for x in submodel.objects.all():
+                    x.save()
+
             assert notifications.models.Email.objects.count(
-            ) == email_count + 7
+            ) == email_count + 17
             assert notifications.models.Email.objects.filter(
                 status=notifications.models.Email.STALE).count() == email_count
             assert notifications.models.Email.objects.filter(
-                status=notifications.models.Email.SUCCEEDED).count() == 6
+                status=notifications.models.Email.SUCCEEDED).count() == 16
             assert notifications.models.Email.objects.filter(
                 status=notifications.models.Email.UNNEEDED).count() == 1

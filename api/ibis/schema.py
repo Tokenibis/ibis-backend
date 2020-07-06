@@ -743,6 +743,8 @@ class WithdrawalDelete(Mutation):
 
 
 class EntryNode(DjangoObjectType):
+    description = graphene.String()
+
     comments = DjangoFilterConnectionField(
         lambda: CommentNode,
         filterset_class=CommentFilter,
@@ -766,8 +768,8 @@ class EntryNode(DjangoObjectType):
         filter_fields = []
         interfaces = (relay.Node, )
 
-    def resolve_comments(self, *args, **kwargs):
-        return models.Comment.objects.filter(parent=self)
+    def resolve_description(self, *args, **kwargs):
+        return self.resolve_description()
 
     def resolve_comment_count(self, *args, **kwargs):
         return models.Comment.objects.filter(parent=self).count()
@@ -833,7 +835,6 @@ class DonationCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     donation = graphene.Field(DonationNode)
@@ -845,7 +846,6 @@ class DonationCreate(Mutation):
             description,
             target,
             amount,
-            mention=[],
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -875,10 +875,6 @@ class DonationCreate(Mutation):
             score=score,
         )
 
-        for x in mention:
-            donation.mention.add(from_global_id(x)[1])
-
-        donation.save()
         return DonationCreate(donation=donation)
 
 
@@ -893,7 +889,6 @@ class DonationUpdate(Mutation):
         target = graphene.ID()
         amount = graphene.Int()
         category = graphene.ID()
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     donation = graphene.Field(DonationNode)
@@ -906,7 +901,6 @@ class DonationUpdate(Mutation):
             description='',
             target=None,
             amount=0,
-            mention=[],
             score=None,
     ):
         if not info.context.user.is_superuser:
@@ -934,8 +928,6 @@ class DonationUpdate(Mutation):
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             donation.amount = amount
-        for x in mention:
-            donation.mention.add(from_global_id(x)[1])
         if type(score) == int:
             donation.score = score
 
@@ -999,7 +991,6 @@ class TransactionCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     transaction = graphene.Field(TransactionNode)
@@ -1011,7 +1002,6 @@ class TransactionCreate(Mutation):
             description,
             target,
             amount,
-            mention=[],
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -1041,10 +1031,6 @@ class TransactionCreate(Mutation):
             score=score,
         )
 
-        for x in mention:
-            transaction.mention.add(from_global_id(x)[1])
-
-        transaction.save()
         return TransactionCreate(transaction=transaction)
 
 
@@ -1058,7 +1044,6 @@ class TransactionUpdate(Mutation):
         description = graphene.String()
         target = graphene.ID()
         amount = graphene.Int()
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     transaction = graphene.Field(TransactionNode)
@@ -1071,7 +1056,6 @@ class TransactionUpdate(Mutation):
             description='',
             target=None,
             amount=0,
-            mention=[],
             score=None,
     ):
         if not info.context.user.is_superuser:
@@ -1099,8 +1083,6 @@ class TransactionUpdate(Mutation):
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             transaction.amount = amount
-        for x in mention:
-            transaction.mention.add(from_global_id(x)[1])
         if type(score) == int:
             transaction.score = score
 
@@ -1155,7 +1137,6 @@ class NewsCreate(Mutation):
         description = graphene.String(required=True)
         title = graphene.String(required=True)
         image = graphene.String(required=True)
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
         link = graphene.String()
 
@@ -1169,7 +1150,6 @@ class NewsCreate(Mutation):
             title,
             image,
             link='',
-            mention=[],
             score=0,
     ):
         if not (info.context.user.is_superuser or
@@ -1189,8 +1169,6 @@ class NewsCreate(Mutation):
 
         if link:
             news.link = link
-        for x in mention:
-            news.mention.add(from_global_id(x)[1])
 
         news.save()
         return NewsCreate(news=news)
@@ -1204,7 +1182,6 @@ class NewsUpdate(Mutation):
         title = graphene.String()
         link = graphene.String()
         image = graphene.String()
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     news = graphene.Field(NewsNode)
@@ -1218,7 +1195,6 @@ class NewsUpdate(Mutation):
             title='',
             link='',
             image='',
-            mention=[],
             score=None,
     ):
         if not (info.context.user.is_superuser or
@@ -1238,8 +1214,6 @@ class NewsUpdate(Mutation):
             news.link = link
         if image:
             news.image = image
-        for x in mention:
-            news.mention.add(from_global_id(x)[1])
         if type(score) == int:
             news.score = score
 
@@ -1309,7 +1283,6 @@ class EventCreate(Mutation):
         duration = graphene.Int(required=True)
         address = graphene.String()
         link = graphene.String()
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -1325,7 +1298,6 @@ class EventCreate(Mutation):
             duration,
             address='',
             link='',
-            mention=[],
             score=0,
     ):
         if not (info.context.user.is_superuser or
@@ -1348,8 +1320,6 @@ class EventCreate(Mutation):
             event.address = address
         if link:
             event.link = link
-        for x in mention:
-            event.mention.add(from_global_id(x)[1])
 
         event.save()
         return EventCreate(event=event)
@@ -1366,7 +1336,6 @@ class EventUpdate(Mutation):
         date = graphene.String()
         duration = graphene.Int()
         address = graphene.String()
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -1383,7 +1352,6 @@ class EventUpdate(Mutation):
             date='',
             duration=None,
             address='',
-            mention=[],
             score=None,
     ):
         if not (info.context.user.is_superuser or
@@ -1410,8 +1378,6 @@ class EventUpdate(Mutation):
             event.duration = duration
         if address:
             event.address = address
-        for x in mention:
-            event.mention.add(from_global_id(x)[1])
         if type(score) == int:
             event.score = score
 
@@ -1917,7 +1883,6 @@ class PostCreate(Mutation):
         user = graphene.ID(required=True)
         title = graphene.String(required=True)
         description = graphene.String(required=True)
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     post = graphene.Field(PostNode)
@@ -1928,7 +1893,6 @@ class PostCreate(Mutation):
             user,
             title,
             description,
-            mention=[],
             score=0,
     ):
         if not (info.context.user.is_superuser or
@@ -1944,10 +1908,6 @@ class PostCreate(Mutation):
             score=score,
         )
 
-        for x in mention:
-            post.mention.add(from_global_id(x)[1])
-
-        post.save()
         return PostCreate(post=post)
 
 
@@ -1957,7 +1917,6 @@ class PostUpdate(Mutation):
         user = graphene.ID()
         title = graphene.String()
         description = graphene.String()
-        mention = graphene.List(graphene.ID)
         score = graphene.Int()
 
     post = graphene.Field(PostNode)
@@ -1968,7 +1927,6 @@ class PostUpdate(Mutation):
             user=None,
             title='',
             description='',
-            mention=[],
             score=None,
     ):
         if not (info.context.user.is_superuser or
@@ -1984,8 +1942,6 @@ class PostUpdate(Mutation):
             post.title = title
         if description:
             post.description = description
-        for x in mention:
-            post.mention.add(from_global_id(x)[1])
         if type(score) == int:
             post.score = score
 
@@ -2031,7 +1987,6 @@ class CommentCreate(Mutation):
         user = graphene.ID(required=True)
         description = graphene.String(required=True)
         parent = graphene.ID(required=True)
-        mention = graphene.List(graphene.ID)
 
     comment = graphene.Field(CommentNode)
 
@@ -2041,7 +1996,6 @@ class CommentCreate(Mutation):
             user,
             description,
             parent,
-            mention=[],
     ):
         parent_obj = models.Entry.objects.get(pk=from_global_id(parent)[1])
 
@@ -2057,10 +2011,6 @@ class CommentCreate(Mutation):
             parent=parent_obj,
         )
 
-        for x in mention:
-            comment.mention.add(from_global_id(x)[1])
-
-        comment.save()
         return CommentCreate(comment=comment)
 
 
@@ -2070,7 +2020,6 @@ class CommentUpdate(Mutation):
         user = graphene.ID()
         description = graphene.String()
         parent = graphene.ID()
-        mention = graphene.List(graphene.ID)
 
     comment = graphene.Field(CommentNode)
 
@@ -2080,7 +2029,6 @@ class CommentUpdate(Mutation):
             user=None,
             description='',
             parent=None,
-            mention=[],
     ):
         if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
@@ -2094,8 +2042,6 @@ class CommentUpdate(Mutation):
         if parent:
             comment.parent = models.Entry.objects.get(
                 pk=from_global_id(parent)[1])
-        for x in mention:
-            comment.mention.add(from_global_id(x)[1])
 
         comment.save()
         return CommentUpdate(comment=comment)

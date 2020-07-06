@@ -179,6 +179,8 @@ class NotificationFilter(django_filters.FilterSet):
 
 
 class NotificationNode(DjangoObjectType):
+    category = graphene.String()
+
     class Meta:
         model = models.Notification
 
@@ -193,6 +195,12 @@ class NotificationNode(DjangoObjectType):
             raise GraphQLError('You are not  logged in')
 
         return queryset.filter(notifier__user=info.context.user)
+
+    def resolve_category(self, *args, **kwargs):
+        return models.get_submodel(
+            self,
+            models.Notification,
+        ).__name__.replace('Notification', '').lower()
 
 
 class NotificationUpdate(Mutation):

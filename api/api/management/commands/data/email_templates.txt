@@ -127,6 +127,6 @@ Talking to you is a treat! Check out what someone commented on your {entry_type}
 
 ***Mention:New Notification***
 
-Someone out there was thinking about you as they mentioned you in their {entry_type!
+Someone mentioned you in their {entry_type}!
 
-Check it out [here](link}.
+Check it out [here](link).
