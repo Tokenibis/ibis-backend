@@ -12,6 +12,10 @@ load_fixtures() {
     done
 }
 
+cd ~/
+sudo -u postgres dropdb ibis
+sudo -u postgres createdb ibis
+
 cd $DIR/.. && \
     python3 manage.py make_fixtures \
 	    --num_person 100 \
@@ -29,7 +33,6 @@ cd $DIR/.. && \
 	    --num_bookmark 10000 \
 	    --num_like  10000 && \
     cd $DIR/.. && \
-    rm db.sqlite3 -rf && \
     rm ibis/migrations/ -rf && \
     rm distribution/migrations/ -rf && \
     rm users/migrations -rf && \

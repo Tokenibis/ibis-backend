@@ -5,8 +5,11 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+cd ~/
+sudo -u postgres dropdb ibis
+sudo -u postgres createdb ibis
+
 cd $DIR/.. && \
-    rm db.sqlite3 -rf && \
     rm ibis/migrations/ -rf && \
     rm distribution/migrations/ -rf && \
     rm users/migrations -rf && \

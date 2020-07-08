@@ -17,7 +17,7 @@ __This code is currently in BETA__
 Please ensure that your environment is set up to run python 3.6 or
 higher.
 
-
+Follow this [guide](https://www.digitalocean.com/community/tutorials/how-to-use-postgresql-with-your-django-application-on-ubuntu-14-04) to install Postgres with a database called "ibis" and user called "ibis".
 
 `$ git submodule init`
 
