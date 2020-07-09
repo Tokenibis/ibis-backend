@@ -143,22 +143,6 @@ class Valuable(models.Model):
         abstract = True
 
 
-class Likeable(models.Model):
-    class Meta:
-        abstract = True
-
-
-class Bookmarkable(models.Model):
-    bookmark = models.ManyToManyField(
-        IbisUser,
-        related_name='bookmark_for_%(class)s',
-        blank=True,
-    )
-
-    class Meta:
-        abstract = True
-
-
 class Rsvpable(models.Model):
     rsvp = models.ManyToManyField(
         IbisUser,
@@ -217,7 +201,7 @@ class Nonprofit(IbisUser):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
 
 
-class Entry(TimeStampedModel):
+class Entry(TimeStampedModel, Scoreable):
     class Meta:
         verbose_name = "Entry"
         verbose_name_plural = "Entries"
@@ -228,6 +212,12 @@ class Entry(TimeStampedModel):
     )
 
     description = models.TextField(validators=[MinLengthValidator(1)])
+
+    bookmark = models.ManyToManyField(
+        IbisUser,
+        related_name='bookmark_for',
+        blank=True,
+    )
 
     like = models.ManyToManyField(
         IbisUser,
@@ -338,7 +328,7 @@ class Withdrawal(TimeStampedModel, Valuable):
         )
 
 
-class Donation(Entry, Valuable, Scoreable):
+class Donation(Entry, Valuable):
     target = models.ForeignKey(
         Nonprofit,
         on_delete=models.CASCADE,
@@ -353,7 +343,7 @@ class Donation(Entry, Valuable, Scoreable):
         )
 
 
-class Transaction(Entry, Valuable, Scoreable):
+class Transaction(Entry, Valuable):
     target = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
@@ -368,7 +358,7 @@ class Transaction(Entry, Valuable, Scoreable):
         )
 
 
-class News(Entry, Bookmarkable, Scoreable):
+class News(Entry):
     class Meta:
         verbose_name_plural = 'news'
 
@@ -380,7 +370,7 @@ class News(Entry, Bookmarkable, Scoreable):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Event(Entry, Bookmarkable, Rsvpable, Scoreable):
+class Event(Entry, Rsvpable):
     title = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
     address = models.TextField(blank=True)
@@ -392,11 +382,11 @@ class Event(Entry, Bookmarkable, Rsvpable, Scoreable):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Post(Entry, Bookmarkable, Scoreable):
+class Post(Entry):
     title = models.TextField(validators=[MinLengthValidator(1)])
 
 
-class Comment(Entry, Scoreable):
+class Comment(Entry):
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',

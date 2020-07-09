@@ -109,6 +109,7 @@ class WithdrawalFilter(django_filters.FilterSet):
 class TransferFilter(django_filters.FilterSet):
     by_user = django_filters.CharFilter(method='filter_by_user')
     by_following = django_filters.CharFilter(method='filter_by_following')
+    bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
     search = django_filters.CharFilter(method='filter_search')
 
@@ -124,6 +125,11 @@ class TransferFilter(django_filters.FilterSet):
                     id=int(from_global_id(value)[1])).following.all()) | Q(
                         user_id__in=models.IbisUser.objects.get(
                             id=int(from_global_id(value)[1])).following.all()))
+
+    def filter_bookmark_by(self, qs, name, value):
+        return qs.filter(
+            id__in=models.IbisUser.objects.get(
+                id=from_global_id(value)[1]).bookmark_for.all())
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -192,7 +198,7 @@ class NewsFilter(django_filters.FilterSet):
     def filter_bookmark_by(self, qs, name, value):
         return qs.filter(
             id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).bookmark_for_news.all())
+                id=from_global_id(value)[1]).bookmark_for.all())
 
     def filter_by_following(self, qs, name, value):
         return qs.filter(
@@ -248,7 +254,7 @@ class EventFilter(django_filters.FilterSet):
     def filter_bookmark_by(self, qs, name, value):
         return qs.filter(
             id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).bookmark_for_event.all())
+                id=from_global_id(value)[1]).bookmark_for.all())
 
     def filter_rsvp_by(self, qs, name, value):
         return qs.filter(
@@ -317,7 +323,7 @@ class PostFilter(django_filters.FilterSet):
     def filter_bookmark_by(self, qs, name, value):
         return qs.filter(
             id__in=models.IbisUser.objects.get(
-                id=from_global_id(value)[1]).bookmark_for_post.all())
+                id=from_global_id(value)[1]).bookmark_for.all())
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -802,6 +808,11 @@ class EntryNode(DjangoObjectType):
 class DonationNode(EntryNode):
     amount = graphene.Int()
 
+    bookmark = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+
     class Meta:
         model = models.Donation
         filter_fields = []
@@ -809,6 +820,9 @@ class DonationNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
+
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -958,6 +972,11 @@ class DonationDelete(Mutation):
 class TransactionNode(EntryNode):
     amount = graphene.Int()
 
+    bookmark = DjangoFilterConnectionField(
+        lambda: IbisUserNode,
+        filterset_class=IbisUserFilter,
+    )
+
     class Meta:
         model = models.Transaction
         filter_fields = []
@@ -965,6 +984,9 @@ class TransactionNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
+
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -2147,22 +2169,14 @@ class BookmarkMutation(Mutation):
 
     @classmethod
     def mutate(cls, info, operation, user, target):
-        if not (info.context.user.is_superuser
-                or info.context.user.id == int(from_global_id(user)[1])):
-            raise GraphQLError('You do not have sufficient permission')
-
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        entry_type, entry_id = from_global_id(target)
+        entry_obj = models.Entry.objects.get(pk=from_global_id(target)[1])
 
-        submodels = {
-            '{}Node'.format(x.__name__): x
-            for x in models.Bookmarkable.__subclasses__()
-        }
-
-        try:
-            entry_obj = submodels[entry_type].objects.get(pk=entry_id)
-        except (KeyError, ObjectDoesNotExist):
-            raise KeyError('Object is not bookmarkable')
+        if not (info.context.user.is_superuser or
+                (info.context.user.id == int(from_global_id(user)[1])
+                 and hasattr(info.context.user, 'ibisuser')
+                 and info.context.user.ibisuser.can_see(entry_obj))):
+            raise GraphQLError('You do not have sufficient permission')
 
         getattr(entry_obj.bookmark, operation)(user_obj)
         entry_obj.save()
