@@ -18,6 +18,7 @@ class NotifierNode(DjangoObjectType):
     email_donation = graphene.Boolean()
     email_transaction = graphene.Boolean()
     email_comment = graphene.Boolean()
+    email_mention = graphene.Boolean()
     email_ubp = graphene.Boolean()
     email_deposit = graphene.Boolean()
     email_like = graphene.Boolean()
@@ -54,6 +55,12 @@ class NotifierNode(DjangoObjectType):
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_comment
+
+    def resolve_email_mention(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_mention
 
     def resolve_email_ubp(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
@@ -110,6 +117,7 @@ class NotifierUpdate(Mutation):
         email_deposit = graphene.Boolean()
         email_ubp = graphene.Boolean()
         email_comment = graphene.Boolean()
+        email_mention = graphene.Boolean()
         email_like = graphene.Boolean()
         email_feed = graphene.String()
         last_seen = graphene.String()
@@ -126,6 +134,7 @@ class NotifierUpdate(Mutation):
             email_deposit=None,
             email_ubp=None,
             email_comment=None,
+            email_mention=None,
             email_like=None,
             email_feed=None,
             last_seen='',
@@ -149,6 +158,8 @@ class NotifierUpdate(Mutation):
             notifier.email_ubp = email_ubp
         if type(email_comment) == bool:
             notifier.email_comment = email_comment
+        if type(email_mention) == bool:
+            notifier.email_mention = email_mention
         if type(email_like) == bool:
             notifier.email_like = email_like
         if email_feed:

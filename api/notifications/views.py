@@ -14,6 +14,7 @@ class SettingsView(UpdateView):
         'email_follow',
         'email_transaction',
         'email_comment',
+        'email_mention',
         'email_deposit',
     )
 
@@ -46,6 +47,7 @@ class NonprofitSettingsView(SettingsView):
         'email_follow',
         'email_donation',
         'email_comment',
+        'email_mention',
         'email_deposit',
     )
 
