@@ -1,19 +1,26 @@
+import os
 import django_filters
 import graphene
+import dateutil.parser
+import ibis.models as models
 
+from PIL import Image
 from django.db.models import Q, Count, Value
 from django.db.models.functions import Concat
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.conf import settings
 from graphql import GraphQLError
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
-from graphql_relay.node.node import from_global_id
-import dateutil.parser
-
-import ibis.models as models
+from graphql_relay.node.node import from_global_id, to_global_id
+from graphene_file_upload.scalars import Upload
 from users.schema import UserNode
+
+AVATAR_SIZE = (200, 200)
+BANNER_SIZE = (200, 200)
 
 # --- Filters --------------------------------------------------------------- #
 
@@ -1454,6 +1461,7 @@ class PersonUpdate(Mutation):
         visibility_follow = graphene.String()
         visibility_donation = graphene.String()
         visibility_transaction = graphene.String()
+        avatar = Upload()
         score = graphene.Int()
 
     person = graphene.Field(PersonNode)
@@ -1470,6 +1478,7 @@ class PersonUpdate(Mutation):
             visibility_follow='',
             visibility_donation='',
             visibility_transaction='',
+            avatar=None,
             score=None,
     ):
         if not (info.context.user.is_superuser
@@ -1505,6 +1514,28 @@ class PersonUpdate(Mutation):
                 models.IbisUser.PRIVATE
             ]
             person.visibility_transaction = visibility_transaction
+        if avatar:
+            path = os.path.join(
+                settings.MEDIA_ROOT,
+                default_storage.save(
+                    'avatar/{}'.format(to_global_id('IbisUserNode', id)),
+                    ContentFile(avatar.read()),
+                ),
+            )
+            try:
+                im = Image.open(path)
+                im.thumbnail(AVATAR_SIZE)
+                im.save('{}.png'.format(path))
+
+                person.avatar = '{}{}{}.png'.format(
+                    settings.API_ROOT_PATH,
+                    settings.MEDIA_URL,
+                    '/'.join(path.rsplit('/')[-2:]),
+                )
+                person.save()
+            finally:
+                os.remove(path)
+
         if type(score) == int:
             person.score = score
         person.save()
@@ -1562,6 +1593,8 @@ class NonprofitUpdate(Mutation):
         visibility_follow = graphene.String()
         visibility_donation = graphene.String()
         visibility_transaction = graphene.String()
+        avatar = Upload()
+        banner = Upload()
         score = graphene.Int()
 
     nonprofit = graphene.Field(NonprofitNode)
@@ -1579,6 +1612,8 @@ class NonprofitUpdate(Mutation):
             visibility_follow='',
             visibility_donation='',
             visibility_transaction='',
+            avatar=None,
+            banner=None,
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -1617,6 +1652,47 @@ class NonprofitUpdate(Mutation):
                 models.IbisUser.PRIVATE
             ]
             nonprofit.visibility_transaction = visibility_transaction
+        if avatar:
+            path = os.path.join(
+                settings.MEDIA_ROOT,
+                default_storage.save(
+                    'avatar/{}'.format(to_global_id('IbisUserNode', id)),
+                    ContentFile(avatar.read()),
+                ),
+            )
+            try:
+                im = Image.open(path)
+                im.thumbnail(AVATAR_SIZE)
+                im.save('{}.png'.format(path))
+
+                nonprofit.avatar = '{}{}{}.png'.format(
+                    settings.API_ROOT_PATH,
+                    settings.MEDIA_URL,
+                    '/'.join(path.rsplit('/')[-2:]),
+                )
+                nonprofit.save()
+            finally:
+                os.remove(path)
+        if banner:
+            path = os.path.join(
+                settings.MEDIA_ROOT,
+                default_storage.save(
+                    'profile/{}'.format(to_global_id('IbisUserNode', id)),
+                    ContentFile(banner.read()),
+                ),
+            )
+            try:
+                im = Image.open(path)
+                im.save('{}.png'.format(path))
+
+                nonprofit.banner = '{}{}{}.png'.format(
+                    settings.API_ROOT_PATH,
+                    settings.MEDIA_URL,
+                    '/'.join(path.rsplit('/')[-2:]),
+                )
+                nonprofit.save()
+            finally:
+                os.remove(path)
         if type(score) == int:
             nonprofit.score = score
 

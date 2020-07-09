@@ -17,6 +17,7 @@ lib
 bin
 include
 api/static
+api/media
 config.json
 
 *.log

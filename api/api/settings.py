@@ -209,6 +209,10 @@ CSRF_TRUSTED_ORIGINS = [
 
 CSRF_COOKIE_DOMAIN = 'tokenibis.org'
 
+MEDIA_ROOT = os.path.join(BASE_DIR, "media/")
+
+MEDIA_URL = os.path.join(BASE_DIR, "/media/")
+
 STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 SITE_ID = 1
