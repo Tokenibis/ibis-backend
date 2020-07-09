@@ -1,4 +1,5 @@
 import os
+import time
 import django_filters
 import graphene
 import dateutil.parser
@@ -20,7 +21,6 @@ from graphene_file_upload.scalars import Upload
 from users.schema import UserNode
 
 AVATAR_SIZE = (200, 200)
-BANNER_SIZE = (200, 200)
 
 # --- Filters --------------------------------------------------------------- #
 
@@ -1515,26 +1515,32 @@ class PersonUpdate(Mutation):
             ]
             person.visibility_transaction = visibility_transaction
         if avatar:
-            path = os.path.join(
+            tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'avatar/{}'.format(to_global_id('IbisUserNode', id)),
+                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
                     ContentFile(avatar.read()),
                 ),
             )
             try:
-                im = Image.open(path)
+                im = Image.open(tmp)
                 im.thumbnail(AVATAR_SIZE)
-                im.save('{}.png'.format(path))
+                path = '{}/{}.png'.format(
+                    tmp.rsplit('/', 1)[0],
+                    int(time.time()),
+                )
+                im.save(path)
 
-                person.avatar = '{}{}{}.png'.format(
+                person.avatar = '{}{}{}'.format(
                     settings.API_ROOT_PATH,
                     settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-2:]),
+                    '/'.join(path.rsplit('/')[-3:]),
                 )
                 person.save()
+            except Exception as e:
+                raise e
             finally:
-                os.remove(path)
+                os.remove(tmp)
 
         if type(score) == int:
             person.score = score
@@ -1653,48 +1659,59 @@ class NonprofitUpdate(Mutation):
             ]
             nonprofit.visibility_transaction = visibility_transaction
         if avatar:
-            path = os.path.join(
+            tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'avatar/{}'.format(to_global_id('IbisUserNode', id)),
+                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
                     ContentFile(avatar.read()),
                 ),
             )
             try:
-                im = Image.open(path)
+                im = Image.open(tmp)
                 im.thumbnail(AVATAR_SIZE)
-                im.save('{}.png'.format(path))
+                path = '{}/{}.png'.format(
+                    tmp.rsplit('/', 1)[0],
+                    int(time.time()),
+                )
+                im.save(path)
 
-                nonprofit.avatar = '{}{}{}.png'.format(
+                nonprofit.avatar = '{}{}{}'.format(
                     settings.API_ROOT_PATH,
                     settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-2:]),
+                    '/'.join(path.rsplit('/')[-3:]),
                 )
                 nonprofit.save()
+            except Exception as e:
+                raise e
             finally:
-                os.remove(path)
+                os.remove(tmp)
+
         if banner:
-            path = os.path.join(
+            tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'profile/{}'.format(to_global_id('IbisUserNode', id)),
+                    'banner/{}/tmp'.format(to_global_id('IbisUserNode', id)),
                     ContentFile(banner.read()),
                 ),
             )
             try:
-                im = Image.open(path)
-                im.save('{}.png'.format(path))
+                im = Image.open(tmp)
+                path = '{}/{}.png'.format(
+                    tmp.rsplit('/', 1)[0],
+                    int(time.time()),
+                )
+                im.save(path)
 
-                nonprofit.banner = '{}{}{}.png'.format(
+                nonprofit.banner = '{}{}{}'.format(
                     settings.API_ROOT_PATH,
                     settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-2:]),
+                    '/'.join(path.rsplit('/')[-3:]),
                 )
                 nonprofit.save()
+            except Exception as e:
+                raise e
             finally:
-                os.remove(path)
-        if type(score) == int:
-            nonprofit.score = score
+                os.remove(tmp)
 
         nonprofit.save()
         return NonprofitUpdate(nonprofit=nonprofit)
