@@ -3,7 +3,6 @@ import json
 import random
 import ibis.models
 import distribution.models
-import distribution.crons
 import distribution.signals
 
 from django.core import management
@@ -11,6 +10,7 @@ from django.utils.timezone import localtime, timedelta, utc, now
 from django.conf import settings
 from freezegun import freeze_time
 from api.test.base import BaseTestCase, TEST_TIME
+from distribution.management.commands.distribute import STATE
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -20,7 +20,7 @@ with open(os.path.join(DIR, '../../../config.json')) as fd:
 
 class DistributionTestCase(BaseTestCase):
     def setUp(self, *args, **kwargs):
-        distribution.crons.STATE['UPCOMING'] = localtime(now()).replace(
+        STATE['UPCOMING'] = localtime(now()).replace(
             year=2019,
             month=4,
             day=5,
@@ -83,11 +83,7 @@ class DistributionTestCase(BaseTestCase):
     def _fast_forward_cron(self, frozen_datetime, number, **kwargs):
         for _ in range(number):
             frozen_datetime.tick(delta=timedelta(**kwargs))
-            management.call_command(
-                'runcrons',
-                'distribution.crons.DistributionCron',
-                '--force',
-            )
+            management.call_command('distribute')
 
     def test_times(self):
         def _test_get_times(test_time, **kwargs):
@@ -300,7 +296,7 @@ class DistributionTestCase(BaseTestCase):
                 for x in active + inactive:
                     self._do_transfer(x)
                 frozen_datetime.tick(delta=timedelta(days=7))
-                distribution.crons.STATE['UPCOMING'] = localtime(
+                STATE['UPCOMING'] = localtime(
                     now()).replace(
                         year=2019,
                         month=4,

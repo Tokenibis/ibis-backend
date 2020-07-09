@@ -1,26 +1,24 @@
 import logging
 
+from django.core.management.base import BaseCommand
 from django.utils.timezone import now, timedelta
 from django.core.mail import EmailMultiAlternatives
-from django_cron import CronJobBase, Schedule
 from django.conf import settings
 
 from notifications.models import Email
 
 logger = logging.getLogger(__name__)
 
-FREQUENCY = 1
 
+class Command(BaseCommand):
+    help = 'Send pending notifications'
 
-class EmailNotificationCron(CronJobBase):
-    schedule = Schedule(run_every_mins=FREQUENCY)
-    code = 'notifications.email_notification'
-
-    def do(self):
+    def handle(self, *args, **options):
         # need to be very careful about not accidently spamming users
         # with double sends due exceptions
         for email in Email.objects.filter(status=Email.SCHEDULED):
-            if email.schedule < now() - timedelta(minutes=FREQUENCY * 2):
+            # assumes that the cron job runs every 1 minutes
+            if email.schedule < now() - timedelta(minutes=1 * 2):
                 email.status = Email.STALE
                 logger.warning('Stale scheduled emails detected')
             elif email.schedule < now():

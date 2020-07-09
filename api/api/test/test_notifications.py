@@ -1,7 +1,6 @@
 import json
 import ibis.models as models
 import notifications.models
-import notifications.crons
 
 from django.core import management
 from django.utils.timezone import now, timedelta
@@ -162,8 +161,7 @@ class NotificationTestCase(BaseTestCase):
 
         with freeze_time(now()) as frozen_datetime:
             frozen_datetime.tick(
-                delta=timedelta(minutes=settings.EMAIL_DELAY +
-                                2 * notifications.crons.FREQUENCY))
+                delta=timedelta(minutes=settings.EMAIL_DELAY + 2))
 
             count = self.person.notifier.notification_set.count()
             mention_count = notifications.models.MentionNotification.objects.count(
@@ -264,11 +262,7 @@ class NotificationTestCase(BaseTestCase):
                        'example.com')
 
             frozen_datetime.tick(delta=timedelta(minutes=settings.EMAIL_DELAY))
-            management.call_command(
-                'runcrons',
-                'notifications.crons.EmailNotificationCron',
-                '--force',
-            )
+            management.call_command('notify')
 
             # this for loop should have no effect
             for submodel in notifications.models.Notification.__subclasses__():

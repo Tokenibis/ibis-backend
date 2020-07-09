@@ -50,11 +50,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-CRON_CLASSES = [
-    'distribution.crons.DistributionCron',
-    'notifications.crons.EmailNotificationCron',
-]
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -80,7 +75,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django_extensions',
-    'django_cron',
     'annoying',
     'crispy_forms',
     'rest_framework',

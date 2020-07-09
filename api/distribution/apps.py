@@ -6,4 +6,3 @@ class DistributionConfig(AppConfig):
 
     def ready(self):
         import distribution.signals
-        import distribution.crons

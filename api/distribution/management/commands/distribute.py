@@ -2,12 +2,10 @@
 # everything that should be distributed. distribute it if not.
 # Otherwise, wait until midnight on Thursday night
 
+from django.core.management.base import BaseCommand
 from django.utils.timezone import now, localtime
-from django_cron import CronJobBase, Schedule
 
 import distribution.models as models
-
-FREQUENCY = 10
 
 STATE = {
     'UPCOMING':
@@ -23,10 +21,9 @@ STATE = {
 }
 
 
-class DistributionCron(CronJobBase):
-    schedule = Schedule(run_every_mins=FREQUENCY)
-    code = 'distribution.distribution_cron'
+class Command(BaseCommand):
+    help = 'Safely distribute UBP'
 
-    def do(self):
+    def handle(self, *args, **options):
         if STATE['UPCOMING'] < localtime(now()):
             STATE['UPCOMING'] = models.Distributor.distribute_all_safe()
