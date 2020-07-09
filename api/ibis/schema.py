@@ -400,66 +400,6 @@ class NonprofitCategoryNode(DjangoObjectType):
         return queryset
 
 
-class NonprofitCategoryCreate(Mutation):
-    class Arguments:
-        title = graphene.String(required=True)
-        description = graphene.String(required=True)
-
-    nonprofitCategory = graphene.Field(NonprofitCategoryNode)
-
-    def mutate(self, info, title, description):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        nonprofitCategory = models.NonprofitCategory.objects.create(
-            title=title,
-            description=description,
-        )
-        nonprofitCategory.save()
-        return NonprofitCategoryCreate(nonprofitCategory=nonprofitCategory)
-
-
-class NonprofitCategoryUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        title = graphene.String()
-        description = graphene.String()
-
-    nonprofitCategory = graphene.Field(NonprofitCategoryNode)
-
-    def mutate(self, info, id, title='', description=''):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        nonprofitCategory = models.NonprofitCategory.objects.get(
-            pk=from_global_id(id)[1])
-        if title:
-            nonprofitCategory.title = title
-        if description:
-            nonprofitCategory.description = description
-        nonprofitCategory.save()
-
-        return NonprofitCategoryUpdate(nonprofitCategory=nonprofitCategory)
-
-
-class NonprofitCategoryDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.NonprofitCategory.objects.get(
-                pk=from_global_id(id)[1]).delete()
-            return NonprofitCategoryDelete(status=True)
-        except models.NonprofitCategory.DoesNotExist:
-            return NonprofitCategoryDelete(status=False)
-
-
 # --- Deposit Category ------------------------------------------------------ #
 
 
@@ -474,59 +414,6 @@ class DepositCategoryNode(DjangoObjectType):
         if not info.context.user.is_authenticated:
             raise GraphQLError('You are not  logged in')
         return queryset
-
-
-class DepositCategoryCreate(Mutation):
-    class Arguments:
-        title = graphene.String(required=True)
-
-    depositCategory = graphene.Field(DepositCategoryNode)
-
-    def mutate(self, info, title):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        depositCategory = models.DepositCategory.objects.create(title=title, )
-        depositCategory.save()
-        return DepositCategoryCreate(depositCategory=depositCategory)
-
-
-class DepositCategoryUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        title = graphene.String()
-
-    depositCategory = graphene.Field(DepositCategoryNode)
-
-    def mutate(self, info, id, title=''):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        depositCategory = models.DepositCategory.objects.get(
-            pk=from_global_id(id)[1])
-        if title:
-            depositCategory.title = title
-        depositCategory.save()
-
-        return DepositCategoryUpdate(depositCategory=depositCategory)
-
-
-class DepositCategoryDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.DepositCategory.objects.get(
-                pk=from_global_id(id)[1]).delete()
-            return DepositCategoryDelete(status=True)
-        except models.DepositCategory.DoesNotExist:
-            return DepositCategoryDelete(status=False)
 
 
 # --- Deposit --------------------------------------------------------------- #
@@ -1556,64 +1443,6 @@ class PersonNode(IbisUserNode, UserNode):
         return models.Transaction.objects.filter(target__id=self.id).count()
 
 
-class PersonCreate(Mutation):
-    class Arguments:
-        username = graphene.String(required=True)
-        email = graphene.String(required=True)
-        first_name = graphene.String(required=True)
-        last_name = graphene.String(required=True)
-        visibility_follow = graphene.String()
-        visibility_donation = graphene.String()
-        visibility_transaction = graphene.String()
-        score = graphene.Int()
-
-    person = graphene.Field(PersonNode)
-
-    def mutate(
-            self,
-            info,
-            username,
-            email,
-            first_name,
-            last_name,
-            visibility_follow=models.IbisUser.PUBLIC,
-            visibility_donation=models.IbisUser.PUBLIC,
-            visibility_transaction=models.IbisUser.PUBLIC,
-            score=0,
-    ):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        if visibility_follow:
-            assert visibility_follow in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-        if visibility_donation:
-            assert visibility_donation in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-        if visibility_transaction:
-            assert visibility_transaction in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-
-        person = models.Person.objects.create(
-            username=username,
-            email=email,
-            first_name=first_name,
-            last_name=last_name,
-            visibility_follow=visibility_follow,
-            visibility_donation=visibility_donation,
-            visibility_transaction=visibility_transaction,
-            score=score,
-        )
-        person.save()
-        return PersonCreate(person=person)
-
-
 class PersonUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -1719,69 +1548,6 @@ class NonprofitNode(IbisUserNode):
 
     def resolve_donation_from_count(self, *args, **kwargs):
         return models.Donation.objects.filter(target__id=self.id).count()
-
-
-class NonprofitCreate(Mutation):
-    class Arguments:
-        username = graphene.String(required=True)
-        email = graphene.String(required=True)
-        category = graphene.ID(required=True)
-        description = graphene.String(required=True)
-        last_name = graphene.String(required=True)
-        link = graphene.String(required=True)
-        visibility_follow = graphene.String()
-        visibility_donation = graphene.String()
-        visibility_transaction = graphene.String()
-        score = graphene.Int()
-
-    nonprofit = graphene.Field(NonprofitNode)
-
-    def mutate(
-            self,
-            info,
-            username,
-            email,
-            category,
-            description,
-            last_name,
-            link,
-            visibility_follow=models.IbisUser.PUBLIC,
-            visibility_donation=models.IbisUser.PUBLIC,
-            visibility_transaction=models.IbisUser.PUBLIC,
-            score=0,
-    ):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        if visibility_follow:
-            assert visibility_follow in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-        if visibility_donation:
-            assert visibility_donation in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-        if visibility_transaction:
-            assert visibility_transaction in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-
-        nonprofit = models.Nonprofit.objects.create(
-            username=username,
-            email=email,
-            first_name='',
-            last_name=last_name,
-            description=description,
-            link=link,
-            category=models.NonprofitCategory.objects.get(
-                pk=from_global_id(category)[1]),
-            score=score,
-        )
-        nonprofit.save()
-        return NonprofitCreate(nonprofit=nonprofit)
 
 
 class NonprofitUpdate(Mutation):
@@ -2297,15 +2063,9 @@ class Query(object):
 
 
 class Mutation(graphene.ObjectType):
-    create_nonprofit_category = NonprofitCategoryCreate.Field()
-    update_nonprofit_category = NonprofitCategoryUpdate.Field()
-    delete_nonprofit_category = NonprofitCategoryDelete.Field()
-
-    create_person = PersonCreate.Field()
     update_person = PersonUpdate.Field()
     delete_person = PersonDelete.Field()
 
-    create_nonprofit = NonprofitCreate.Field()
     update_nonprofit = NonprofitUpdate.Field()
     delete_nonprofit = NonprofitDelete.Field()
 
