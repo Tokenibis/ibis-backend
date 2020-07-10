@@ -68,7 +68,6 @@ class BaseTestCase(GraphQLTestCase):
         x.split('/')[-1] for x in os.listdir(os.path.join(DIR, '../fixtures'))
     ])
     operations = [
-        'Balance',
         'BookmarkCreate',
         'BookmarkDelete',
         'CommentCreate',
@@ -83,6 +82,7 @@ class BaseTestCase(GraphQLTestCase):
         'EventList',
         'EventUpdate',
         'EventListFilter',
+        'Finance',
         'FollowCreate',
         'FollowDelete',
         'Home',

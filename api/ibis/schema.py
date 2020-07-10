@@ -356,10 +356,10 @@ class CommentOrderingFilter(django_filters.OrderingFilter):
 
 
 class CommentFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
-    by_following = django_filters.CharFilter(method='filter_by_following')
-    has_parent = django_filters.CharFilter(method='filter_has_parent')
-    search = django_filters.CharFilter(method='filter_search')
+    has_parent = django_filters.CharFilter(
+        method='filter_has_parent',
+        required=True,
+    )
 
     order_by = PostOrderingFilter(
         fields=(
@@ -372,23 +372,12 @@ class CommentFilter(django_filters.FilterSet):
         model = models.Comment
         fields = []
 
-    def filter_by_user(self, qs, name, value):
-        return qs.filter(user_id=from_global_id(value)[1])
-
-    def filter_by_following(self, qs, name, value):
-        return qs.filter(
-            user_id__in=models.IbisUser.objects.get(
-                id=int(from_global_id(value)[1])).following.all())
-
     def filter_has_parent(self, qs, name, value):
+        if not (self.request.user.is_superuser or
+                models.IbisUser.objects.get(id=self.request.user.id).can_see(
+                    models.Entry.objects.get(id=from_global_id(value)[1]))):
+            raise GraphQLError('You do not have sufficient permission')
         return qs.filter(parent_id=from_global_id(value)[1])
-
-    def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat('user__first_name', Value(' '),
-                             'user__last_name')).filter(
-                                 Q(user_name__icontains=value)
-                                 | Q(user__username__icontains=value))
 
 
 # --- Nonprofit Category ---------------------------------------------------- #
@@ -435,6 +424,7 @@ class DepositNode(DjangoObjectType):
     @classmethod
     def get_queryset(cls, queryset, info):
         if info.context.user.is_superuser:
+
             return queryset
         return queryset.filter(user=info.context.user)
 
@@ -695,6 +685,24 @@ class EntryNode(DjangoObjectType):
     def resolve_mention(self, *args, **kwargs):
         return self.mention
 
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+
+        if info.context.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            (Q(donation__isnull=False) &
+             (Q(donation__private=False)
+              | Q(user_id=info.context.user.id)
+              | Q(donation__target_id=info.context.user.id)))
+            | (Q(transaction__isnull=False) &
+               (Q(transaction__private=False)
+                | Q(user_id=info.context.user.id)
+                | Q(transaction__target_id=info.context.user.id))))
+
 
 # --- Donation -------------------------------------------------------------- #
 
@@ -727,11 +735,8 @@ class DonationNode(EntryNode):
             return queryset
 
         return queryset.filter(
-            Q(user__visibility_donation=models.IbisUser.PUBLIC)
-            | (Q(user__visibility_donation=models.IbisUser.FOLLOWING)
-               & Q(user__following__id__exact=info.context.user.id))
-            | (Q(user_id=info.context.user.id)
-               | Q(target_id=info.context.user.id))).distinct()
+            Q(private=False) | Q(user__id=info.context.user.id)
+            | Q(target_id=info.context.user.id)).distinct()
 
 
 class DonationCreate(Mutation):
@@ -743,6 +748,7 @@ class DonationCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
+        private = graphene.Boolean()
         score = graphene.Int()
 
     donation = graphene.Field(DonationNode)
@@ -754,6 +760,7 @@ class DonationCreate(Mutation):
             description,
             target,
             amount,
+            private=False,
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -780,6 +787,7 @@ class DonationCreate(Mutation):
             description=description,
             target=target_obj,
             amount=amount,
+            private=private,
             score=score,
         )
 
@@ -797,6 +805,7 @@ class DonationUpdate(Mutation):
         target = graphene.ID()
         amount = graphene.Int()
         category = graphene.ID()
+        private = graphene.Boolean()
         score = graphene.Int()
 
     donation = graphene.Field(DonationNode)
@@ -809,6 +818,7 @@ class DonationUpdate(Mutation):
             description='',
             target=None,
             amount=0,
+            private=None,
             score=None,
     ):
         if not info.context.user.is_superuser:
@@ -836,6 +846,8 @@ class DonationUpdate(Mutation):
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             donation.amount = amount
+        if type(private) == bool:
+            donation.private = private
         if type(score) == int:
             donation.score = score
 
@@ -891,11 +903,8 @@ class TransactionNode(EntryNode):
             return queryset
 
         return queryset.filter(
-            Q(user__visibility_transaction=models.IbisUser.PUBLIC)
-            | (Q(user__visibility_transaction=models.IbisUser.FOLLOWING)
-               & Q(user__following__id__exact=info.context.user.id))
-            | (Q(user_id=info.context.user.id)
-               | Q(target_id=info.context.user.id))).distinct()
+            Q(private=False) | Q(user__id=info.context.user.id)
+            | Q(target_id=info.context.user.id)).distinct()
 
 
 class TransactionCreate(Mutation):
@@ -907,6 +916,7 @@ class TransactionCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
+        private = graphene.Boolean()
         score = graphene.Int()
 
     transaction = graphene.Field(TransactionNode)
@@ -918,6 +928,7 @@ class TransactionCreate(Mutation):
             description,
             target,
             amount,
+            private=False,
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -944,6 +955,7 @@ class TransactionCreate(Mutation):
             description=description,
             target=target_obj,
             amount=amount,
+            private=private,
             score=score,
         )
 
@@ -960,6 +972,7 @@ class TransactionUpdate(Mutation):
         description = graphene.String()
         target = graphene.ID()
         amount = graphene.Int()
+        private = graphene.Boolean()
         score = graphene.Int()
 
     transaction = graphene.Field(TransactionNode)
@@ -972,6 +985,7 @@ class TransactionUpdate(Mutation):
             description='',
             target=None,
             amount=0,
+            private=None,
             score=None,
     ):
         if not info.context.user.is_superuser:
@@ -999,6 +1013,8 @@ class TransactionUpdate(Mutation):
             except AssertionError:
                 raise GraphQLError('Balance would be below zero')
             transaction.amount = amount
+        if type(private) == bool:
+            transaction.private = private
         if type(score) == int:
             transaction.score = score
 
@@ -1412,11 +1428,6 @@ class IbisUserNode(UserNode):
 class PersonNode(IbisUserNode, UserNode):
 
     donated = graphene.Int()
-
-    visibility_follow = graphene.String()
-    visibility_donation = graphene.String()
-    visibility_transaction = graphene.String()
-
     transaction_from_count = graphene.Int()
 
     class Meta:
@@ -1427,24 +1438,6 @@ class PersonNode(IbisUserNode, UserNode):
 
     def resolve_donated(self, *args, **kwargs):
         return self.donated()
-
-    def resolve_visibility_following(self, info, *args, **kwargs):
-        if not (info.context.user.is_superuser
-                or info.context.user.id == self.id):
-            raise GraphQLError('You do not have sufficient permission')
-        return self.visibility_following
-
-    def resolve_visibility_donation(self, info, *args, **kwargs):
-        if not (info.context.user.is_superuser
-                or info.context.user.id == self.id):
-            raise GraphQLError('You do not have sufficient permission')
-        return self.visibility_donation
-
-    def resolve_visibility_transaction(self, info, *args, **kwargs):
-        if not (info.context.user.is_superuser
-                or info.context.user.id == self.id):
-            raise GraphQLError('You do not have sufficient permission')
-        return self.visibility_transaction
 
     def resolve_transaction_from_count(self, *args, **kwargs):
         return models.Transaction.objects.filter(target__id=self.id).count()
@@ -1458,9 +1451,9 @@ class PersonUpdate(Mutation):
         description = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
-        visibility_follow = graphene.String()
-        visibility_donation = graphene.String()
-        visibility_transaction = graphene.String()
+        privacy_donation = graphene.Boolean()
+        privacy_transaction = graphene.Boolean()
+        privacy_deposit = graphene.Boolean()
         avatar = Upload()
         score = graphene.Int()
 
@@ -1475,9 +1468,9 @@ class PersonUpdate(Mutation):
             description='',
             first_name='',
             last_name='',
-            visibility_follow='',
-            visibility_donation='',
-            visibility_transaction='',
+            privacy_donation=None,
+            privacy_transaction=None,
+            privacy_deposit=None,
             avatar=None,
             score=None,
     ):
@@ -1496,24 +1489,12 @@ class PersonUpdate(Mutation):
             person.first_name = first_name
         if last_name:
             person.first_name = last_name
-        if visibility_follow:
-            assert visibility_follow in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-            person.visibility_follow = visibility_follow
-        if visibility_donation:
-            assert visibility_donation in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-            person.visibility_donation = visibility_donation
-        if visibility_transaction:
-            assert visibility_transaction in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-            person.visibility_transaction = visibility_transaction
+        if type(privacy_donation) == bool:
+            person.privacy_donation = privacy_donation
+        if type(privacy_transaction) == bool:
+            person.privacy_transaction = privacy_transaction
+        if type(privacy_deposit) == bool:
+            person.privacy_deposit = privacy_deposit
         if avatar:
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
@@ -1596,9 +1577,9 @@ class NonprofitUpdate(Mutation):
         description = graphene.String()
         last_name = graphene.String()
         link = graphene.String()
-        visibility_follow = graphene.String()
-        visibility_donation = graphene.String()
-        visibility_transaction = graphene.String()
+        privacy_donation = graphene.Boolean()
+        privacy_transaction = graphene.Boolean()
+        privacy_deposit = graphene.Boolean()
         avatar = Upload()
         banner = Upload()
         score = graphene.Int()
@@ -1615,9 +1596,9 @@ class NonprofitUpdate(Mutation):
             description='',
             last_name='',
             link='',
-            visibility_follow='',
-            visibility_donation='',
-            visibility_transaction='',
+            privacy_donation=None,
+            privacy_transaction=None,
+            privacy_deposit=None,
             avatar=None,
             banner=None,
             score=0,
@@ -1640,24 +1621,12 @@ class NonprofitUpdate(Mutation):
             nonprofit.description = description
         if link:
             nonprofit.link = link
-        if visibility_follow:
-            assert visibility_follow in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-            nonprofit.visibility_follow = visibility_follow
-        if visibility_donation:
-            assert visibility_donation in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-            nonprofit.visibility_donation = visibility_donation
-        if visibility_transaction:
-            assert visibility_transaction in [
-                models.IbisUser.PUBLIC, models.IbisUser.FOLLOWING,
-                models.IbisUser.PRIVATE
-            ]
-            nonprofit.visibility_transaction = visibility_transaction
+        if type(privacy_donation) == bool:
+            nonprofit.privacy_donation = privacy_donation
+        if type(privacy_transaction) == bool:
+            nonprofit.privacy_transaction = privacy_transaction
+        if type(privacy_deposit) == bool:
+            nonprofit.privacy_deposit = privacy_deposit
         if avatar:
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
@@ -2104,7 +2073,6 @@ class Query(object):
     news = relay.Node.Field(NewsNode)
     event = relay.Node.Field(EventNode)
     post = relay.Node.Field(PostNode)
-    comment = relay.Node.Field(CommentNode)
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)

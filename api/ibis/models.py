@@ -54,19 +54,16 @@ class Scoreable(models.Model):
         abstract = True
 
 
+class Hideable(models.Model):
+    private = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+
+
 class IbisUser(User, Scoreable):
     class Meta:
         verbose_name_plural = 'ibis user'
-
-    PUBLIC = 'PC'
-    FOLLOWING = 'FL'
-    PRIVATE = 'PR'
-
-    VISIBILITY_CHOICES = (
-        (PUBLIC, 'Public'),
-        (FOLLOWING, 'Following Only'),
-        (PRIVATE, 'Me Only'),
-    )
 
     following = models.ManyToManyField(
         'self',
@@ -78,17 +75,9 @@ class IbisUser(User, Scoreable):
     avatar = models.TextField(validators=[MinLengthValidator(1)])
     description = models.TextField(blank=True, null=True)
 
-    visibility_donation = models.CharField(
-        max_length=2,
-        choices=VISIBILITY_CHOICES,
-        default=PUBLIC,
-    )
-
-    visibility_transaction = models.CharField(
-        max_length=2,
-        choices=VISIBILITY_CHOICES,
-        default=PUBLIC,
-    )
+    privacy_donation = models.BooleanField(default=False)
+    privacy_transaction = models.BooleanField(default=False)
+    privacy_deposit = models.BooleanField(default=False)
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -116,19 +105,11 @@ class IbisUser(User, Scoreable):
         if hasattr(entry, 'comment'):
             entry = entry.comment.get_root()
 
-        if hasattr(entry, 'donation'):
-            permission = entry.user.visibility_donation
-            if permission == IbisUser.PRIVATE:
-                return self.id == entry.user.id
-            if permission == IbisUser.FOLLOWING:
-                return entry.user.following.filter(pk=self.id).exists()
+        if hasattr(entry, 'donation') and entry.donation.private:
+            return self.id == entry.user.id or self.id == entry.donation.target
 
-        if hasattr(entry, 'transaction'):
-            permission = entry.user.visibility_transaction
-            if permission == IbisUser.PRIVATE:
-                return self.id == entry.user.id
-            if permission == IbisUser.FOLLOWING:
-                return entry.self.following.filter(pk=self.id).exists()
+        if hasattr(entry, 'transaction') and entry.transaction.private:
+            return self.id == entry.user.id or self.id == entry.transaction.target
 
         return True
 
@@ -232,6 +213,11 @@ class Entry(TimeStampedModel, Scoreable):
     )
 
     def save(self, *args, **kwargs):
+        if (hasattr(self, 'donation')
+                and self.donation.private) or (hasattr(self, 'transaction')
+                                               and self.transaction.private):
+            return super().save(*args, **kwargs)
+
         mention = set(
             IbisUser.objects.get(username=x[2:-1]) for x in re.findall(
                 r'\W@\w{{{},{}}}\W'.format(
@@ -259,7 +245,6 @@ class Entry(TimeStampedModel, Scoreable):
                         ))),
                     ' ' + self.description + ' ',
             ):
-                print('removing for some reason')
                 self.mention.remove(x)
 
         for user in [
@@ -293,7 +278,7 @@ class DepositCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Deposit(TimeStampedModel, Valuable):
+class Deposit(TimeStampedModel, Valuable, Hideable):
     user = models.ForeignKey(
         IbisUser,
         on_delete=models.CASCADE,
@@ -328,7 +313,7 @@ class Withdrawal(TimeStampedModel, Valuable):
         )
 
 
-class Donation(Entry, Valuable):
+class Donation(Entry, Valuable, Hideable):
     target = models.ForeignKey(
         Nonprofit,
         on_delete=models.CASCADE,
@@ -343,7 +328,7 @@ class Donation(Entry, Valuable):
         )
 
 
-class Transaction(Entry, Valuable):
+class Transaction(Entry, Valuable, Hideable):
     target = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,

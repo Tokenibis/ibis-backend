@@ -16,13 +16,13 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Balance'],
-                op_name='Balance',
+                self.gql['Finance'],
+                op_name='Finance',
                 variables={
                     'id': to_global_id('IbisUserNode', user.id),
                 },
             ).content)
-        success['Balance'] = 'errors' not in result and bool(
+        success['Finance'] = 'errors' not in result and bool(
             result['data']['ibisUser']['id'])
 
         result = json.loads(
@@ -365,12 +365,12 @@ class PermissionTestCase(BaseTestCase):
                 op_name='NonprofitUpdate',
                 variables={
                     'id': self.me_nonprofit.gid,
-                    'visibilityDonation': models.IbisUser.PUBLIC,
-                    'visibilityTransaction': models.IbisUser.PUBLIC,
+                    'privacyDonation': False,
+                    'privacyTransaction': False,
                 },
             ).content)
-        success['NonprofitUpdate'] = 'errors' not in result and result[
-            'data']['updateNonprofit']['nonprofit']['id']
+        success['NonprofitUpdate'] = 'errors' not in result and result['data'][
+            'updateNonprofit']['nonprofit']['id']
 
         result = json.loads(
             self.query(
@@ -584,12 +584,12 @@ class PermissionTestCase(BaseTestCase):
                 op_name='PersonUpdate',
                 variables={
                     'id': self.me_person.gid,
-                    'visibilityDonation': models.IbisUser.PUBLIC,
-                    'visibilityTransaction': models.IbisUser.PUBLIC,
+                    'privacyDonation': False,
+                    'privacyTransaction': False,
                 },
             ).content)
-        success['PersonUpdate'] = 'errors' not in result and result[
-            'data']['updatePerson']['person']['id']
+        success['PersonUpdate'] = 'errors' not in result and result['data'][
+            'updatePerson']['person']['id']
 
         result = json.loads(
             self.query(
@@ -602,8 +602,8 @@ class PermissionTestCase(BaseTestCase):
                     'emailTransaction': True,
                 },
             ).content)
-        success['NotifierUpdate'] = 'errors' not in result and result[
-            'data']['updateNotifier']['notifier']['id']
+        success['NotifierUpdate'] = 'errors' not in result and result['data'][
+            'updateNotifier']['notifier']['id']
 
         result = json.loads(
             self.query(
@@ -719,9 +719,8 @@ class PermissionTestCase(BaseTestCase):
     # logged in users can see some of other people's information
     def test_other_public(self):
         expected = {
-            'Balance': True,
             'BookmarkCreate': False,
-            'BookmarkDelete': False,
+
             'CommentCreate': False,
             'CommentList': True,
             'DepositList': False,
@@ -732,6 +731,7 @@ class PermissionTestCase(BaseTestCase):
             'Event': True,
             'EventList': True,
             'EventListFilter': True,
+            'Finance': True,
             'FollowCreate': False,
             'FollowDelete': False,
             'Home': True,
@@ -764,48 +764,29 @@ class PermissionTestCase(BaseTestCase):
             'TransactionList': True,
         }
 
-        self.person.visibility_donation = models.IbisUser.PUBLIC
-        self.person.visibility_transaction = models.IbisUser.PUBLIC
-        self.person.save()
-
         self._client.force_login(self.me_person)
         result = self.run_all(self.person)
         assert (result[x] == expected[x] for x in result)
 
-    # anyone can see public visibility
+    # anyone can see public privacy
     def test_privacy_public(self):
-        self.person.visibility_donation = models.IbisUser.PUBLIC
-        self.person.visibility_transaction = models.IbisUser.PUBLIC
-        self.person.save()
-
         self._client.force_login(self.me_person)
         assert all(self.run_privacy(self.person).values())
 
-    # nobody can see private visibility except self
+    # nobody can see private privacy except self and target
     def test_privacy_private(self):
-        self.person.visibility_donation = models.IbisUser.PRIVATE
-        self.person.visibility_transaction = models.IbisUser.PRIVATE
-        self.person.save()
+        for x in models.Donation.objects.all():
+            x.private = True
+            x.save()
+
+        for x in models.Transaction.objects.all():
+            x.private = True
+            x.save()
 
         self._client.force_login(self.me_person)
         assert not any(self.run_privacy(self.person).values())
 
         self._client.force_login(self.person)
-        assert all(self.run_privacy(self.person).values())
-
-    # only people being followed have visibility if set to 'following'
-    def test_privacy_following(self):
-        self.person.visibility_donation = models.IbisUser.FOLLOWING
-        self.person.visibility_transaction = models.IbisUser.FOLLOWING
-        self.person.save()
-
-        self._client.force_login(self.me_person)
-        assert not any(self.run_privacy(self.person).values())
-
-        self.person.following.add(self.me_person)
-        self.person.save()
-
-        self._client.force_login(self.me_person)
         assert all(self.run_privacy(self.person).values())
 
     # makes sure the username validator + valid generator works as expected
