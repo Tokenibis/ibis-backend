@@ -671,3 +671,7 @@ class EmailTemplateMention(EmailTemplate):
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )
+
+
+class DonationMessage(models.Model):
+    description = models.TextField()

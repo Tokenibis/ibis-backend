@@ -92,6 +92,7 @@ class Model:
         self.nonprofit_categories = []
         self.deposit_categories = []
         self.email_templates = []
+        self.donation_messages = []
         self.ibisUsers = []
         self.users = []
         self.people = []
@@ -188,6 +189,17 @@ class Model:
                 'html': html,
                 'active': True,
             }
+        })
+
+    def add_donation_message(self, description):
+        pk = len(self.donation_messages) + 1
+
+        self.donation_messages.append({
+            'model': 'notifications.DonationMessage',
+            'pk': pk,
+            'fields': {
+                'description': description,
+            },
         })
 
     def add_nonprofit(
@@ -556,6 +568,7 @@ class Model:
             self.nonprofit_categories,
             self.deposit_categories,
             self.email_templates,
+            self.donation_messages,
             self.nonprofits,
             self.people,
             self.ibisUsers,
@@ -696,6 +709,11 @@ class Command(BaseCommand):
                     template['body'],
                     template['html'],
                 )
+
+        # add donation messages
+        with open(os.path.join(DIR, 'data/donation_messages.json')) as fd:
+            for x in json.load(fd):
+                model.add_donation_message(x)
 
         # make nonprofits from scraped list of real nonprofits
         nonprofits = [

@@ -20,9 +20,16 @@ urlpatterns = [
     path(
         'settings_success/',
         views.SettingsSuccess.as_view(),
-        name='settings_success'),
+        name='settings_success',
+    ),
     path(
         'unsubscribe_success/',
         views.UnsubscribeSuccess.as_view(),
-        name='unsubscribe_success'),
+        name='unsubscribe_success',
+    ),
+    path(
+        'donation_message/<str:name>/',
+        views.DonationMessageView.as_view(),
+        name='donation_message',
+    ),
 ]

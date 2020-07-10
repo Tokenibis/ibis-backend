@@ -1,10 +1,11 @@
 import ibis.models as models
 
 from django.urls import reverse
+from django.views import View
 from django.views.generic import UpdateView, TemplateView
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.conf import settings
-from .models import Notifier
+from .models import Notifier, DonationMessage
 
 
 class SettingsView(UpdateView):
@@ -90,3 +91,10 @@ class UnsubscribeView(UpdateView):
 
 class UnsubscribeSuccess(TemplateView):
     template_name = 'unsubscribe_success.html'
+
+
+class DonationMessageView(View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse(
+            DonationMessage.objects.order_by("?").first().description.format(
+                nonprofit=kwargs['name']))

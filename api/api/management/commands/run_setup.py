@@ -59,6 +59,9 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
             deposit_categories = json.load(fd)
 
+        with open(os.path.join(DIR, 'data/donation_messages.json')) as fd:
+            donation_messages = json.load(fd)
+
         for cat in sorted(nonprofit_categories.keys()):
             models.NonprofitCategory.objects.create(
                 title=cat,
@@ -67,6 +70,10 @@ class Command(BaseCommand):
 
         for cat in deposit_categories:
             models.DepositCategory.objects.create(title=cat, )
+
+        for message in donation_messages:
+            notifications.models.DonationMessage.objects.create(
+                description=message)
 
         email_templates = make_email_templates()
 

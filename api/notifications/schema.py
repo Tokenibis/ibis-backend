@@ -1,10 +1,12 @@
 import django_filters
 import graphene
+
+from django.db.models import Value, PositiveIntegerField
 from graphql import GraphQLError
 from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphql_relay.node.node import from_global_id
-from graphene_django.filter import DjangoFilterConnectionField
+from graphene_django.filter import DjangoFilterConnectionField, GlobalIDFilter
 
 import notifications.models as models
 import ibis.models
@@ -13,7 +15,6 @@ import ibis.models
 
 
 class NotifierNode(DjangoObjectType):
-
     email_follow = graphene.Boolean()
     email_donation = graphene.Boolean()
     email_transaction = graphene.Boolean()
@@ -275,6 +276,44 @@ class NotificationUpdate(Mutation):
         return NotificationUpdate(notification=notification)
 
 
+class DonationMessageFilter(django_filters.FilterSet):
+    nonprofit = GlobalIDFilter(method='filter_nonprofit')
+    random = django_filters.BooleanFilter(method='filter_random')
+
+    class Meta:
+        model = models.DonationMessage
+        fields = []
+
+    def filter_random(self, qs, name, value):
+        return qs.order_by('?')
+
+    def filter_nonprofit(self, qs, name, value):
+        return qs.annotate(
+            nonprofit_id=Value(
+                from_global_id(value)[1],
+                output_field=PositiveIntegerField(),
+            ))
+
+
+class DonationMessageNode(DjangoObjectType):
+    description = graphene.String()
+
+    class Meta:
+        model = models.DonationMessage
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    class Arguments:
+        test = graphene.String()
+
+    def resolve_description(self, *args, **kwargs):
+        if hasattr(self, 'nonprofit_id'):
+            return self.description.format(
+                nonprofit=ibis.models.Nonprofit.objects.get(
+                    id=self.nonprofit_id))
+        return self.description
+
+
 # --------------------------------------------------------------------------- #
 
 
@@ -286,6 +325,10 @@ class Query(object):
     all_notifications = DjangoFilterConnectionField(
         NotificationNode,
         filterset_class=NotificationFilter,
+    )
+    all_donation_messages = DjangoFilterConnectionField(
+        DonationMessageNode,
+        filterset_class=DonationMessageFilter,
     )
 
 
