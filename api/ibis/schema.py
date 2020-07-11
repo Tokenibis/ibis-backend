@@ -75,7 +75,17 @@ class IbisUserFilter(django_filters.FilterSet):
 
     def filter_like_for(self, qs, name, value):
         entry_obj = models.Entry.objects.get(pk=from_global_id(value)[1])
-        return qs.filter(id__in=entry_obj.like.all())
+        if any(
+                x.objects.filter(pk=from_global_id(value)[1]).exists()
+                for x in [
+                    models.News,
+                    models.Event,
+                    models.Post,
+                ]):
+            return qs.filter(id__in=entry_obj.like.all())
+        else:
+            return qs.filter(
+                id__in=entry_obj.like.filter(id=self.request.user.id))
 
     def filter_rsvp_for(self, qs, name, value):
         entry_type, entry_id = from_global_id(value)
@@ -676,7 +686,10 @@ class EntryNode(DjangoObjectType):
 
         return count
 
-    def resolve_like(self, *args, **kwargs):
+    def resolve_like(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.id):
+            return self.like.filter(id=self.id)
         return self.like
 
     def resolve_like_count(self, *args, **kwargs):
