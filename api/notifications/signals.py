@@ -25,6 +25,7 @@ def handleDepositCreate(sender, instance, created, **kwargs):
             ),
             description=description,
             subject=instance,
+            created=instance.created,
         )
 
     else:
@@ -39,6 +40,7 @@ def handleDepositCreate(sender, instance, created, **kwargs):
             ),
             description=description,
             subject=instance,
+            created=instance.created,
         )
 
 
@@ -62,6 +64,7 @@ def handleDonationCreate(sender, instance, created, **kwargs):
             instance.amount / 100,
         ),
         subject=instance,
+        created=instance.created,
     )
 
 
@@ -85,6 +88,7 @@ def handleTransactionCreate(sender, instance, created, **kwargs):
             instance.amount / 100,
         ),
         subject=instance,
+        created=instance.created,
     )
 
 
@@ -106,6 +110,7 @@ def handleNewsCreate(sender, instance, created, **kwargs):
             reference=reference,
             description='{} released a news story'.format(str(entry.user)),
             subject=instance,
+            created=instance.created,
         )
 
 
@@ -127,6 +132,7 @@ def handleEventCreate(sender, instance, created, **kwargs):
             reference=reference,
             description='{} planned an new event'.format(str(entry.user)),
             subject=instance,
+            created=instance.created,
         )
 
 
@@ -149,6 +155,7 @@ def handlePostCreate(sender, instance, created, **kwargs):
             reference=reference,
             description='{} made a new post'.format(str(entry.user)),
             subject=instance,
+            created=instance.created,
         )
 
 
@@ -208,6 +215,7 @@ def handleCommentCreate(sender, instance, created, **kwargs):
             reference=reference,
             description=info['description'],
             subject=info['subject'],
+            created=instance.created,
         )
 
 
