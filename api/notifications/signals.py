@@ -11,7 +11,9 @@ def handleDepositCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    if instance.payment_id.split(':')[0] == 'ubp':
+    if ibis.models.DepositCategory.objects.filter(title='ubp').exists(
+    ) and instance.category == ibis.models.DepositCategory.objects.get(
+            title='ubp'):
         description = 'You have a fresh ${:.2f} waiting for you'.format(
             instance.amount / 100)
 
