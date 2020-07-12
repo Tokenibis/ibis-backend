@@ -20,7 +20,7 @@ from graphql_relay.node.node import from_global_id, to_global_id
 from graphene_file_upload.scalars import Upload
 from users.schema import UserNode
 
-AVATAR_SIZE = (200, 200)
+AVATAR_SIZE = (528, 528)
 
 # --- Filters --------------------------------------------------------------- #
 
