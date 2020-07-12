@@ -11,12 +11,8 @@ def scoreFundraisedDescending(sender, instance, created, raw, **kwargs):
     nonprofits = list(models.Nonprofit.objects.all())
     nonprofits.sort(key=lambda x: x.fundraised(), reverse=True)
     for i, nonprofit in enumerate(nonprofits):
-        if settings.SIGNAL_SCORE_NONPROFIT_IGNORE and \
-           nonprofit.username in settings.SIGNAL_SCORE_NONPROFIT_IGNORE:
-            continue
-
-        if nonprofit.score != i + len(settings.SIGNAL_SCORE_NONPROFIT_IGNORE):
-            nonprofit.score = i + len(settings.SIGNAL_SCORE_NONPROFIT_IGNORE)
+        if nonprofit.score != i:
+            nonprofit.score = i
             nonprofit.save()
 
 

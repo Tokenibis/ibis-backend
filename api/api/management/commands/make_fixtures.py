@@ -715,6 +715,14 @@ class Command(BaseCommand):
             for x in json.load(fd):
                 model.add_donation_message(x)
 
+        # add special first nonprofit
+        model.add_nonprofit(
+            'Token Ibis',
+            'First nonprofit',
+            random.choice(nonprofit_categories),
+            random.randint(0, 100),
+        )
+
         # make nonprofits from scraped list of real nonprofits
         nonprofits = [
             model.add_nonprofit(
@@ -722,7 +730,7 @@ class Command(BaseCommand):
                 x['description'],
                 random.choice(nonprofit_categories),
                 random.randint(0, 100),
-            ) for x in np_raw[:num_nonprofit]
+            ) for x in np_raw[:num_nonprofit - 1]
         ]
 
         # make people

@@ -108,3 +108,10 @@ class Command(BaseCommand):
         )
         app.sites.add(site)
         app.save()
+
+        # the first nonprofit is special; the name/info can be changed later
+        models.Nonprofit.objects.create(
+            username='tokenibis',
+            first_name='',
+            last_name='Token Ibis',
+        )
