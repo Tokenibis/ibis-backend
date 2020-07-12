@@ -1005,113 +1005,6 @@ class IbisUserNode(UserNode):
         return queryset
 
 
-# --- Person ---------------------------------------------------------------- #
-
-
-class PersonNode(IbisUserNode, UserNode):
-
-    donated = graphene.Int()
-    transaction_from_count = graphene.Int()
-
-    class Meta:
-        model = models.Person
-        exclude = ['email', 'password']
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-    def resolve_donated(self, *args, **kwargs):
-        return self.donated()
-
-    def resolve_transaction_from_count(self, *args, **kwargs):
-        return models.Transaction.objects.filter(target__id=self.id).count()
-
-
-class PersonUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        username = graphene.String()
-        email = graphene.String()
-        description = graphene.String()
-        first_name = graphene.String()
-        last_name = graphene.String()
-        privacy_donation = graphene.Boolean()
-        privacy_transaction = graphene.Boolean()
-        privacy_deposit = graphene.Boolean()
-        avatar = Upload()
-        score = graphene.Int()
-
-    person = graphene.Field(PersonNode)
-
-    def mutate(
-            self,
-            info,
-            id,
-            username='',
-            email='',
-            description='',
-            first_name='',
-            last_name='',
-            privacy_donation=None,
-            privacy_transaction=None,
-            privacy_deposit=None,
-            avatar=None,
-            score=None,
-    ):
-        if not (info.context.user.is_superuser
-                or info.context.user.id == int(from_global_id(id)[1])):
-            raise GraphQLError('You do not have sufficient permission')
-
-        person = models.Person.objects.get(pk=from_global_id(id)[1])
-        if username:
-            person.username = username
-        if email:
-            person.email = email
-        if description:
-            person.description = description
-        if first_name:
-            person.first_name = first_name
-        if last_name:
-            person.first_name = last_name
-        if type(privacy_donation) == bool:
-            person.privacy_donation = privacy_donation
-        if type(privacy_transaction) == bool:
-            person.privacy_transaction = privacy_transaction
-        if type(privacy_deposit) == bool:
-            person.privacy_deposit = privacy_deposit
-        if avatar:
-            tmp = os.path.join(
-                settings.MEDIA_ROOT,
-                default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
-                    ContentFile(avatar.read()),
-                ),
-            )
-            try:
-                im = Image.open(tmp)
-                im.thumbnail(AVATAR_SIZE)
-                path = '{}/{}.png'.format(
-                    tmp.rsplit('/', 1)[0],
-                    int(time.time()),
-                )
-                im.save(path)
-
-                person.avatar = '{}{}{}'.format(
-                    settings.API_ROOT_PATH,
-                    settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-3:]),
-                )
-                person.save()
-            except Exception as e:
-                raise e
-            finally:
-                os.remove(tmp)
-
-        if type(score) == int:
-            person.score = score
-        person.save()
-        return PersonUpdate(person=person)
-
-
 # --- Nonprofit ------------------------------------------------------------- #
 
 
@@ -1252,6 +1145,143 @@ class NonprofitUpdate(Mutation):
         return NonprofitUpdate(nonprofit=nonprofit)
 
 
+# --- Person ---------------------------------------------------------------- #
+
+
+class PersonNode(IbisUserNode, UserNode):
+
+    donated = graphene.Int()
+    transaction_from_count = graphene.Int()
+
+    class Meta:
+        model = models.Person
+        exclude = ['email', 'password']
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    def resolve_donated(self, *args, **kwargs):
+        return self.donated()
+
+    def resolve_transaction_from_count(self, *args, **kwargs):
+        return models.Transaction.objects.filter(target__id=self.id).count()
+
+
+class PersonUpdate(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        username = graphene.String()
+        email = graphene.String()
+        description = graphene.String()
+        first_name = graphene.String()
+        last_name = graphene.String()
+        privacy_donation = graphene.Boolean()
+        privacy_transaction = graphene.Boolean()
+        privacy_deposit = graphene.Boolean()
+        avatar = Upload()
+        score = graphene.Int()
+
+    person = graphene.Field(PersonNode)
+
+    def mutate(
+            self,
+            info,
+            id,
+            username='',
+            email='',
+            description='',
+            first_name='',
+            last_name='',
+            privacy_donation=None,
+            privacy_transaction=None,
+            privacy_deposit=None,
+            avatar=None,
+            score=None,
+    ):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == int(from_global_id(id)[1])):
+            raise GraphQLError('You do not have sufficient permission')
+
+        person = models.Person.objects.get(pk=from_global_id(id)[1])
+        if username:
+            person.username = username
+        if email:
+            person.email = email
+        if description:
+            person.description = description
+        if first_name:
+            person.first_name = first_name
+        if last_name:
+            person.first_name = last_name
+        if type(privacy_donation) == bool:
+            person.privacy_donation = privacy_donation
+        if type(privacy_transaction) == bool:
+            person.privacy_transaction = privacy_transaction
+        if type(privacy_deposit) == bool:
+            person.privacy_deposit = privacy_deposit
+        if avatar:
+            tmp = os.path.join(
+                settings.MEDIA_ROOT,
+                default_storage.save(
+                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
+                    ContentFile(avatar.read()),
+                ),
+            )
+            try:
+                im = Image.open(tmp)
+                im.thumbnail(AVATAR_SIZE)
+                path = '{}/{}.png'.format(
+                    tmp.rsplit('/', 1)[0],
+                    int(time.time()),
+                )
+                im.save(path)
+
+                person.avatar = '{}{}{}'.format(
+                    settings.API_ROOT_PATH,
+                    settings.MEDIA_URL,
+                    '/'.join(path.rsplit('/')[-3:]),
+                )
+                person.save()
+            except Exception as e:
+                raise e
+            finally:
+                os.remove(tmp)
+
+        if type(score) == int:
+            person.score = score
+        person.save()
+        return PersonUpdate(person=person)
+
+
+# --- Bot ------------------------------------------------------------------- #
+
+
+class BotNode(PersonNode):
+    class Meta:
+        model = models.Bot
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+
+class BotUpdate(PersonUpdate):
+    class Arguments(PersonUpdate.Arguments):
+        id = graphene.ID(required=True)
+        tank = graphene.Int()
+
+    bot = graphene.Field(BotNode)
+
+    def mutate(self, info, id, tank=None, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == int(from_global_id(id)[1])):
+            raise GraphQLError('You do not have sufficient permission')
+
+        bot = models.Bot.objects.get(pk=from_global_id(id)[1])
+        if type(tank) == int:
+            bot.tank = tank
+
+        bot.save()
+        return BotUpdate(bot=bot)
+
+
 # --- Post ------------------------------------------------------------------ #
 
 
@@ -1322,8 +1352,21 @@ class CommentNode(EntryNode):
     @classmethod
     def get_queryset(cls, queryset, info):
         if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+            raise GraphQLError('You are not logged in')
         return queryset
+
+    @classmethod
+    def get_node(cls, info, id):
+        queryset = cls.get_queryset(cls._meta.model.objects, info)
+        try:
+            comment = queryset.get(pk=id)
+            if not (info.context.user.is_superuser
+                    or models.IbisUser.objects.get(
+                        id=info.context.user.id).can_see(comment)):
+                raise GraphQLError('You do not have sufficient permission')
+            return comment
+        except cls._meta.model.DoesNotExist:
+            return None
 
 
 class CommentCreate(Mutation):
@@ -1508,8 +1551,9 @@ class Query(object):
     nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
     deposit_category = relay.Node.Field(DepositCategoryNode)
     ibis_user = relay.Node.Field(IbisUserNode)
-    person = relay.Node.Field(PersonNode)
     nonprofit = relay.Node.Field(NonprofitNode)
+    person = relay.Node.Field(PersonNode)
+    bot = relay.Node.Field(BotNode)
     withdrawal = relay.Node.Field(WithdrawalNode)
     deposit = relay.Node.Field(DepositNode)
     donation = relay.Node.Field(DonationNode)
@@ -1517,6 +1561,7 @@ class Query(object):
     news = relay.Node.Field(NewsNode)
     event = relay.Node.Field(EventNode)
     post = relay.Node.Field(PostNode)
+    comment = relay.Node.Field(CommentNode)
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)
@@ -1527,6 +1572,10 @@ class Query(object):
     )
     all_people = DjangoFilterConnectionField(
         PersonNode,
+        filterset_class=IbisUserFilter,
+    )
+    all_bots = DjangoFilterConnectionField(
+        BotNode,
         filterset_class=IbisUserFilter,
     )
     all_nonprofits = DjangoFilterConnectionField(
@@ -1580,8 +1629,9 @@ class Mutation(graphene.ObjectType):
     create_bookmark = BookmarkCreate.Field()
     create_RSVP = RsvpCreate.Field()
 
-    update_person = PersonUpdate.Field()
     update_nonprofit = NonprofitUpdate.Field()
+    update_person = PersonUpdate.Field()
+    update_bot = BotUpdate.Field()
     update_news = NewsUpdate.Field()
     update_event = EventUpdate.Field()
 

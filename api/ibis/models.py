@@ -146,20 +146,6 @@ class NonprofitCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Person(IbisUser):
-    class Meta:
-        verbose_name = "Person"
-        verbose_name_plural = "People"
-
-    transaction_from = models.ManyToManyField(
-        IbisUser,
-        related_name='transaction_to',
-        through='Transaction',
-        symmetrical=False,
-    )
-    is_bot = models.BooleanField(default=False)
-
-
 class Nonprofit(IbisUser):
     class Meta:
         verbose_name = "Nonprofit"
@@ -180,6 +166,24 @@ class Nonprofit(IbisUser):
 
     def fundraised(self):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
+
+
+class Person(IbisUser):
+    class Meta:
+        verbose_name = "Person"
+        verbose_name_plural = "People"
+
+    transaction_from = models.ManyToManyField(
+        IbisUser,
+        related_name='transaction_to',
+        through='Transaction',
+        symmetrical=False,
+    )
+
+
+class Bot(Person):
+    gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
+    tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
 
 
 class Entry(TimeStampedModel, Scoreable):

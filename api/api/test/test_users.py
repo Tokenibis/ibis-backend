@@ -219,7 +219,8 @@ class PermissionTestCase(BaseTestCase):
                     'id': self.nonprofit.gid,
                 },
             ).content)
-        success['Nonprofit'] = 'errors' not in result and len(result) > 0
+        success['Nonprofit'] = 'errors' not in result and bool(
+            result['data']['nonprofit']['id'])
 
         result = json.loads(
             self.query(
@@ -470,7 +471,8 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['CommentList'],
+                self.gql[
+                    'CommentList'],
                 op_name='CommentList',
                 variables={
                     'hasParent': self.donation.gid,

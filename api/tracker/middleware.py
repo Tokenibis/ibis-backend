@@ -29,7 +29,7 @@ def TrackerMiddleware(get_response):
                             'Pwa-Standalone'] == 'true' else False
 
                     log.response_code = response.status_code
-                    log.save()
+                log.save()
         except User.DoesNotExist:
             pass
         except RawPostDataException:

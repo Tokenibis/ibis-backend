@@ -117,6 +117,7 @@ MIDDLEWARE += [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'tracker.middleware.TrackerMiddleware',
+    'ibis.middleware.BotGasMiddleware',
 ]
 
 REST_FRAMEWORK = {
@@ -249,6 +250,34 @@ def APP_LINK_RESOLVER(reference):
 AVATAR_BUCKET = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 
 AVATAR_BUCKET_LEN = 233
+
+BOT_GAS_INITIAL = 10000000
+
+BOT_GAS_MUTATION = {
+    'createDeposit': 100,
+    'createDonation': 100,
+    'createTransaction': 100,
+    'createNews': 100,
+    'createEvent': 100,
+    'createPost': 100,
+    'createComment': 100,
+    'createFollow': 100,
+    'createLike': 100,
+    'createBookmark': 100,
+    'createRSVP': 100,
+    'updatePerson': 100,
+    'updateBot': 100,
+    'deleteFollow': 100,
+    'deleteLike': 100,
+    'deleteBookmark': 100,
+    'deleteRSVP': 100,
+}
+
+BOT_GAS_EXCHANGE = 1000  # gas units per cent
+
+BOT_GAS_QUERY_FIXED = 10
+
+BOT_GAS_QUERY_VARIABLE = 1
 
 DISTRIBUTION_DAY = CONF['ibis']['distribution']['day']
 
