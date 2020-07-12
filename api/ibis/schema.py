@@ -383,70 +383,6 @@ class DepositCreate(Mutation):
         return DepositCreate(deposit=deposit)
 
 
-class DepositUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        user = graphene.ID()
-        amount = graphene.Int()
-        payment_id = graphene.String()
-        category = graphene.ID()
-
-    deposit = graphene.Field(DepositNode)
-
-    def mutate(
-            self,
-            info,
-            id,
-            user=None,
-            amount='',
-            payment_id='',
-            category=None,
-    ):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            assert amount > 0
-            assert amount <= settings.MAX_EXCHANGE
-        except AssertionError:
-            raise GraphQLError('Arguments do not satisfy constraints')
-
-        deposit = models.Deposit.objects.get(pk=from_global_id(id)[1])
-        if user:
-            deposit.user = models.IbisUser.objects.get(
-                pk=from_global_id(user)[1])
-        if amount:
-            try:
-                assert deposit.user.balance() - amount >= 0
-            except AssertionError:
-                raise GraphQLError('Balance would be below zero')
-            deposit.amount = amount
-        if payment_id:
-            deposit.payment_id = payment_id
-        if category:
-            deposit.category = models.DepositCategory.objects.get(
-                pk=from_global_id(category)[1])
-        deposit.save()
-        return DepositUpdate(deposit=deposit)
-
-
-class DepositDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Deposit.objects.get(pk=from_global_id(id)[1]).delete()
-            return DepositDelete(status=True)
-        except models.Deposit.DoesNotExist:
-            return DepositDelete(status=False)
-
-
 # --- Withdrawal --------------------------------------------------------------- #
 
 
@@ -461,94 +397,6 @@ class WithdrawalNode(DjangoObjectType):
         if info.context.user.is_superuser:
             return queryset
         return queryset.filter(user=info.context.user)
-
-
-class WithdrawalCreate(Mutation):
-    class Arguments:
-        user = graphene.ID(required=True)
-        amount = graphene.Int(required=True)
-        description = graphene.String()
-
-    withdrawal = graphene.Field(WithdrawalNode)
-
-    def mutate(self, info, user, amount, description=''):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            assert amount > 0
-            assert amount <= settings.MAX_EXCHANGE
-        except AssertionError:
-            raise GraphQLError('Arguments do not satisfy constraints')
-
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-
-        try:
-            assert hasattr(user_obj, 'nonprofit')
-            assert user_obj.balance() - amount >= 0
-        except AssertionError:
-            raise GraphQLError('Balance would be below zero')
-
-        withdrawal = models.Withdrawal.objects.create(
-            user=user_obj.nonprofit,
-            amount=amount,
-            description=description,
-        )
-        withdrawal.save()
-        return WithdrawalCreate(withdrawal=withdrawal)
-
-
-class WithdrawalUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        user = graphene.ID()
-        amount = graphene.Int()
-        description = graphene.String()
-
-    withdrawal = graphene.Field(WithdrawalNode)
-
-    def mutate(self, info, id, user=None, amount=None, description=''):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            assert amount > 0
-            assert amount <= settings.MAX_EXCHANGE
-        except AssertionError:
-            raise GraphQLError('Arguments do not satisfy constraints')
-
-        withdrawal = models.Withdrawal.objects.get(pk=from_global_id(id)[1])
-        if user:
-            withdrawal.user = models.Nonprofit.objects.get(
-                pk=from_global_id(user)[1])
-        if type(amount) == int:
-            try:
-                assert hasattr(withdrawal.user, 'nonprofit')
-                assert withdrawal.user.balance() - amount >= 0
-            except AssertionError:
-                raise GraphQLError('Balance would be below zero')
-            withdrawal.amount = amount
-        if description:
-            withdrawal.description = description
-        withdrawal.save()
-        return WithdrawalUpdate(withdrawal=withdrawal)
-
-
-class WithdrawalDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Withdrawal.objects.get(pk=from_global_id(id)[1]).delete()
-            return WithdrawalDelete(status=True)
-        except models.Withdrawal.DoesNotExist:
-            return WithdrawalDelete(status=False)
 
 
 # --- Entry ----------------------------------------------------------------- #
@@ -718,84 +566,6 @@ class DonationCreate(Mutation):
         return DonationCreate(donation=donation)
 
 
-class DonationUpdate(Mutation):
-    class Meta:
-        model = models.Donation
-
-    class Arguments:
-        id = graphene.ID(required=True)
-        user = graphene.ID()
-        description = graphene.String()
-        target = graphene.ID()
-        amount = graphene.Int()
-        category = graphene.ID()
-        private = graphene.Boolean()
-        score = graphene.Int()
-
-    donation = graphene.Field(DonationNode)
-
-    def mutate(
-            self,
-            info,
-            id,
-            user=None,
-            description='',
-            target=None,
-            amount=0,
-            private=None,
-            score=None,
-    ):
-        if not info.context.user.is_superuser:
-            return
-
-        try:
-            assert len(description) > 0
-            assert amount > 0
-            assert amount <= settings.MAX_TRANSFER
-        except AssertionError:
-            raise GraphQLError('Arguments do not satisfy constraints')
-
-        donation = models.Donation.objects.get(pk=from_global_id(id)[1])
-        if user:
-            donation.user = models.IbisUser.objects.get(
-                pk=from_global_id(user)[1])
-        if description:
-            donation.description = description
-        if target:
-            donation.target = models.Nonprofit.objects.get(
-                pk=from_global_id(target)[1])
-        if amount:
-            try:
-                assert donation.user.balance() - amount >= 0
-            except AssertionError:
-                raise GraphQLError('Balance would be below zero')
-            donation.amount = amount
-        if type(private) == bool:
-            donation.private = private
-        if type(score) == int:
-            donation.score = score
-
-        donation.save()
-        return DonationUpdate(donation=donation)
-
-
-class DonationDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Donation.objects.get(pk=from_global_id(id)[1]).delete()
-            return DonationDelete(status=True)
-        except models.Donation.DoesNotExist:
-            return DonationDelete(status=False)
-
-
 # --- Transaction ----------------------------------------------------------- #
 
 
@@ -884,83 +654,6 @@ class TransactionCreate(Mutation):
         )
 
         return TransactionCreate(transaction=transaction)
-
-
-class TransactionUpdate(Mutation):
-    class Meta:
-        model = models.Transaction
-
-    class Arguments:
-        id = graphene.ID(required=True)
-        user = graphene.ID()
-        description = graphene.String()
-        target = graphene.ID()
-        amount = graphene.Int()
-        private = graphene.Boolean()
-        score = graphene.Int()
-
-    transaction = graphene.Field(TransactionNode)
-
-    def mutate(
-            self,
-            info,
-            id,
-            user=None,
-            description='',
-            target=None,
-            amount=0,
-            private=None,
-            score=None,
-    ):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            assert len(description) > 0
-            assert amount > 0
-            assert amount <= settings.MAX_TRANSFER
-        except AssertionError:
-            raise GraphQLError('Arguments do not satisfy constraints')
-
-        transaction = models.Transaction.objects.get(pk=from_global_id(id)[1])
-        if user:
-            transaction.user = models.IbisUser.objects.get(
-                pk=from_global_id(user)[1])
-        if description:
-            transaction.description = description
-        if target:
-            transaction.target = models.Person.objects.get(
-                pk=from_global_id(target)[1])
-        if amount:
-            try:
-                assert transaction.user.balance() - amount >= 0
-            except AssertionError:
-                raise GraphQLError('Balance would be below zero')
-            transaction.amount = amount
-        if type(private) == bool:
-            transaction.private = private
-        if type(score) == int:
-            transaction.score = score
-
-        transaction.save()
-        return TransactionUpdate(transaction=transaction)
-
-
-class TransactionDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Transaction.objects.get(pk=from_global_id(id)[1]).delete()
-            return TransactionDelete(status=True)
-        except models.Transaction.DoesNotExist:
-            return TransactionDelete(status=False)
 
 
 # --- News ------------------------------------------------------------------ #
@@ -1075,23 +768,6 @@ class NewsUpdate(Mutation):
 
         news.save()
         return NewsUpdate(news=news)
-
-
-class NewsDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.News.objects.get(pk=from_global_id(id)[1]).delete()
-            return NewsDelete(status=True)
-        except models.News.DoesNotExist:
-            return NewsDelete(status=False)
 
 
 # --- Event ----------------------------------------------------------------- #
@@ -1239,23 +915,6 @@ class EventUpdate(Mutation):
 
         event.save()
         return EventUpdate(event=event)
-
-
-class EventDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Event.objects.get(pk=from_global_id(id)[1]).delete()
-            return EventDelete(status=True)
-        except models.Event.DoesNotExist:
-            return EventDelete(status=False)
 
 
 # --- Ibis User ------------------------------------------------------------- #
@@ -1453,23 +1112,6 @@ class PersonUpdate(Mutation):
         return PersonUpdate(person=person)
 
 
-class PersonDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
-            return PersonDelete(status=True)
-        except models.IbisUser.DoesNotExist:
-            return PersonDelete(status=False)
-
-
 # --- Nonprofit ------------------------------------------------------------- #
 
 
@@ -1610,23 +1252,6 @@ class NonprofitUpdate(Mutation):
         return NonprofitUpdate(nonprofit=nonprofit)
 
 
-class NonprofitDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.IbisUser.objects.get(pk=from_global_id(id)[1]).delete()
-            return NonprofitDelete(status=True)
-        except models.IbisUser.DoesNotExist:
-            return NonprofitDelete(status=False)
-
-
 # --- Post ------------------------------------------------------------------ #
 
 
@@ -1685,61 +1310,6 @@ class PostCreate(Mutation):
         return PostCreate(post=post)
 
 
-class PostUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        user = graphene.ID()
-        title = graphene.String()
-        description = graphene.String()
-        score = graphene.Int()
-
-    post = graphene.Field(PostNode)
-
-    def mutate(
-            self,
-            info,
-            user=None,
-            title='',
-            description='',
-            score=None,
-    ):
-        if not (info.context.user.is_superuser or
-                (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Person.objects.filter(
-                    id=info.context.user.id).exists()):
-            raise GraphQLError('You do not have sufficient permission')
-
-        post = models.Post.objects.get(pk=from_global_id(id)[1])
-        if user:
-            post.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        if title:
-            post.title = title
-        if description:
-            post.description = description
-        if type(score) == int:
-            post.score = score
-
-        post.save()
-        return PostUpdate(post=post)
-
-
-class PostDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Post.objects.get(pk=from_global_id(id)[1]).delete()
-            return PostDelete(status=True)
-        except models.Post.DoesNotExist:
-            return PostDelete(status=False)
-
-
 # --- Comment --------------------------------------------------------------- #
 
 
@@ -1786,56 +1356,6 @@ class CommentCreate(Mutation):
         )
 
         return CommentCreate(comment=comment)
-
-
-class CommentUpdate(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        user = graphene.ID()
-        description = graphene.String()
-        parent = graphene.ID()
-
-    comment = graphene.Field(CommentNode)
-
-    def mutate(
-            self,
-            info,
-            user=None,
-            description='',
-            parent=None,
-    ):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        comment = models.Comment.objects.get(pk=from_global_id(id)[1])
-        if user:
-            comment.user = models.IbisUser.objects.get(
-                pk=from_global_id(user)[1])
-        if description:
-            comment.description = description
-        if parent:
-            comment.parent = models.Entry.objects.get(
-                pk=from_global_id(parent)[1])
-
-        comment.save()
-        return CommentUpdate(comment=comment)
-
-
-class CommentDelete(Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    status = graphene.Boolean()
-
-    def mutate(self, info, id):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            models.Comment.objects.get(pk=from_global_id(id)[1]).delete()
-            return CommentDelete(status=True)
-        except models.Comment.DoesNotExist:
-            return CommentDelete(status=False)
 
 
 # --- Follow ---------------------------------------------------------------- #
@@ -2048,52 +1568,24 @@ class Query(object):
 
 
 class Mutation(graphene.ObjectType):
-    update_person = PersonUpdate.Field()
-    delete_person = PersonDelete.Field()
-
-    update_nonprofit = NonprofitUpdate.Field()
-    delete_nonprofit = NonprofitDelete.Field()
-
     create_deposit = DepositCreate.Field()
-    update_deposit = DepositUpdate.Field()
-    delete_deposit = DepositDelete.Field()
-
-    create_withdrawal = WithdrawalCreate.Field()
-    update_withdrawal = WithdrawalUpdate.Field()
-    delete_withdrawal = WithdrawalDelete.Field()
-
     create_donation = DonationCreate.Field()
-    update_donation = DonationUpdate.Field()
-    delete_donation = DonationDelete.Field()
-
     create_transaction = TransactionCreate.Field()
-    update_transaction = TransactionUpdate.Field()
-    delete_transaction = TransactionDelete.Field()
-
     create_news = NewsCreate.Field()
-    update_news = NewsUpdate.Field()
-    delete_news = NewsDelete.Field()
-
     create_event = EventCreate.Field()
-    update_event = EventUpdate.Field()
-    delete_event = EventDelete.Field()
-
     create_post = PostCreate.Field()
-    update_post = PostUpdate.Field()
-    delete_post = PostDelete.Field()
-
     create_comment = CommentCreate.Field()
-    update_comment = CommentUpdate.Field()
-    delete_comment = CommentDelete.Field()
-
     create_follow = FollowCreate.Field()
-    delete_follow = FollowDelete.Field()
-
     create_like = LikeCreate.Field()
-    delete_like = LikeDelete.Field()
-
     create_bookmark = BookmarkCreate.Field()
-    delete_bookmark = BookmarkDelete.Field()
-
     create_RSVP = RsvpCreate.Field()
+
+    update_person = PersonUpdate.Field()
+    update_nonprofit = NonprofitUpdate.Field()
+    update_news = NewsUpdate.Field()
+    update_event = EventUpdate.Field()
+
+    delete_follow = FollowDelete.Field()
+    delete_like = LikeDelete.Field()
+    delete_bookmark = BookmarkDelete.Field()
     delete_RSVP = RsvpDelete.Field()
