@@ -1,8 +1,8 @@
 import json
+import ibis.models
 import tracker.models as models
 
 from django.http.request import RawPostDataException
-from users.models import User
 
 
 def TrackerMiddleware(get_response):
@@ -13,7 +13,7 @@ def TrackerMiddleware(get_response):
             if request.method == 'POST' and 'graphql' in request.path:
                 body = json.loads(request.body.decode())
                 log = models.Log.objects.create()
-                log.user = User.objects.get(pk=request.user.id)
+                log.user = ibis.models.IbisUser.objects.get(pk=request.user.id)
 
                 if 'operationName' in body:
                     log.graphql_operation = body['operationName']
@@ -30,7 +30,7 @@ def TrackerMiddleware(get_response):
 
                     log.response_code = response.status_code
                 log.save()
-        except User.DoesNotExist:
+        except ibis.models.IbisUser.DoesNotExist:
             pass
         except RawPostDataException:
             pass
