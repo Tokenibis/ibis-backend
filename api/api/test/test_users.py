@@ -675,6 +675,7 @@ class PermissionTestCase(BaseTestCase):
                 variables={
                     'byUser': person.gid,
                     'orderBy': '-created',
+                    'first': 2,
                 },
             ).content)
         success['TransactionList'] = 'errors' not in result and any(
@@ -722,7 +723,6 @@ class PermissionTestCase(BaseTestCase):
     def test_other_public(self):
         expected = {
             'BookmarkCreate': False,
-
             'CommentCreate': False,
             'CommentList': True,
             'DepositList': False,

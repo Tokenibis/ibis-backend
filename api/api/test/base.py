@@ -145,146 +145,152 @@ class BaseTestCase(GraphQLTestCase):
         assert len(models.Post.objects.all()) == NUM_POST
         assert len(models.Comment.objects.all()) == NUM_COMMENT
 
-        self.staff = users.models.User.objects.create(
-            username='staff',
-            first_name='Staffy',
-            last_name='McStaffface',
-            email='staff@example.come',
-            is_superuser=True,
-        )
+        with freeze_time(TEST_TIME.astimezone(utc).date()):
+            self.staff = users.models.User.objects.create(
+                username='staff',
+                first_name='Staffy',
+                last_name='McStaffface',
+                email='staff@example.come',
+                is_superuser=True,
+            )
 
-        self.me_person = models.Person.objects.create(
-            username='person',
-            password='password',
-            first_name='Person',
-            last_name='McPersonFace',
-            email='person@example.com',
-        )
+            self.me_person = models.Person.objects.create(
+                username='person',
+                password='password',
+                first_name='Person',
+                last_name='McPersonFace',
+                email='person@example.com',
+            )
 
-        self.me_nonprofit = models.Nonprofit.objects.create(
-            username='nonprofit',
-            password='password',
-            first_name='Nonprofit',
-            last_name='McNonprofitFace',
-            email='nonprofit@example.com',
-            category=models.NonprofitCategory.objects.first(),
-        )
+            self.me_nonprofit = models.Nonprofit.objects.create(
+                username='nonprofit',
+                password='password',
+                first_name='Nonprofit',
+                last_name='McNonprofitFace',
+                email='nonprofit@example.com',
+                category=models.NonprofitCategory.objects.first(),
+            )
 
-        models.Deposit.objects.create(
-            user=self.me_person,
-            amount=300,
-            payment_id='unique_1',
-            category=models.DepositCategory.objects.first(),
-        )
+            models.Deposit.objects.create(
+                user=self.me_person,
+                amount=300,
+                payment_id='unique_1',
+                category=models.DepositCategory.objects.first(),
+            )
 
-        models.Deposit.objects.create(
-            user=self.me_nonprofit,
-            amount=400,
-            payment_id='unique_2',
-            category=models.DepositCategory.objects.first(),
-        )
+            models.Deposit.objects.create(
+                user=self.me_nonprofit,
+                amount=400,
+                payment_id='unique_2',
+                category=models.DepositCategory.objects.first(),
+            )
 
-        self.nonprofit = models.Nonprofit.objects.all().first()
-        self.person = models.Person.objects.all().first()
-        self.donation = models.Donation.objects.all().first()
-        self.transaction = models.Transaction.objects.all().first()
-        self.news = models.News.objects.all().first()
-        self.event = models.Event.objects.all().first()
-        self.post = models.Post.objects.all().first()
+            self.nonprofit = models.Nonprofit.objects.all().first()
+            self.person = models.Person.objects.all().first()
+            self.donation = models.Donation.objects.all().first()
+            self.transaction = models.Transaction.objects.all().first()
+            self.news = models.News.objects.all().first()
+            self.event = models.Event.objects.all().first()
+            self.post = models.Post.objects.all().first()
 
-        self.me_person.gid = to_global_id('PersonNode', self.me_person.id)
-        self.me_nonprofit.gid = to_global_id('NonprofitNode',
-                                             self.me_nonprofit.id)
-        self.nonprofit.gid = to_global_id('NonprofitNode', self.nonprofit.id)
-        self.person.gid = to_global_id('PersonNode', self.person.id)
-        self.donation.gid = to_global_id('DonationNode', self.donation.id)
-        self.transaction.gid = to_global_id('TransactionNode',
-                                            self.transaction.id)
-        self.news.gid = to_global_id('NewsNode', self.news.id)
-        self.event.gid = to_global_id('EventNode', self.event.id)
-        self.post.gid = to_global_id('PostNode', self.post.id)
+            self.me_person.gid = to_global_id('PersonNode', self.me_person.id)
+            self.me_nonprofit.gid = to_global_id('NonprofitNode',
+                                                 self.me_nonprofit.id)
+            self.nonprofit.gid = to_global_id('NonprofitNode',
+                                              self.nonprofit.id)
+            self.person.gid = to_global_id('PersonNode', self.person.id)
+            self.donation.gid = to_global_id('DonationNode', self.donation.id)
+            self.transaction.gid = to_global_id('TransactionNode',
+                                                self.transaction.id)
+            self.news.gid = to_global_id('NewsNode', self.news.id)
+            self.event.gid = to_global_id('EventNode', self.event.id)
+            self.post.gid = to_global_id('PostNode', self.post.id)
 
-        # make sure that me_person, me_nonprofit, and person have notifications
-        donation_me_person = models.Donation.objects.create(
-            user=self.me_person,
-            target=self.nonprofit,
-            amount=100,
-            description='My donation',
-        )
-        donation_me_nonprofit = models.Donation.objects.create(
-            user=self.me_nonprofit,
-            target=self.nonprofit,
-            amount=100,
-            description='My donation',
-        )
-        donation_person = models.Donation.objects.create(
-            user=self.person,
-            target=self.nonprofit,
-            amount=100,
-            description='Person\'s donation',
-        )
+            # make sure that me_person, me_nonprofit, and person have notifications
+            donation_me_person = models.Donation.objects.create(
+                user=self.me_person,
+                target=self.nonprofit,
+                amount=100,
+                description='My donation',
+            )
+            donation_me_nonprofit = models.Donation.objects.create(
+                user=self.me_nonprofit,
+                target=self.nonprofit,
+                amount=100,
+                description='My donation',
+            )
+            donation_person = models.Donation.objects.create(
+                user=self.person,
+                target=self.nonprofit,
+                amount=100,
+                description='Person\'s donation',
+            )
 
-        # make sure me_nonprofit has one withdrawal
-        models.Withdrawal.objects.create(
-            user=self.me_nonprofit,
-            amount=100,
-            description='This is a withdrawal',
-        )
+            # make sure me_nonprofit has one withdrawal
+            models.Withdrawal.objects.create(
+                user=self.me_nonprofit,
+                amount=100,
+                description='This is a withdrawal',
+            )
 
-        self._client.force_login(self.person)
-        self.query(
-            self.gql['LikeCreate'],
-            op_name='LikeCreate',
-            variables={
-                'user': self.person.gid,
-                'target': to_global_id('DonationNode', donation_me_person.id),
-            },
-        )
-        self.query(
-            self.gql['LikeCreate'],
-            op_name='LikeCreate',
-            variables={
-                'user': self.person.gid,
-                'target': to_global_id('DonationNode',
-                                       donation_me_nonprofit.id),
-            },
-        )
-        self._client.logout()
-        self._client.force_login(self.me_person)
-        self.query(
-            self.gql['LikeCreate'],
-            op_name='LikeCreate',
-            variables={
-                'user': self.me_person.gid,
-                'target': to_global_id('DonationNode', donation_person.id),
-            },
-        )
-        self._client.logout()
+            self._client.force_login(self.person)
+            self.query(
+                self.gql['LikeCreate'],
+                op_name='LikeCreate',
+                variables={
+                    'user': self.person.gid,
+                    'target': to_global_id('DonationNode',
+                                           donation_me_person.id),
+                },
+            )
+            self.query(
+                self.gql['LikeCreate'],
+                op_name='LikeCreate',
+                variables={
+                    'user':
+                    self.person.gid,
+                    'target':
+                    to_global_id('DonationNode', donation_me_nonprofit.id),
+                },
+            )
+            self._client.logout()
+            self._client.force_login(self.me_person)
+            self.query(
+                self.gql['LikeCreate'],
+                op_name='LikeCreate',
+                variables={
+                    'user': self.me_person.gid,
+                    'target': to_global_id('DonationNode', donation_person.id),
+                },
+            )
+            self._client.logout()
 
-        self.notification = self.me_person.notifier.notification_set.first()
+            self.notification = self.me_person.notifier.notification_set.first(
+            )
 
-        # make sure that self.person has things to hide for later
+            # make sure that self.person has things to hide for later
 
-        models.Deposit.objects.create(
-            user=self.me_person,
-            amount=200,
-            payment_id='unique_3',
-            category=models.DepositCategory.objects.first(),
-        )
+            models.Deposit.objects.create(
+                user=self.me_person,
+                amount=200,
+                payment_id='unique_3',
+                category=models.DepositCategory.objects.first(),
+            )
 
-        models.Donation.objects.create(
-            user=self.person,
-            target=self.nonprofit,
-            amount=100,
-            description='External donation',
-        )
+            models.Donation.objects.create(
+                user=self.person,
+                target=self.nonprofit,
+                amount=100,
+                description='External donation',
+            )
 
-        models.Transaction.objects.create(
-            user=self.person,
-            target=models.Person.objects.exclude(pk=self.person.id).first(),
-            amount=100,
-            description='External transaction',
-        )
+            models.Transaction.objects.create(
+                user=self.person,
+                target=models.Person.objects.exclude(
+                    pk=self.person.id).first(),
+                amount=100,
+                description='External transaction',
+            )
 
     def query(self, query, op_name, variables):
         body = {"query": query}

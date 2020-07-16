@@ -150,13 +150,14 @@ class NotificationTestCase(BaseTestCase):
         self.person.following.add(self.nonprofit)
         self.person.following.add(self.me_person)
 
-        def run(op_type, c, mention=False):
+        def run(op_type, c, mention=False, delete=False):
             id = create_operation('{}Create'.format(op_type), mention)
             assert self.person.notifier.notification_set.count() == c + 1
-            delete_operation('{}Delete'.format(op_type), id)
-            assert self.person.notifier.notification_set.count() == c + 0
-            id = create_operation('{}Create'.format(op_type), mention)
-            assert self.person.notifier.notification_set.count() == c + 1
+            if delete:
+                delete_operation('{}Delete'.format(op_type), id)
+                assert self.person.notifier.notification_set.count() == c + 0
+                id = create_operation('{}Create'.format(op_type), mention)
+                assert self.person.notifier.notification_set.count() == c + 1
             read_last_operation()
 
         with freeze_time(now()) as frozen_datetime:
@@ -168,10 +169,10 @@ class NotificationTestCase(BaseTestCase):
             )
             email_count = notifications.models.Email.objects.count()
 
-            run('Follow', count)
-            run('Follow', count)
-            run('Like', count + 1)
-            run('Like', count + 1)
+            run('Follow', count, delete=True)
+            run('Follow', count, delete=True)
+            run('Like', count + 1, delete=True)
+            run('Like', count + 1, delete=True)
             run('Transaction', count + 2)
             run('Transaction', count + 3, mention=True)
             run('Comment', count + 4)

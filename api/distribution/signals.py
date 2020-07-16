@@ -10,4 +10,4 @@ def handlePersonCreate(sender, instance, created, raw, **kwargs):
     if STATE['LOADING_DATA'] or not created:
         return
 
-    instance.distributor.distribute_initial()
+    instance.distributor.distribute_initial_safe()

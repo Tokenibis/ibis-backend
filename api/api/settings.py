@@ -279,11 +279,17 @@ BOT_GAS_QUERY_FIXED = 10
 
 BOT_GAS_QUERY_VARIABLE = 1
 
+DISTRIBUTION_GOAL = CONF['ibis']['distribution']['goal']
+
 DISTRIBUTION_DAY = CONF['ibis']['distribution']['day']
 
-DISTRIBUTION_DEFAULT = CONF['ibis']['distribution']['default']
+DISTRIBUTION_HORIZON = 3
 
-DISTRIBUTION_THROUGHPUT = CONF['ibis']['distribution']['throughput']
+DISTRIBUTION_CONTROLLER_KP = 0.25
+
+DISTRIBUTION_CONTROLLER_TI = 1
+
+DISTRIBUTION_CONTROLLER_TD = 0.5
 
 EMAIL_HOST = CONF['email']['host']
 

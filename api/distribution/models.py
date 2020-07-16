@@ -3,8 +3,10 @@ import random
 from hashlib import sha256
 
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
-from django.utils.timezone import now, localtime, timedelta
+from django.utils.timezone import datetime, localtime, timedelta
+from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 
 import ibis.models
@@ -19,9 +21,150 @@ DAYS = (
     'Sunday',
 )
 
+UBP_CATEGORY = ibis.models.DepositCategory.objects.get(title='ubp')
+
+
+def distribute_all_safe():
+    """Calculate UBP global amount and personal shares and safely
+    distribute deposits. The function is *safe* because it has no effect
+    if called more than once within the same (weekly) time epoch.
+    """
+
+    time = localtime()
+
+    if Goal.objects.filter(created__gte=to_step_start(time)).exists():
+        return
+
+    amount = get_distribution_amount(time)
+    shares = get_distribution_shares(time)
+
+    for person in shares:
+        person.distributor.distribute_safe(time,
+                                           round(amount * shares[person]))
+
+    Goal.objects.create(
+        amount=settings.DISTRIBUTION_GOAL,
+        created=time,
+    )
+
+
+def get_distribution_amount(time):
+    """Using historical user data and a PID controller, calculate the
+    optimal global UBP amount for the current week. The error is the
+    deviation of effective weekly donations from the specified goal
+    and the control signal is the weekly UBP amount. """
+
+    error = [x[1] - x[0] for x in get_control_history(time)]
+
+    # Let settle for first three weeks
+    if len(error) < 3:
+        return settings.DISTRIBUTION_GOAL
+
+    # PID controller
+    control = settings.DISTRIBUTION_CONTROLLER_KP * sum([
+        error[-1],
+        (1 / settings.DISTRIBUTION_CONTROLLER_TI) * sum(error),
+        settings.DISTRIBUTION_CONTROLLER_TD * (error[-1] - error[-2]),
+    ])
+
+    # Impose max/min thresholds
+    if control < -0.5 * settings.DISTRIBUTION_GOAL:
+        control = -0.5 * settings.DISTRIBUTION_GOAL
+    elif control > 0.5 * settings.DISTRIBUTION_GOAL:
+        control = 0.5 * settings.DISTRIBUTION_GOAL
+
+    return settings.DISTRIBUTION_GOAL - control
+
+
+def get_control_history(time):
+    """Calculate the historical control (goal, adjusted donations) as a
+    timeseries. The effective donation adjusts for outbound nonprofit
+    transactions as well as user deposits. The control error can be
+    calculated as the difference of each pair of data points.
+
+    """
+
+    goals = list(Goal.objects.order_by('created'))
+    if not all((to_step_start(goals[i + 1].created) -
+                to_step_start(goals[i].created)).days == 7
+               for i in range(len(goals) - 1)):
+        raise ValueError('Non-contiguous or duplicate goal objects')
+
+    return [
+        [
+            x.amount,
+            sum([
+                sum(  # sum of all donations
+                    x.amount for x in ibis.models.Donation.objects.filter(
+                        created__gte=to_step_start(x.created),
+                        created__lt=to_step_start(x.created, offset=1))),
+                -sum(  # sum of non-UBP deposits
+                    x.amount for x in ibis.models.Deposit.objects.exclude(
+                        category=UBP_CATEGORY).filter(
+                            created__gte=to_step_start(x.created),
+                            created__lt=to_step_start(x.created, offset=1))),
+                -sum(  # sum of outbound donations
+                    x.amount for x in ibis.models.Donation.objects.filter(
+                        user__nonprofit__isnull=False,
+                        created__gte=to_step_start(x.created),
+                        created__lt=to_step_start(x.created, offset=1))),
+                -sum(  # sum of outbound transactions
+                    x.amount for x in ibis.models.Transaction.objects.filter(
+                        user__nonprofit__isnull=False,
+                        created__gte=to_step_start(x.created),
+                        created__lt=to_step_start(x.created, offset=1))),
+            ]),
+        ] for x in goals
+    ]
+
+
+def get_distribution_shares(time, initial=[]):
+    """Calculate the relative UBP share for each active person based on the
+    recency of their last activity (donation or transaction).
+    """
+
+    step = to_step_start(time)
+
+    # calculate raw relative shares
+    raw = {}
+    for x in ibis.models.Person.objects.exclude(distributor__eligible=False):
+        activity = x.entry_set.filter(
+            Q(donation__isnull=False)
+            | Q(transaction__isnull=False)).filter(
+                created__lt=step).order_by('created').last()
+        last = localtime(activity.created if activity else x.date_joined)
+        weeks = (step.date() - to_step_start(last).date()).days / len(DAYS)
+        raw[x] = int(2**(settings.DISTRIBUTION_HORIZON - weeks))
+
+    for x in initial:
+        if x.distributor.eligible:
+            raw[x] = 2**settings.DISTRIBUTION_HORIZON
+
+    # prune and normalize
+    total = sum(raw.values())
+    return {x: raw[x] / total for x in raw if raw[x]} if total else {}
+
+
+def to_step_start(time, offset=0):
+    """Calculate the exact time (midnight) of the previous timestep as
+    defined by the project settings. The optional offset parameter
+    increments or decrements the provided number of weeks
+    """
+
+    return datetime.combine(
+        time.date() - timedelta(
+            days=((time.weekday() - DAYS.index(settings.DISTRIBUTION_DAY)) %
+                  len(DAYS)) - offset * len(DAYS)),
+        datetime.min.time(),
+        tzinfo=time.tzinfo,
+    )
+
+
+class Goal(TimeStampedModel):
+    amount = models.PositiveIntegerField()
+
 
 class Distributor(models.Model):
-
     person = AutoOneToOneField(
         ibis.models.Person,
         on_delete=models.CASCADE,
@@ -30,128 +173,44 @@ class Distributor(models.Model):
 
     eligible = models.BooleanField(default=True)
 
-    def is_active(self):
-        previous_list, _ = models.Distributor._get_times(now())
-        return self.transaction_to.filter(created__gt=previous_list[-1]).union(
-            self.donation_to.filter(created__gt=previous_list[-1])).exists()
+    def distribute_safe(self, time, amount):
+        """Distribute a UBP payment of the specified amount to the person. The
+        function is *safe* because it has no effect if called more than once
+        within the same (weekly) time epoch.
+        """
+        if self.eligible and not self.person.deposit_set.filter(
+                created__gte=to_step_start(time),
+                category=UBP_CATEGORY,
+        ).exists():
+            ibis.models.Deposit.objects.create(
+                user=self.person,
+                amount=amount,
+                payment_id='ubp:{}'.format(
+                    sha256(str(random.random()).encode('utf-8')).hexdigest()),
+                category=UBP_CATEGORY,
+                created=time,
+            )
 
-    def distribute_initial(self):
-        if not self.eligible:
-            raise ValueError('Person is not eligible for distribution program')
+    def distribute_initial_safe(self):
+        """Distribute the initial UBP payment to a the new person. The amount
+        is calculated as the maximum possible payout from the previous
+        week adjusted to gradually decrease if too many users join in
+        the same week. The function is *safe* because it has no effect
+        if called more than once in the lifetime of a user.
+        """
 
-        current = now()
-        previous_list, upcoming = Distributor._get_times(current)
+        time = localtime()
+        amount = get_distribution_amount(time)
+        shares = get_distribution_shares(time, initial=[self.person])
 
-        self._distribute(
-            Distributor.get_distribution_amount(previous_list, initial=True),
-            current,
-        )
+        population_discount = len(shares) / (
+            ibis.models.Deposit.objects.filter(
+                created__gte=to_step_start(time),
+                category=UBP_CATEGORY,
+            ).count() + 1)
 
-    def _distribute(self, amount, current):
-        if not amount:
-            return
-
-        ibis.models.Deposit.objects.create(
-            user=self.person,
-            amount=amount,
-            payment_id='ubp:{}'.format(
-                sha256(str(random.random()).encode('utf-8')).hexdigest()),
-            category=ibis.models.DepositCategory.objects.get(title='ubp'),
-            created=localtime(current),
-        )
-
-    @staticmethod
-    def distribute_all_safe():
-        current = now()
-        previous_list, upcoming = Distributor._get_times(current)
-
-        amount = Distributor.get_distribution_amount(previous_list)
-
-        for participant in list(
-                Distributor._get_participants(
-                    previous_list[-2],
-                    previous_list[-1],
-                )):
-            if not participant.deposit_set.filter(
-                    created__gte=previous_list[-1],
-                    category=ibis.models.DepositCategory.objects.get(
-                        title='ubp'),
-            ).exists():
-                participant.distributor._distribute(amount, current)
-
-        return upcoming
-
-    @staticmethod
-    def get_distribution_amount(previous_list, initial=False):
-        combined_amount = 0
-        for i in range(len(previous_list) - 1):
-            if Distributor._get_distributions(
-                    previous_list[i],
-                    previous_list[i + 1],
-            ).exists():
-                number = Distributor._get_participants(
-                    previous_list[i],
-                    previous_list[i + 1],
-                ).count()
-                if number:
-                    amount = settings.DISTRIBUTION_THROUGHPUT / number
-                else:
-                    amount = settings.DISTRIBUTION_THROUGHPUT
-            else:
-                amount = settings.DISTRIBUTION_DEFAULT
-            combined_amount += amount * (i + 1) / sum(
-                range(len(previous_list)))
-
-        if initial and combined_amount:
-            combined_amount = combined_amount * (
-                settings.DISTRIBUTION_THROUGHPUT / combined_amount) / (
-                    settings.DISTRIBUTION_THROUGHPUT / combined_amount +
-                    ibis.models.Person.objects.filter(
-                        date_joined__gte=previous_list[-1]).count())
-
-        return round(combined_amount)
-
-    @staticmethod
-    def _get_participants(start, end):
-        return ibis.models.Person.objects.exclude(
-            distributor__eligible=False).filter(
-                id__in=(ibis.models.Donation.objects.filter(
-                    created__gt=start,
-                    created__lte=end,
-                ).values('user').union(
-                    ibis.models.Transaction.objects.filter(
-                        created__gt=start,
-                        created__lte=end,
-                    ).values('user')).distinct()))
-
-    @staticmethod
-    def _get_distributions(start, end):
-        return ibis.models.Deposit.objects.filter(
-            created__gt=start,
-            created__lte=end,
-            category=ibis.models.DepositCategory.objects.get(title='ubp'),
-        )
-
-    @staticmethod
-    def _get_times(current):
-
-        current_day_start = localtime(current).replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
-
-        previous_list = list(
-            reversed([
-                current_day_start - timedelta(
-                    days=((current_day_start.weekday() -
-                           DAYS.index(settings.DISTRIBUTION_DAY)) % len(DAYS)))
-                - timedelta(days=i * len(DAYS)) for i in range(0, 5)
-            ]))
-
-        upcoming = current_day_start + timedelta(
-            days=((DAYS.index(settings.DISTRIBUTION_DAY) -
-                   current_day_start.weekday() - 1) % len(DAYS)) + 1)
-
-        return previous_list, upcoming
+        if not self.person.deposit_set.filter(category=UBP_CATEGORY).exists():
+            self.distribute_safe(
+                time,
+                amount=amount * shares[self.person] * population_discount,
+            )
