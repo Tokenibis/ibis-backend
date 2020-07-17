@@ -41,18 +41,6 @@ class Notifier(models.Model):
         primary_key=True,
     )
 
-    WEEKLY = 'WE'
-    DAILY = 'DA'
-    INSTANTLY = 'IN'
-    NEVER = 'NE'
-
-    FREQUENCY = (
-        (WEEKLY, 'weekly'),
-        (DAILY, 'daily'),
-        (INSTANTLY, 'instantly'),
-        (NEVER, 'never'),
-    )
-
     email_follow = models.BooleanField(
         verbose_name='follow',
         default=True,
@@ -84,12 +72,6 @@ class Notifier(models.Model):
     email_like = models.BooleanField(
         verbose_name='like',
         default=False,
-    )
-    email_feed = models.CharField(
-        verbose_name='feed',
-        max_length=2,
-        choices=FREQUENCY,
-        default=WEEKLY,
     )
 
     last_seen = models.DateTimeField(
