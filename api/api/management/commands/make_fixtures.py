@@ -187,7 +187,6 @@ class Model:
                 'subject': subject,
                 'body': body,
                 'html': html,
-                'active': True,
             }
         })
 

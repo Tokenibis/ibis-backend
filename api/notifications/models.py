@@ -465,7 +465,7 @@ class EmailTemplate(models.Model):
     subject = models.TextField()
     body = models.TextField()
     html = models.TextField()
-    active = models.BooleanField(default=True)
+    frequency = models.PositiveIntegerField(default=1)
 
     def make_email(*args, **kwargs):
         raise NotImplementedError
@@ -491,7 +491,7 @@ class EmailTemplate(models.Model):
 
     @classmethod
     def choose(cls):
-        return random.choice(list(cls.objects.filter(active=True)))
+        return random.choice(list(cls.objects.filter(frequency__gte=1)))
 
     @staticmethod
     def _apply_top_template(notifier, subject, body, html):
@@ -675,3 +675,4 @@ class EmailTemplateMention(EmailTemplate):
 
 class DonationMessage(models.Model):
     description = models.TextField()
+    frequency = models.PositiveIntegerField(default=1)
