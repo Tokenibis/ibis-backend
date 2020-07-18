@@ -264,7 +264,7 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
                 models.get_submodel(
                     entry,
                     ibis.models.Entry,
-                ).__name__,
+                ).__name__.lower(),
             )
 
             root = entry

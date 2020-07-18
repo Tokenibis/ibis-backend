@@ -18,7 +18,8 @@ def BotGasMiddleware(get_response):
             if bot.balance() >= bot.tank / settings.BOT_GAS_PRICE:
                 models.Donation.create(
                     user=bot,
-                    target=models.Nonprofit.objects.first(),
+                    target=models.Nonprofit.objects.get(
+                        username=settings.ROOT_NONPROFIT_USERNAME),
                     amount=bot.tank / settings.GAS_PRICE,
                 )
             else:

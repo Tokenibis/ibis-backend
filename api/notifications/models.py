@@ -125,11 +125,10 @@ class Notification(TimeStampedModel):
     )
     clicked = models.BooleanField(default=False)
     reference = models.TextField(blank=True, null=True)
-    deduper = models.TextField(blank=True, null=True)
     description = models.TextField(validators=[MinLengthValidator(1)])
 
     def __str__(self):
-        return '{}:{}:{}'.format(
+        return '{}:{}'.format(
             self.pk,
             self.notifier.user.username,
         )

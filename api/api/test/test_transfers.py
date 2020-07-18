@@ -25,6 +25,8 @@ class TransferTestCase(BaseTestCase):
                     },
                 ).content)
 
+        self.me_person.deposit_set.all().delete()
+
         models.Deposit.objects.create(
             user=self.me_person,
             amount=int(
@@ -132,26 +134,14 @@ class TransferTestCase(BaseTestCase):
             return result
 
         def withdraw(user, amount):
-            self._client.force_login(self.staff)
-            result = json.loads(
-                self.query(
-                    '''
-                    mutation WithdrawalCreate($user: ID! $amount: Int!) {
-                        createWithdrawal(user: $user amount: $amount) {
-                            withdrawal {
-                                id
-                            }
-                        }
-                    }
-                    ''',
-                    op_name='WithdrawalCreate',
-                    variables={
-                        'user': to_global_id('NonprofitNode', user.id),
-                        'amount': amount,
-                    },
-                ).content)
-            self._client.logout()
-            return result
+            if user.balance() - amount >= 0:
+                models.Withdrawal.objects.create(
+                    user=user,
+                    amount=amount,
+                )
+                return True
+            else:
+                return False
 
         person_state = {
             x: {
@@ -241,10 +231,10 @@ class TransferTestCase(BaseTestCase):
                 result = withdraw(user, amount)
 
                 if nonprofit_state[user]['balance'] - amount >= 0:
-                    assert 'errors' not in result
+                    assert result
                     nonprofit_state[user]['balance'] -= amount
                 else:
-                    assert 'errors' in result
+                    assert not result
 
         for x in person_state:
             assert person_state[x]['balance'] == x.balance()

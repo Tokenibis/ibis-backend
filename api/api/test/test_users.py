@@ -3,13 +3,15 @@ import json
 import tracker.models
 import ibis.models as models
 
+from freezegun import freeze_time
 from django.core.exceptions import ValidationError
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import now, timedelta, utc
 from graphql_relay.node.node import to_global_id
-from api.test.base import BaseTestCase
+from api.test.base import BaseTestCase, TEST_TIME
 
 
 class PermissionTestCase(BaseTestCase):
+    @freeze_time(TEST_TIME.astimezone(utc).date())
     def run_all(self, user):
         success = {}
         init_tracker_len = len(tracker.models.Log.objects.all())

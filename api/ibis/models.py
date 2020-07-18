@@ -153,6 +153,7 @@ class Nonprofit(IbisUser):
     category = models.ForeignKey(
         NonprofitCategory,
         on_delete=models.CASCADE,
+        null=True,
     )
     link = models.TextField(validators=[MinLengthValidator(1)])
     banner = models.TextField(validators=[MinLengthValidator(1)])

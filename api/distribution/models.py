@@ -21,8 +21,6 @@ DAYS = (
     'Sunday',
 )
 
-UBP_CATEGORY = ibis.models.DepositCategory.objects.get(title='ubp')
-
 
 def distribute_all_safe():
     """Calculate UBP global amount and personal shares and safely
@@ -100,7 +98,8 @@ def get_control_history(time):
                         created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of non-UBP deposits
                     x.amount for x in ibis.models.Deposit.objects.exclude(
-                        category=UBP_CATEGORY).filter(
+                        category=ibis.models.DepositCategory.
+                        objects.get(title=settings.IBIS_CATEGORY_UBP)).filter(
                             created__gte=to_step_start(x.created),
                             created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of outbound donations
@@ -180,14 +179,16 @@ class Distributor(models.Model):
         """
         if self.eligible and not self.person.deposit_set.filter(
                 created__gte=to_step_start(time),
-                category=UBP_CATEGORY,
+                category=ibis.models.DepositCategory.objects.get(
+                    title=settings.IBIS_CATEGORY_UBP),
         ).exists():
             ibis.models.Deposit.objects.create(
                 user=self.person,
                 amount=amount,
                 payment_id='ubp:{}'.format(
                     sha256(str(random.random()).encode('utf-8')).hexdigest()),
-                category=UBP_CATEGORY,
+                category=ibis.models.DepositCategory.objects.get(
+                    title=settings.IBIS_CATEGORY_UBP),
                 created=time,
             )
 
@@ -206,10 +207,13 @@ class Distributor(models.Model):
         population_discount = len(shares) / (
             ibis.models.Deposit.objects.filter(
                 created__gte=to_step_start(time),
-                category=UBP_CATEGORY,
+                category=ibis.models.DepositCategory.objects.get(
+                    title=settings.IBIS_CATEGORY_UBP),
             ).count() + 1)
 
-        if not self.person.deposit_set.filter(category=UBP_CATEGORY).exists():
+        if not self.person.deposit_set.filter(
+                category=ibis.models.DepositCategory.objects.get(
+                    title=settings.IBIS_CATEGORY_UBP)).exists():
             self.distribute_safe(
                 time,
                 amount=amount * shares[self.person] * population_discount,

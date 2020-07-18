@@ -18,7 +18,7 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 TS_WEEKS = 9
 SS_WEEKS = 15
 
-UBP_CATEGORY = ibis.models.DepositCategory.objects.get(title='ubp')
+UBP_CATEGORY = ibis.models.DepositCategory.objects.get(title=settings.IBIS_CATEGORY_UBP)
 
 EPSILON = 1.0
 
@@ -30,9 +30,14 @@ class DistributionTestCase(BaseTestCase):
     def setUp(self, *args, **kwargs):
         settings.DISTRIBUTION_DAY = 'Friday'
         settings.DISTRIBUTION_GOAL = 100000
+        self._max_transfer_old = settings.MAX_TRANSFER
         settings.MAX_TRANSFER = 1e20
 
         super().setUp(*args, **kwargs)
+
+    def tearDown(self, *args, **kwargs):
+        settings.MAX_TRANSFER = self._max_transfer_old
+        super().tearDown(*args, **kwargs)
 
     def _donate(self, user, target, amount):
         self._client.force_login(user)
