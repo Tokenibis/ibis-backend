@@ -433,7 +433,7 @@ class Email(models.Model):
     force = models.BooleanField(default=False)
 
     def __str__(self):
-        return '{}:{}:{}'.format(
+        return '{}:{}'.format(
             self.pk,
             self.notification.notifier.user.email,
         )

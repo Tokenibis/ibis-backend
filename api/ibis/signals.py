@@ -8,11 +8,12 @@ def scoreFundraisedDescending(sender, instance, created, raw, **kwargs):
     if raw or not created:
         return
 
-    nonprofits = list(models.Nonprofit.objects.all())
+    nonprofits = list(
+        models.Nonprofit.objects.exclude(username=settings.IBIS_USERNAME_ROOT))
     nonprofits.sort(key=lambda x: x.fundraised(), reverse=True)
     for i, nonprofit in enumerate(nonprofits):
-        if nonprofit.score != i:
-            nonprofit.score = i
+        if nonprofit.score != i + 1:
+            nonprofit.score = i + 1
             nonprofit.save()
 
 

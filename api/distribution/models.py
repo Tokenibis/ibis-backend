@@ -131,13 +131,15 @@ def get_distribution_shares(time, initial=[]):
             Q(donation__isnull=False)
             | Q(transaction__isnull=False)).filter(
                 created__lt=step).order_by('created').last()
-        last = localtime(activity.created if activity else x.date_joined)
-        weeks = (step.date() - to_step_start(last).date()).days / len(DAYS)
+        last = to_step_start(
+            localtime(activity.created) if activity else to_step_start(
+                x.date_joined, offset=-1))
+        weeks = (step.date() - last.date()).days / len(DAYS)
         raw[x] = int(2**(settings.DISTRIBUTION_HORIZON - weeks))
 
     for x in initial:
         if x.distributor.eligible:
-            raw[x] = 2**settings.DISTRIBUTION_HORIZON
+            raw[x] = 2**(settings.DISTRIBUTION_HORIZON - 1)
 
     # prune and normalize
     total = sum(raw.values())
@@ -200,21 +202,29 @@ class Distributor(models.Model):
         if called more than once in the lifetime of a user.
         """
 
-        time = localtime()
-        amount = get_distribution_amount(time)
-        shares = get_distribution_shares(time, initial=[self.person])
-
-        population_discount = len(shares) / (
-            ibis.models.Deposit.objects.filter(
-                created__gte=to_step_start(time),
-                category=ibis.models.DepositCategory.objects.get(
-                    title=settings.IBIS_CATEGORY_UBP),
-            ).count() + 1)
-
-        if not self.person.deposit_set.filter(
+        if self.person.deposit_set.filter(
                 category=ibis.models.DepositCategory.objects.get(
                     title=settings.IBIS_CATEGORY_UBP)).exists():
+            return
+
+        time = localtime()
+
+        if hasattr(settings, 'DISTRIBUTION_INITIAL'):
             self.distribute_safe(
                 time,
-                amount=amount * shares[self.person] * population_discount,
+                amount=settings.DISTRIBUTION_INITIAL,
+            )
+        else:
+            total = get_distribution_amount(time)
+            shares = get_distribution_shares(time, initial=[self.person])
+            population_discount = len(shares) / (
+                ibis.models.Deposit.objects.filter(
+                    created__gte=to_step_start(time),
+                    category=ibis.models.DepositCategory.objects.get(
+                        title=settings.IBIS_CATEGORY_UBP),
+                ).count() + 1)
+
+            self.distribute_safe(
+                time,
+                amount=total * shares[self.person] * population_discount,
             )

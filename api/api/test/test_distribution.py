@@ -18,7 +18,8 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 TS_WEEKS = 9
 SS_WEEKS = 15
 
-UBP_CATEGORY = ibis.models.DepositCategory.objects.get(title=settings.IBIS_CATEGORY_UBP)
+UBP_CATEGORY = ibis.models.DepositCategory.objects.get(
+    title=settings.IBIS_CATEGORY_UBP)
 
 EPSILON = 1.0
 
@@ -32,6 +33,8 @@ class DistributionTestCase(BaseTestCase):
         settings.DISTRIBUTION_GOAL = 100000
         self._max_transfer_old = settings.MAX_TRANSFER
         settings.MAX_TRANSFER = 1e20
+        if hasattr(settings, 'DISTRIBUTION_INITIAL'):
+            del settings.DISTRIBUTION_INITIAL
 
         super().setUp(*args, **kwargs)
 
@@ -96,6 +99,29 @@ class DistributionTestCase(BaseTestCase):
             assert distribution.models.to_step_start(
                 localtime(), offset=1) > localtime()
 
+    def test_initial(self):
+        settings.DISTRIBUTION_INITIAL = 1000
+        person1 = ibis.models.Person.objects.create(
+            username=str(random.random())[:15],
+            password='password',
+            first_name='Person',
+            last_name='McPersonFace_Initial_1',
+        )
+
+        del settings.DISTRIBUTION_INITIAL
+
+        person2 = ibis.models.Person.objects.create(
+            username=str(random.random())[:15],
+            password='password',
+            first_name='Person',
+            last_name='McPersonFace_Initial_2',
+        )
+
+        assert person1.deposit_set.count() == 1
+        assert person1.balance() == 1000
+        assert person2.deposit_set.count() == 1
+        assert person2.balance() != 1000
+
     def test_distribution(self):
         def _create_person(activity):
             activity[ibis.models.Person.objects.create(
@@ -105,7 +131,7 @@ class DistributionTestCase(BaseTestCase):
                 last_name='McPersonFace{}'.format(
                     ibis.models.Person.objects.count()),
                 email='person@example.com',
-            )] = 0
+            )] = 1
 
         def _check_transient(activity):
             step = distribution.models.to_step_start(localtime())
@@ -118,8 +144,10 @@ class DistributionTestCase(BaseTestCase):
                 for x in activity
             }
 
-            by_tier = [[payouts[y] for y in payouts if activity[y] == x]
-                       for x in range(settings.DISTRIBUTION_HORIZON)]
+            by_tier = [[
+                payouts[y] for y in payouts
+                if activity[y] == x and y.date_joined < step
+            ] for x in range(settings.DISTRIBUTION_HORIZON)]
 
             for i, x in enumerate(by_tier):
                 if x:

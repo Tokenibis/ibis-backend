@@ -488,7 +488,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['DepositList'],
                 op_name='DepositList',
                 variables={
-                    'byUser': user.gid,
+                    'withUser': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -640,7 +640,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['WithdrawalList'],
                 op_name='WithdrawalList',
                 variables={
-                    'byUser': self.me_nonprofit.gid,
+                    'withUser': self.me_nonprofit.gid,
                     'orderBy': '-created',
                     'first': 25,
                 },
@@ -661,7 +661,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['DonationList'],
                 op_name='DonationList',
                 variables={
-                    'byUser': person.gid,
+                    'withUser': person.gid,
                     'orderBy': '-created',
                     'first': 2,
                 },
@@ -675,7 +675,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['TransactionList'],
                 op_name='TransactionList',
                 variables={
-                    'byUser': person.gid,
+                    'withUser': person.gid,
                     'orderBy': '-created',
                     'first': 2,
                 },

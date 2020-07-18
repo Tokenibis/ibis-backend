@@ -106,10 +106,10 @@ class IbisUser(User, Scoreable):
             entry = entry.comment.get_root()
 
         if hasattr(entry, 'donation') and entry.donation.private:
-            return self.id == entry.user.id or self.id == entry.donation.target
+            return self.id == entry.user.id or self.id == entry.donation.target.id
 
         if hasattr(entry, 'transaction') and entry.transaction.private:
-            return self.id == entry.user.id or self.id == entry.transaction.target
+            return self.id == entry.user.id or self.id == entry.transaction.target.id
 
         return True
 

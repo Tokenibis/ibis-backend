@@ -291,6 +291,9 @@ DISTRIBUTION_CONTROLLER_TI = 1
 
 DISTRIBUTION_CONTROLLER_TD = 0.5
 
+if 'initial' in CONF['ibis']['distribution']:
+    DISTRIBUTION_INITIAL = CONF['ibis']['distribution']['initial']
+
 EMAIL_HOST = CONF['email']['host']
 
 EMAIL_HOST_PASSWORD = CONF['email']['password']
