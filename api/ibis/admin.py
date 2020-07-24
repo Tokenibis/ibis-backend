@@ -14,16 +14,24 @@ class NonprofitAdmin(admin.ModelAdmin):
         return '${:.2f}'.format(obj.fundraised() / 100)
 
 
-@admin.register(models.Person)
-class PersonAdmin(admin.ModelAdmin):
-    readonly_fields = ('balance_str', 'donated_str')
+class EntryNonprofitAdmin(admin.ModelAdmin):
+    exclude = (
+        'score',
+        'bookmark',
+        'like',
+        'mention',
+        'rsvp',
+    )
 
-    def balance_str(self, obj):
-        return '${:.2f}'.format(obj.balance() / 100)
+    def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
+        if db_field.name == 'user':
+            kwargs['queryset'] = models.IbisUser.objects.filter(
+                nonprofit__isnull=False)
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-    def donated_str(self, obj):
-        return '${:.2f}'.format(obj.donated() / 100)
 
+admin.site.register(models.News, EntryNonprofitAdmin)
+admin.site.register(models.Event, EntryNonprofitAdmin)
 
 admin.site.register(models.NonprofitCategory)
 admin.site.register(models.DepositCategory)
@@ -32,7 +40,4 @@ admin.site.register(models.Withdrawal)
 admin.site.register(models.Entry)
 admin.site.register(models.Donation)
 admin.site.register(models.Transaction)
-admin.site.register(models.News)
-admin.site.register(models.Event)
-admin.site.register(models.Post)
 admin.site.register(models.Comment)
