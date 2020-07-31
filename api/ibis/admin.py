@@ -14,6 +14,17 @@ class NonprofitAdmin(admin.ModelAdmin):
         return '${:.2f}'.format(obj.fundraised() / 100)
 
 
+@admin.register(models.Person)
+class PersonAdmin(admin.ModelAdmin):
+    readonly_fields = ('balance_str', 'donated_str')
+
+    def balance_str(self, obj):
+        return '${:.2f}'.format(obj.balance() / 100)
+
+    def donated_str(self, obj):
+        return '${:.2f}'.format(obj.donated() / 100)
+
+
 class EntryNonprofitAdmin(admin.ModelAdmin):
     exclude = (
         'score',
