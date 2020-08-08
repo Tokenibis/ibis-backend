@@ -182,7 +182,7 @@ class Person(IbisUser):
     )
 
 
-class Bot(Person):
+class Bot(IbisUser):
     gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
     tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
 

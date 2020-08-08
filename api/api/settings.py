@@ -232,8 +232,9 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 def APP_LINK_RESOLVER(reference):
     lookup = {
         'Organization': '/Organization/Organization?id={}',
-        'Donation': '/Donation/Donation?id={}',
         'Person': '/Person/Person?id={}',
+        'Bot': '/Bot/Bot?id={}',
+        'Donation': '/Donation/Donation?id={}',
         'Transaction': '/Transaction/Transaction?id={}',
         'News': '/News/News?id={}',
         'Event': '/Event/Event?id={}',

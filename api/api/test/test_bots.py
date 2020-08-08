@@ -13,6 +13,8 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 class BotTestCase(BaseTestCase):
     operations_bot = [
         'Balance',
+        'Bot',
+        'BotList',
         'BotUpdate',
         'Comment',
         'CommentCreate',
@@ -34,7 +36,6 @@ class BotTestCase(BaseTestCase):
         'OrganizationList',
         'Person',
         'PersonList',
-        'PersonUpdate',
         'Post',
         'PostCreate',
         'PostList',
@@ -92,6 +93,30 @@ class BotTestCase(BaseTestCase):
             ).content)
         success['Balance'] = 'errors' not in result and bool(
             result['data']['ibisUser']['id'])
+
+        result = json.loads(
+            self.query(
+                self.gql_bot['Bot'],
+                op_name='Bot',
+                variables={
+                    'id': self.bot.gid,
+                },
+            ).content)
+        success['Bot'] = 'errors' not in result and bool(
+            result['data']['bot']['id'])
+
+        result = json.loads(
+            self.query(
+                self.gql_bot['BotList'],
+                op_name='BotList',
+                variables={
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+        success['BotList'] = 'errors' not in result and len(
+            result['data']['allBots']['edges']) > 0
 
         result = json.loads(
             self.query(
@@ -345,18 +370,6 @@ class BotTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql_bot['PersonUpdate'],
-                op_name='PersonUpdate',
-                variables={
-                    'id': self.bot.gid,
-                    'description': 'This is a bio',
-                },
-            ).content)
-        success['PersonUpdate'] = 'errors' not in result and result['data'][
-            'updatePerson']['person']['id']
-
-        result = json.loads(
-            self.query(
                 self.gql_bot['Post'],
                 op_name='Post',
                 variables={
@@ -366,18 +379,18 @@ class BotTestCase(BaseTestCase):
         success['Post'] = 'errors' not in result and bool(
             result['data']['post']['id'])
 
-        result = json.loads(
-            self.query(
-                self.gql_bot['PostCreate'],
-                op_name='PostCreate',
-                variables={
-                    'user': user.gid,
-                    'title': 'This is a title',
-                    'description': 'This is a description',
-                },
-            ).content)
-        success['PostCreate'] = 'errors' not in result and result['data'][
-            'createPost']['post']['id']
+        # result = json.loads(
+        #     self.query(
+        #         self.gql_bot['PostCreate'],
+        #         op_name='PostCreate',
+        #         variables={
+        #             'user': user.gid,
+        #             'title': 'This is a title',
+        #             'description': 'This is a description',
+        #         },
+        #     ).content)
+        # success['PostCreate'] = 'errors' not in result and result['data'][
+        #     'createPost']['post']['id']
 
         result = json.loads(
             self.query(
@@ -392,16 +405,16 @@ class BotTestCase(BaseTestCase):
         success['PostList'] = 'errors' not in result and len(
             result['data']['allPosts']['edges']) > 0
 
-        result = json.loads(
-            self.query(
-                self.gql_bot['Transaction'],
-                op_name='Transaction',
-                variables={
-                    'id': self.transaction.gid,
-                },
-            ).content)
-        success['Transaction'] = 'errors' not in result and bool(
-            result['data']['transaction']['id'])
+        # result = json.loads(
+        #     self.query(
+        #         self.gql_bot['Transaction'],
+        #         op_name='Transaction',
+        #         variables={
+        #             'id': self.transaction.gid,
+        #         },
+        #     ).content)
+        # success['Transaction'] = 'errors' not in result and bool(
+        #     result['data']['transaction']['id'])
 
         result = json.loads(
             self.query(
@@ -433,7 +446,7 @@ class BotTestCase(BaseTestCase):
         return success
 
     # staff can do everything
-    def test_person(self):
+    def test_staff(self):
         self._client.force_login(self.staff)
         assert all(self.run_all(self.bot).values())
 

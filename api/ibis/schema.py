@@ -1296,32 +1296,104 @@ class PersonUpdate(Mutation):
         return PersonUpdate(person=person)
 
 
-# --- Bot ------------------------------------------------------------------- #
+# --- Bot ---------------------------------------------------------------- #
 
 
-class BotNode(PersonNode):
+class BotNode(IbisUserNode, UserNode):
+
     class Meta:
         model = models.Bot
+        exclude = ['email', 'password']
         filter_fields = []
         interfaces = (IbisUserNodeInterface, )
 
 
-class BotUpdate(PersonUpdate):
-    class Arguments(PersonUpdate.Arguments):
+class BotUpdate(Mutation):
+    class Arguments:
         id = graphene.ID(required=True)
+        username = graphene.String()
+        email = graphene.String()
+        description = graphene.String()
+        first_name = graphene.String()
+        last_name = graphene.String()
+        privacy_donation = graphene.Boolean()
+        privacy_transaction = graphene.Boolean()
+        privacy_deposit = graphene.Boolean()
+        avatar = Upload()
         tank = graphene.Int()
+        score = graphene.Int()
 
     bot = graphene.Field(BotNode)
 
-    def mutate(self, info, id, tank=None, **kwargs):
+    def mutate(
+            self,
+            info,
+            id,
+            username='',
+            email='',
+            description='',
+            first_name='',
+            last_name='',
+            privacy_donation=None,
+            privacy_transaction=None,
+            privacy_deposit=None,
+            avatar=None,
+            tank=None,
+            score=None,
+    ):
         if not (info.context.user.is_superuser
                 or info.context.user.id == int(from_global_id(id)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
         bot = models.Bot.objects.get(pk=from_global_id(id)[1])
+        if username:
+            bot.username = username
+        if email:
+            bot.email = email
+        if description:
+            bot.description = description
+        if first_name:
+            bot.first_name = first_name
+        if last_name:
+            bot.first_name = last_name
+        if type(privacy_donation) == bool:
+            bot.privacy_donation = privacy_donation
+        if type(privacy_transaction) == bool:
+            bot.privacy_transaction = privacy_transaction
+        if type(privacy_deposit) == bool:
+            bot.privacy_deposit = privacy_deposit
+        if avatar:
+            tmp = os.path.join(
+                settings.MEDIA_ROOT,
+                default_storage.save(
+                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
+                    ContentFile(avatar.read()),
+                ),
+            )
+            try:
+                im = Image.open(tmp)
+                im.thumbnail(AVATAR_SIZE)
+                path = '{}/{}.png'.format(
+                    tmp.rsplit('/', 1)[0],
+                    int(time.time()),
+                )
+                im.save(path)
+
+                bot.avatar = '{}{}{}'.format(
+                    settings.API_ROOT_PATH,
+                    settings.MEDIA_URL,
+                    '/'.join(path.rsplit('/')[-3:]),
+                )
+                bot.save()
+            except Exception as e:
+                raise e
+            finally:
+                os.remove(tmp)
+
         if type(tank) == int:
             bot.tank = tank
-
+        if type(score) == int:
+            bot.score = score
         bot.save()
         return BotUpdate(bot=bot)
 
