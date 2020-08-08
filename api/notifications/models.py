@@ -36,7 +36,7 @@ def get_submodel(instance, supermodel):
 
 class Notifier(models.Model):
     user = AutoOneToOneField(
-        ibis.models.IbisUser,
+        ibis.models.User,
         on_delete=models.CASCADE,
         primary_key=True,
     )
@@ -152,7 +152,7 @@ class UbpNotification(Notification):
             return
 
         if not STATE['LOADING_DATA'] and self.notifier.email_ubp:
-            if self.notifier.email_ubp and self.subject.user.ibisuser.deposit_set.filter(
+            if self.notifier.email_ubp and self.subject.user.user.deposit_set.filter(
                     category=ibis.models.DepositCategory.objects.get(
                         title='ubp')).count() == 1:
                 try:
@@ -315,7 +315,7 @@ class CommentNotification(Notification):
 
 class FollowNotification(Notification):
     subject = models.ForeignKey(
-        ibis.models.IbisUser,
+        ibis.models.User,
         on_delete=models.CASCADE,
     )
 
@@ -355,7 +355,7 @@ class LikeNotification(Notification):
         on_delete=models.CASCADE,
     )
     user = models.ForeignKey(
-        ibis.models.IbisUser,
+        ibis.models.User,
         on_delete=models.CASCADE,
     )
 

@@ -176,7 +176,7 @@ WSGI_APPLICATION = 'api.wsgi.application'
 # Additional Library/App/Middleware Settings
 # ------------------------------------------------------------ #
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'users.GeneralUser'
 
 # TODO: change to https when ready to launch from server
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'http'

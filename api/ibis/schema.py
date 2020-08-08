@@ -19,21 +19,21 @@ from graphene_django import DjangoObjectType
 from graphene_django.filter import DjangoFilterConnectionField
 from graphql_relay.node.node import from_global_id, to_global_id
 from graphene_file_upload.scalars import Upload
-from users.schema import UserNode
+from users.schema import GeneralUserNode
 
 AVATAR_SIZE = (528, 528)
 
 
-class IbisUserNodeInterface(relay.Node):
+class UserNodeInterface(relay.Node):
     @staticmethod
     def to_global_id(type, id):
-        return to_global_id(IbisUserNode.__name__, id)
+        return to_global_id(UserNode.__name__, id)
 
     @staticmethod
     def get_node_from_global_id(info, global_id, only_type=None):
         if only_type:
             return only_type.get_node(info, from_global_id(global_id)[1])
-        return IbisUserNode.get_node(info, from_global_id(global_id)[1])
+        return UserNode.get_node(info, from_global_id(global_id)[1])
 
 
 class EntryNodeInterface(relay.Node):
@@ -51,9 +51,9 @@ class EntryNodeInterface(relay.Node):
 # --- Filters --------------------------------------------------------------- #
 
 
-class IbisUserOrderingFilter(django_filters.OrderingFilter):
+class UserOrderingFilter(django_filters.OrderingFilter):
     def __init__(self, *args, **kwargs):
-        super(IbisUserOrderingFilter, self).__init__(*args, **kwargs)
+        super(UserOrderingFilter, self).__init__(*args, **kwargs)
 
     def filter(self, qs, value):
         if value:
@@ -63,16 +63,16 @@ class IbisUserOrderingFilter(django_filters.OrderingFilter):
                         follower_count=Count('follower')).order_by(v)
                     value.remove(v)
 
-        return super(IbisUserOrderingFilter, self).filter(qs, value)
+        return super(UserOrderingFilter, self).filter(qs, value)
 
 
-class IbisUserFilter(django_filters.FilterSet):
+class UserFilter(django_filters.FilterSet):
     id = django_filters.CharFilter(method='filter_id')
     followed_by = django_filters.CharFilter(method='filter_followed_by')
     follower_of = django_filters.CharFilter(method='filter_follower_of')
     like_for = django_filters.CharFilter(method='filter_like_for')
     rsvp_for = django_filters.CharFilter(method='filter_rsvp_for')
-    order_by = IbisUserOrderingFilter(
+    order_by = UserOrderingFilter(
         fields=(
             ('score', 'score'),
             ('date_joined', 'date_joined'),
@@ -83,7 +83,7 @@ class IbisUserFilter(django_filters.FilterSet):
     search = django_filters.CharFilter(method='filter_search')
 
     class Meta:
-        model = models.IbisUser
+        model = models.User
         fields = []
 
     def filter_id(self, qs, name, value):
@@ -185,7 +185,7 @@ class EntryFilter(django_filters.FilterSet):
 
     def filter_by_following(self, qs, name, value):
         return qs.filter(
-            user_id__in=models.IbisUser.objects.get(
+            user_id__in=models.User.objects.get(
                 id=int(from_global_id(value)[1])).following.all())
 
     def filter_bookmark_by(self, qs, name, value):
@@ -194,7 +194,7 @@ class EntryFilter(django_filters.FilterSet):
             raise GraphQLError('You do not have sufficient permission')
 
         return qs.filter(
-            id__in=models.IbisUser.objects.get(
+            id__in=models.User.objects.get(
                 id=from_global_id(value)[1]).bookmark_for.all())
 
     def filter_search(self, qs, name, value):
@@ -236,9 +236,9 @@ class TransferFilter(EntryFilter):
     def filter_with_following(self, qs, name, value):
         return qs.filter(
             Q(
-                target_id__in=models.IbisUser.objects.get(
+                target_id__in=models.User.objects.get(
                     id=int(from_global_id(value)[1])).following.all()) | Q(
-                        user_id__in=models.IbisUser.objects.get(
+                        user_id__in=models.User.objects.get(
                             id=int(from_global_id(value)[1])).following.all()))
 
 
@@ -287,7 +287,7 @@ class EventFilter(EntryFilter):
 
     def filter_rsvp_by(self, qs, name, value):
         return qs.filter(
-            id__in=models.IbisUser.objects.get(
+            id__in=models.User.objects.get(
                 id=from_global_id(value)[1]).rsvp_for_event.all())
 
     def filter_begin_date(self, qs, name, value):
@@ -338,7 +338,7 @@ class CommentFilter(django_filters.FilterSet):
 
     def filter_has_parent(self, qs, name, value):
         if not (self.request.user.is_superuser or
-                models.IbisUser.objects.get(id=self.request.user.id).can_see(
+                models.User.objects.get(id=self.request.user.id).can_see(
                     models.Entry.objects.get(id=from_global_id(value)[1]))):
             raise GraphQLError('You do not have sufficient permission')
         return qs.filter(parent_id=from_global_id(value)[1])
@@ -412,7 +412,7 @@ class DepositCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Arguments do not satisfy constraints')
 
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
 
         deposit = models.Deposit.objects.create(
             user=user_obj,
@@ -455,14 +455,14 @@ class EntryNode(DjangoObjectType):
     comment_count_recursive = graphene.Int()
 
     like = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
     like_count = graphene.Int()
 
     mention = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
 
     class Meta:
@@ -525,8 +525,8 @@ class DonationNode(EntryNode):
     amount = graphene.Int()
 
     bookmark = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
 
     class Meta:
@@ -588,7 +588,7 @@ class DonationCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Arguments do not satisfy constraints')
 
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Organization.objects.get(pk=from_global_id(target)[1])
 
         try:
@@ -615,8 +615,8 @@ class TransactionNode(EntryNode):
     amount = graphene.Int()
 
     bookmark = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
 
     class Meta:
@@ -678,7 +678,7 @@ class TransactionCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Arguments do not satisfy constraints')
 
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Person.objects.get(pk=from_global_id(target)[1])
 
         try:
@@ -703,8 +703,8 @@ class TransactionCreate(Mutation):
 
 class NewsNode(EntryNode):
     bookmark = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
 
     class Meta:
@@ -750,7 +750,7 @@ class NewsCreate(Mutation):
             raise GraphQLError('You do not have sufficient permission')
 
         news = models.News.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=models.User.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
             link=link,
@@ -796,7 +796,7 @@ class NewsUpdate(Mutation):
 
         news = models.News.objects.get(pk=from_global_id(id)[1])
         if user:
-            news.user = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+            news.user = models.User.objects.get(pk=from_global_id(user)[1])
         if description:
             news.description = description
         if title:
@@ -817,12 +817,12 @@ class NewsUpdate(Mutation):
 
 class EventNode(EntryNode):
     bookmark = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
     rsvp = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
     rsvp_count = graphene.Int()
 
@@ -881,7 +881,7 @@ class EventCreate(Mutation):
             raise GraphQLError('You do not have sufficient permission')
 
         event = models.Event.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=models.User.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
             image=image,
@@ -936,7 +936,7 @@ class EventUpdate(Mutation):
 
         event = models.Event.objects.get(pk=from_global_id(id)[1])
         if user:
-            event.user = models.IbisUser.objects.get(
+            event.user = models.User.objects.get(
                 pk=from_global_id(user)[1])
         if description:
             event.description = description
@@ -962,17 +962,17 @@ class EventUpdate(Mutation):
 # --- Ibis User ------------------------------------------------------------- #
 
 
-class IbisUserNode(UserNode):
+class UserNode(GeneralUserNode):
     name = graphene.String()
     short_name = graphene.String()
     balance = graphene.Int()
     following = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
     follower = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
     following_count = graphene.Int()
     follower_count = graphene.Int()
@@ -989,10 +989,10 @@ class IbisUserNode(UserNode):
     event_rsvp_count = graphene.Int()
 
     class Meta:
-        model = models.IbisUser
+        model = models.User
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (IbisUserNodeInterface, )
+        interfaces = (UserNodeInterface, )
 
     def resolve_name(self, *args, **kwargs):
         return str(self)
@@ -1061,7 +1061,7 @@ class IbisUserNode(UserNode):
 # --- Organization ------------------------------------------------------------- #
 
 
-class OrganizationNode(IbisUserNode):
+class OrganizationNode(UserNode):
 
     fundraised = graphene.Int()
 
@@ -1069,7 +1069,7 @@ class OrganizationNode(IbisUserNode):
         model = models.Organization
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (IbisUserNodeInterface, )
+        interfaces = (UserNodeInterface, )
 
     def resolve_fundraised(self, *args, **kwargs):
         return self.fundraised()
@@ -1138,7 +1138,7 @@ class OrganizationUpdate(Mutation):
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
+                    'avatar/{}/tmp'.format(to_global_id('UserNode', id)),
                     ContentFile(avatar.read()),
                 ),
             )
@@ -1166,7 +1166,7 @@ class OrganizationUpdate(Mutation):
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'banner/{}/tmp'.format(to_global_id('IbisUserNode', id)),
+                    'banner/{}/tmp'.format(to_global_id('UserNode', id)),
                     ContentFile(banner.read()),
                 ),
             )
@@ -1196,7 +1196,7 @@ class OrganizationUpdate(Mutation):
 # --- Person ---------------------------------------------------------------- #
 
 
-class PersonNode(IbisUserNode, UserNode):
+class PersonNode(UserNode):
 
     donated = graphene.Int()
 
@@ -1204,7 +1204,7 @@ class PersonNode(IbisUserNode, UserNode):
         model = models.Person
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (IbisUserNodeInterface, )
+        interfaces = (UserNodeInterface, )
 
     def resolve_donated(self, *args, **kwargs):
         return self.donated()
@@ -1266,7 +1266,7 @@ class PersonUpdate(Mutation):
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
+                    'avatar/{}/tmp'.format(to_global_id('UserNode', id)),
                     ContentFile(avatar.read()),
                 ),
             )
@@ -1299,13 +1299,13 @@ class PersonUpdate(Mutation):
 # --- Bot ---------------------------------------------------------------- #
 
 
-class BotNode(IbisUserNode, UserNode):
+class BotNode(UserNode):
 
     class Meta:
         model = models.Bot
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (IbisUserNodeInterface, )
+        interfaces = (UserNodeInterface, )
 
 
 class BotUpdate(Mutation):
@@ -1366,7 +1366,7 @@ class BotUpdate(Mutation):
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
                 default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('IbisUserNode', id)),
+                    'avatar/{}/tmp'.format(to_global_id('UserNode', id)),
                     ContentFile(avatar.read()),
                 ),
             )
@@ -1404,8 +1404,8 @@ class BotUpdate(Mutation):
 class PostNode(EntryNode):
 
     bookmark = DjangoFilterConnectionField(
-        lambda: IbisUserNode,
-        filterset_class=IbisUserFilter,
+        lambda: UserNode,
+        filterset_class=UserFilter,
     )
 
     class Meta:
@@ -1447,7 +1447,7 @@ class PostCreate(Mutation):
             raise GraphQLError('You do not have sufficient permission')
 
         post = models.Post.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=models.User.objects.get(pk=from_global_id(user)[1]),
             title=title,
             description=description,
             score=score,
@@ -1477,7 +1477,7 @@ class CommentNode(EntryNode):
         try:
             comment = queryset.get(pk=id)
             if not (info.context.user.is_superuser
-                    or models.IbisUser.objects.get(
+                    or models.User.objects.get(
                         id=info.context.user.id).can_see(comment)):
                 raise GraphQLError('You do not have sufficient permission')
             return comment
@@ -1504,12 +1504,12 @@ class CommentCreate(Mutation):
 
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
-                 and hasattr(info.context.user, 'ibisuser')
-                 and info.context.user.ibisuser.can_see(parent_obj))):
+                 and hasattr(info.context.user, 'user')
+                 and info.context.user.user.can_see(parent_obj))):
             raise GraphQLError('You do not have sufficient permission')
 
         comment = models.Comment.objects.create(
-            user=models.IbisUser.objects.get(pk=from_global_id(user)[1]),
+            user=models.User.objects.get(pk=from_global_id(user)[1]),
             description=description,
             parent=parent_obj,
         )
@@ -1533,8 +1533,8 @@ class FollowMutation(Mutation):
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        target_obj = models.IbisUser.objects.get(pk=from_global_id(target)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.User.objects.get(pk=from_global_id(target)[1])
         getattr(user_obj.following, operation)(target_obj)
         user_obj.save()
         return FollowMutation(
@@ -1563,13 +1563,13 @@ class LikeMutation(Mutation):
 
     @classmethod
     def mutate(cls, info, operation, user, target):
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
         entry_obj = models.Entry.objects.get(pk=from_global_id(target)[1])
 
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
-                 and hasattr(info.context.user, 'ibisuser')
-                 and info.context.user.ibisuser.can_see(entry_obj))):
+                 and hasattr(info.context.user, 'user')
+                 and info.context.user.user.can_see(entry_obj))):
             raise GraphQLError('You do not have sufficient permission')
 
         getattr(entry_obj.like, operation)(user_obj)
@@ -1600,13 +1600,13 @@ class BookmarkMutation(Mutation):
 
     @classmethod
     def mutate(cls, info, operation, user, target):
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
         entry_obj = models.Entry.objects.get(pk=from_global_id(target)[1])
 
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
-                 and hasattr(info.context.user, 'ibisuser')
-                 and info.context.user.ibisuser.can_see(entry_obj))):
+                 and hasattr(info.context.user, 'user')
+                 and info.context.user.user.can_see(entry_obj))):
             raise GraphQLError('You do not have sufficient permission')
 
         getattr(entry_obj.bookmark, operation)(user_obj)
@@ -1641,7 +1641,7 @@ class RsvpMutation(Mutation):
                 or info.context.user.id == int(from_global_id(user)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
-        user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
         event_obj = models.Event.objects.get(pk=from_global_id(target)[1])
         getattr(event_obj.rsvp, operation)(user_obj)
         event_obj.save()
@@ -1666,10 +1666,10 @@ class Query(object):
 
     organization_category = relay.Node.Field(OrganizationCategoryNode)
     deposit_category = relay.Node.Field(DepositCategoryNode)
-    ibis_user = IbisUserNodeInterface.Field(IbisUserNode)
-    organization = IbisUserNodeInterface.Field(OrganizationNode)
-    person = IbisUserNodeInterface.Field(PersonNode)
-    bot = IbisUserNodeInterface.Field(BotNode)
+    user = UserNodeInterface.Field(UserNode)
+    organization = UserNodeInterface.Field(OrganizationNode)
+    person = UserNodeInterface.Field(PersonNode)
+    bot = UserNodeInterface.Field(BotNode)
     withdrawal = relay.Node.Field(WithdrawalNode)
     deposit = relay.Node.Field(DepositNode)
     donation = EntryNodeInterface.Field(DonationNode)
@@ -1682,21 +1682,21 @@ class Query(object):
     all_organization_categories = DjangoFilterConnectionField(
         OrganizationCategoryNode)
     all_deposit_categories = DjangoFilterConnectionField(DepositCategoryNode)
-    all_ibis_users = DjangoFilterConnectionField(
-        IbisUserNode,
-        filterset_class=IbisUserFilter,
+    all_users = DjangoFilterConnectionField(
+        UserNode,
+        filterset_class=UserFilter,
     )
     all_people = DjangoFilterConnectionField(
         PersonNode,
-        filterset_class=IbisUserFilter,
+        filterset_class=UserFilter,
     )
     all_bots = DjangoFilterConnectionField(
         BotNode,
-        filterset_class=IbisUserFilter,
+        filterset_class=UserFilter,
     )
     all_organizations = DjangoFilterConnectionField(
         OrganizationNode,
-        filterset_class=IbisUserFilter,
+        filterset_class=UserFilter,
     )
     all_deposits = DjangoFilterConnectionField(
         DepositNode,

@@ -26,8 +26,6 @@ class BotTestCase(BaseTestCase):
         'EventList',
         'FollowCreate',
         'FollowDelete',
-        'IbisUser',
-        'IbisUserList',
         'LikeCreate',
         'LikeDelete',
         'News',
@@ -42,6 +40,8 @@ class BotTestCase(BaseTestCase):
         'Transaction',
         'TransactionCreate',
         'TransactionList',
+        'User',
+        'UserList',
     ]
 
     @classmethod
@@ -72,7 +72,7 @@ class BotTestCase(BaseTestCase):
             last_name='McBotFace',
             email='bot@example.com',
         )
-        self.bot.gid = to_global_id('IbisUserNode', self.bot.id)
+        self.bot.gid = to_global_id('UserNode', self.bot.id)
 
         models.Deposit.objects.create(
             user=self.bot,
@@ -88,11 +88,11 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['Balance'],
                 op_name='Balance',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                 },
             ).content)
         success['Balance'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['id'])
+            result['data']['user']['id'])
 
         result = json.loads(
             self.query(
@@ -123,7 +123,7 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['BotUpdate'],
                 op_name='BotUpdate',
                 variables={
-                    'id': to_global_id('IbisUserNode', self.bot.id),
+                    'id': to_global_id('UserNode', self.bot.id),
                     'tank': settings.BOT_GAS_INITIAL + 1,
                 },
             ).content)
@@ -180,7 +180,7 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['DonationCreate'],
                 op_name='DonationCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', user.id),
+                    'user': to_global_id('UserNode', user.id),
                     'target': self.organization.gid,
                     'amount': 100,
                     'description': 'This is a donation',
@@ -251,27 +251,27 @@ class BotTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql_bot['IbisUser'],
-                op_name='IbisUser',
+                self.gql_bot['User'],
+                op_name='User',
                 variables={
-                    'id': to_global_id('IbisUserNode', self.person.id),
+                    'id': to_global_id('UserNode', self.person.id),
                 },
             ).content)
-        success['IbisUser'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['id'])
+        success['User'] = 'errors' not in result and bool(
+            result['data']['user']['id'])
 
         result = json.loads(
             self.query(
-                self.gql_bot['IbisUserList'],
-                op_name='IbisUserList',
+                self.gql_bot['UserList'],
+                op_name='UserList',
                 variables={
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
-        success['IbisUserList'] = 'errors' not in result and len(
-            result['data']['allIbisUsers']['edges']) > 0
+        success['UserList'] = 'errors' not in result and len(
+            result['data']['allUsers']['edges']) > 0
 
         result = json.loads(
             self.query(
@@ -421,7 +421,7 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['TransactionCreate'],
                 op_name='TransactionCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', user.id),
+                    'user': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                     'amount': 100,
                     'description': 'This is a transaction',

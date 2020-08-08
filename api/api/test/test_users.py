@@ -21,18 +21,18 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['Finance'],
                 op_name='Finance',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                 },
             ).content)
         success['Finance'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['id'])
+            result['data']['user']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', user.id),
+                    'user': to_global_id('UserNode', user.id),
                     'target': self.organization.gid,
                     'amount': 100,
                     'description': 'This is a donation',
@@ -46,7 +46,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['TransactionCreate'],
                 op_name='TransactionCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', user.id),
+                    'user': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                     'amount': 100,
                     'description': 'This is a transaction',
@@ -295,58 +295,58 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['Home'],
                 op_name='Home',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                 },
             ).content)
         success['Home'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['id'])
+            result['data']['user']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['SideMenu'],
                 op_name='SideMenu',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                 },
             ).content)
         success['SideMenu'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['id'])
+            result['data']['user']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['Settings'],
                 op_name='Settings',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                 },
             ).content)
         success['Settings'] = 'errors' not in result and bool(
-            result['data']['ibisUser']['notifier']['id'])
+            result['data']['user']['notifier']['id'])
 
         result = json.loads(
             self.query(
                 self.gql['Notifier'],
                 op_name='Notifier',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                 },
             ).content)
         success['Notifier'] = 'errors' not in result and (
-            result['data']['ibisUser']['notifier']['id'] == to_global_id(
+            result['data']['user']['notifier']['id'] == to_global_id(
                 'NotifierNode', user.id))
 
         result = json.loads(
             self.query(
-                self.gql['IbisUserList'],
-                op_name='IbisUserList',
+                self.gql['UserList'],
+                op_name='UserList',
                 variables={
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
-        success['IbisUserList'] = 'errors' not in result and len(
-            result['data']['allIbisUsers']['edges']) > 0
+        success['UserList'] = 'errors' not in result and len(
+            result['data']['allUsers']['edges']) > 0
 
         result = json.loads(
             self.query(
@@ -563,7 +563,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['DonationForm'],
                 op_name='DonationForm',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                     'target': self.organization.gid,
                 },
             ).content)
@@ -575,7 +575,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['TransactionForm'],
                 op_name='TransactionForm',
                 variables={
-                    'id': to_global_id('IbisUserNode', user.id),
+                    'id': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                 },
             ).content)
@@ -667,7 +667,7 @@ class PermissionTestCase(BaseTestCase):
                 },
             ).content)
         success['DonationList'] = 'errors' not in result and any(
-            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
+            x['node']['user']['id'] == to_global_id('UserNode', person.id)
             for x in result['data']['allDonations']['edges'])
 
         result = json.loads(
@@ -681,7 +681,7 @@ class PermissionTestCase(BaseTestCase):
                 },
             ).content)
         success['TransactionList'] = 'errors' not in result and any(
-            x['node']['user']['id'] == to_global_id('IbisUserNode', person.id)
+            x['node']['user']['id'] == to_global_id('UserNode', person.id)
             for x in result['data']['allTransactions']['edges'])
 
         return success
@@ -739,7 +739,7 @@ class PermissionTestCase(BaseTestCase):
             'FollowCreate': False,
             'FollowDelete': False,
             'Home': True,
-            'IbisUserList': True,
+            'UserList': True,
             'LikeCreate': False,
             'LikeDelete': False,
             'News': True,
@@ -795,7 +795,7 @@ class PermissionTestCase(BaseTestCase):
 
     # makes sure the username validator + valid generator works as expected
     def test_usernames(self):
-        for user in models.IbisUser.objects.all():
+        for user in models.User.objects.all():
             assert len(user.username) <= models.MAX_USERNAME_LEN
             assert len(user.username) >= models.MIN_USERNAME_LEN
             assert re.sub(r'\W+', '', user.username) == user.username

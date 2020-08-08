@@ -2,19 +2,18 @@ import graphene
 
 from graphene import relay
 from graphql import GraphQLError
-from graphql_relay.node.node import from_global_id
 from graphene_django import DjangoObjectType
 from allauth.socialaccount.models import SocialAccount
 
 import users.models as models
 
 
-class UserNode(DjangoObjectType):
+class GeneralUserNode(DjangoObjectType):
     social_ID = graphene.String()
     email = graphene.String(required=True)
 
     class Meta:
-        model = models.User
+        model = models.GeneralUser
         exclude = ['password']
         filter_fields = ['id', 'username']
         interfaces = (relay.Node, )
@@ -34,4 +33,4 @@ class UserNode(DjangoObjectType):
 
 
 class Query(object):
-    user = relay.Node.Field(UserNode)
+    general_user = relay.Node.Field(GeneralUserNode)

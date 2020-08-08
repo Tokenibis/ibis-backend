@@ -7,7 +7,7 @@ from django.conf import settings
 from model_utils.models import TimeStampedModel
 from graphql_relay.node.node import to_global_id
 
-from users.models import User
+from users.models import GeneralUser
 
 MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 15
@@ -39,7 +39,7 @@ def generate_valid_username(first_name, last_name):
     name = base
     index = 1
 
-    while IbisUser.objects.filter(username=name).exists():
+    while User.objects.filter(username=name).exists():
         index += 1
         suffix = '_{}'.format(index)
         name = base[:MAX_USERNAME_LEN - len(suffix)] + suffix
@@ -61,7 +61,7 @@ class Hideable(models.Model):
         abstract = True
 
 
-class IbisUser(User, Scoreable):
+class User(GeneralUser, Scoreable):
     class Meta:
         verbose_name_plural = 'ibis user'
 
@@ -126,7 +126,7 @@ class Valuable(models.Model):
 
 class Rsvpable(models.Model):
     rsvp = models.ManyToManyField(
-        IbisUser,
+        User,
         related_name='rsvp_for_%(class)s',
         blank=True,
     )
@@ -146,7 +146,7 @@ class OrganizationCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Organization(IbisUser):
+class Organization(User):
     class Meta:
         verbose_name = "Organization"
 
@@ -159,7 +159,7 @@ class Organization(IbisUser):
     banner = models.TextField(validators=[MinLengthValidator(1)])
 
     donation_from = models.ManyToManyField(
-        IbisUser,
+        User,
         related_name='donation_to',
         through='Donation',
         symmetrical=False,
@@ -169,20 +169,20 @@ class Organization(IbisUser):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
 
 
-class Person(IbisUser):
+class Person(User):
     class Meta:
         verbose_name = "Person"
         verbose_name_plural = "People"
 
     transaction_from = models.ManyToManyField(
-        IbisUser,
+        User,
         related_name='transaction_to',
         through='Transaction',
         symmetrical=False,
     )
 
 
-class Bot(IbisUser):
+class Bot(User):
     gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
     tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
 
@@ -193,26 +193,26 @@ class Entry(TimeStampedModel, Scoreable):
         verbose_name_plural = "Entries"
 
     user = models.ForeignKey(
-        IbisUser,
+        User,
         on_delete=models.CASCADE,
     )
 
     description = models.TextField(validators=[MinLengthValidator(1)])
 
     bookmark = models.ManyToManyField(
-        IbisUser,
+        User,
         related_name='bookmark_for',
         blank=True,
     )
 
     like = models.ManyToManyField(
-        IbisUser,
+        User,
         related_name='likes',
         blank=True,
     )
 
     mention = models.ManyToManyField(
-        IbisUser,
+        User,
         related_name='mentioned_by',
         blank=True,
     )
@@ -224,18 +224,18 @@ class Entry(TimeStampedModel, Scoreable):
             return super().save(*args, **kwargs)
 
         mention = set(
-            IbisUser.objects.get(username=x[2:-1]) for x in re.findall(
+            User.objects.get(username=x[2:-1]) for x in re.findall(
                 r'\W@\w{{{},{}}}\W'.format(
                     MIN_USERNAME_LEN,
                     MAX_USERNAME_LEN,
                 ),
                 ' ' + self.description + ' ',
-            ) if IbisUser.objects.filter(username=x[2:-1]).exists())
+            ) if User.objects.filter(username=x[2:-1]).exists())
 
         for x in mention:
             self.description = re.sub(
                 r'(\W)@{}(\W)'.format(x.username),
-                r'\1@{}\2'.format(to_global_id('IbisUserNode', str(x.id))),
+                r'\1@{}\2'.format(to_global_id('UserNode', str(x.id))),
                 ' ' + self.description + ' ',
             )[1:-1]
 
@@ -245,7 +245,7 @@ class Entry(TimeStampedModel, Scoreable):
             if x not in mention and not re.findall(
                     r'\W@{}\W'.format(
                         re.escape(to_global_id(
-                            'IbisUserNode',
+                            'UserNode',
                             str(x.id),
                         ))),
                     ' ' + self.description + ' ',
@@ -264,7 +264,7 @@ class Entry(TimeStampedModel, Scoreable):
             description = re.sub(
                 r'(\W)@{}(\W)'.format(
                     re.escape(to_global_id(
-                        'IbisUserNode',
+                        'UserNode',
                         str(x.id),
                     ))),
                 r'\1@{}\2'.format(x.username),
@@ -285,7 +285,7 @@ class DepositCategory(models.Model):
 
 class Deposit(TimeStampedModel, Valuable, Hideable):
     user = models.ForeignKey(
-        IbisUser,
+        User,
         on_delete=models.CASCADE,
     )
     category = models.ForeignKey(

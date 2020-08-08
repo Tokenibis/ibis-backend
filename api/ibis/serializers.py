@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from users.models import User
+from users.models import GeneralUser
 
 
 class PasswordLoginSerializer(serializers.Serializer):
@@ -11,7 +11,7 @@ class PasswordLoginSerializer(serializers.Serializer):
 
 
 class PasswordChangeSerializer(serializers.Serializer):
-    model = User
+    model = GeneralUser
     password_old = serializers.CharField(
         required=True,
         style={'input_type': 'password'},

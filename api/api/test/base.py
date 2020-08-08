@@ -86,7 +86,6 @@ class BaseTestCase(GraphQLTestCase):
         'FollowCreate',
         'FollowDelete',
         'Home',
-        'IbisUserList',
         'LikeCreate',
         'LikeDelete',
         'News',
@@ -115,6 +114,7 @@ class BaseTestCase(GraphQLTestCase):
         'TransactionCreate',
         'TransactionForm',
         'TransactionList',
+        'UserList',
         'WithdrawalList',
     ]
 
@@ -146,7 +146,7 @@ class BaseTestCase(GraphQLTestCase):
         assert len(models.Comment.objects.all()) == NUM_COMMENT
 
         with freeze_time(TEST_TIME.astimezone(utc).date()):
-            self.staff = users.models.User.objects.create(
+            self.staff = users.models.GeneralUser.objects.create(
                 username='staff',
                 first_name='Staffy',
                 last_name='McStaffface',
@@ -193,12 +193,12 @@ class BaseTestCase(GraphQLTestCase):
             self.event = models.Event.objects.all().first()
             self.post = models.Post.objects.all().first()
 
-            self.me_person.gid = to_global_id('IbisUserNode', self.me_person.id)
-            self.me_organization.gid = to_global_id('IbisUserNode',
+            self.me_person.gid = to_global_id('UserNode', self.me_person.id)
+            self.me_organization.gid = to_global_id('UserNode',
                                                  self.me_organization.id)
-            self.organization.gid = to_global_id('IbisUserNode',
+            self.organization.gid = to_global_id('UserNode',
                                               self.organization.id)
-            self.person.gid = to_global_id('IbisUserNode', self.person.id)
+            self.person.gid = to_global_id('UserNode', self.person.id)
             self.donation.gid = to_global_id('EntryNode', self.donation.id)
             self.transaction.gid = to_global_id('EntryNode',
                                                 self.transaction.id)

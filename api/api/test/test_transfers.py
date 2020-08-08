@@ -108,8 +108,8 @@ class TransferTestCase(BaseTestCase):
                     self.gql['DonationCreate'],
                     op_name='DonationCreate',
                     variables={
-                        'user': to_global_id('IbisUserNode', user.id),
-                        'target': to_global_id('IbisUserNode', target.id),
+                        'user': to_global_id('UserNode', user.id),
+                        'target': to_global_id('UserNode', target.id),
                         'amount': amount,
                         'description': 'This is a donation',
                     },
@@ -124,8 +124,8 @@ class TransferTestCase(BaseTestCase):
                     self.gql['TransactionCreate'],
                     op_name='TransactionCreate',
                     variables={
-                        'user': to_global_id('IbisUserNode', user.id),
-                        'target': to_global_id('IbisUserNode', target.id),
+                        'user': to_global_id('UserNode', user.id),
+                        'target': to_global_id('UserNode', target.id),
                         'amount': amount,
                         'description': 'This is a transaction',
                     },

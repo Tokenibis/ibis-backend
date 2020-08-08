@@ -12,7 +12,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
 from rest_framework import generics, response, exceptions, serializers
-from users.models import User
+from users.models import GeneralUser
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import localtime, now
@@ -75,7 +75,7 @@ class LoginView(generics.GenericAPIView):
                 )
 
             social_account = social_accounts[0]
-            user = User.objects.get(id=request.user.id)
+            user = GeneralUser.objects.get(id=request.user.id)
 
             # return error message
             if social_account.provider == 'microsoft' and user.email.rsplit(
@@ -102,7 +102,7 @@ class LoginView(generics.GenericAPIView):
 
         return response.Response({
             'user_id':
-            to_global_id('IbisUserNode', str(request.user.id)),
+            to_global_id('UserNode', str(request.user.id)),
             'user_type':
             'person',
         })
@@ -125,7 +125,7 @@ class PasswordLoginView(generics.GenericAPIView):
             login(request, user)
             return response.Response({
                 'user_id':
-                to_global_id('IbisUserNode', str(user.id)),
+                to_global_id('UserNode', str(user.id)),
                 'user_type':
                 'person' if models.Person.objects.filter(
                     id=user.id) else 'organization',
@@ -203,7 +203,7 @@ class AnonymousLoginView(generics.GenericAPIView):
 
         return response.Response({
             'user_id':
-            to_global_id('IbisUserNode', str(person.user_ptr.id)),
+            to_global_id('UserNode', str(person.user_ptr.id)),
             'user_type':
             'person',
         })
@@ -225,8 +225,8 @@ class LogoutView(generics.GenericAPIView):
 
 class IdentifyView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
-        if models.IbisUser.objects.filter(id=request.user.id).exists():
-            user_id = to_global_id('IbisUserNode', str(request.user.id))
+        if models.User.objects.filter(id=request.user.id).exists():
+            user_id = to_global_id('UserNode', str(request.user.id))
             user_type = 'person' if models.Person.objects.filter(
                 id=request.user.id).exists() else 'organization'
         else:
@@ -256,7 +256,7 @@ class PaymentView(generics.GenericAPIView):
                 'depositID': '',
             })
 
-        user = models.IbisUser.objects.get(pk=request.user.id)
+        user = models.User.objects.get(pk=request.user.id)
         deposit = models.Deposit.objects.create(
             user=user,
             amount=net,

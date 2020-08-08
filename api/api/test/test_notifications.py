@@ -127,11 +127,11 @@ class NotificationTestCase(BaseTestCase):
                     self.gql['Notifier'],
                     op_name='Notifier',
                     variables={
-                        'id': to_global_id('IbisUserNode', self.person.id),
+                        'id': to_global_id('UserNode', self.person.id),
                     },
                 ).content)
             assert 'errors' not in result
-            return result['data']['ibisUser']['notifier']['unseenCount']
+            return result['data']['user']['notifier']['unseenCount']
 
         self.person.notifier.email_follow = True
         self.person.notifier.email_transaction = True

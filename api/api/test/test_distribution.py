@@ -49,8 +49,8 @@ class DistributionTestCase(BaseTestCase):
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', user.id),
-                    'target': to_global_id('IbisUserNode', target.id),
+                    'user': to_global_id('UserNode', user.id),
+                    'target': to_global_id('UserNode', target.id),
                     'amount': amount,
                     'description': 'This is a donation',
                 },
@@ -63,8 +63,8 @@ class DistributionTestCase(BaseTestCase):
                 self.gql['TransactionCreate'],
                 op_name='TransactionCreate',
                 variables={
-                    'user': to_global_id('IbisUserNode', user.id),
-                    'target': to_global_id('IbisUserNode', target.id),
+                    'user': to_global_id('UserNode', user.id),
+                    'target': to_global_id('UserNode', target.id),
                     'amount': amount,
                     'description': 'This is a transaction',
                 },
@@ -317,7 +317,7 @@ class DistributionTestCase(BaseTestCase):
             sink = ibis.models.Organization.objects.last()
 
             # number of weeks since last active (last week == 0)
-            for x in ibis.models.IbisUser.objects.exclude(id=sink.id):
+            for x in ibis.models.User.objects.exclude(id=sink.id):
                 ibis.models.Deposit.objects.create(
                     user=x,
                     amount=2000,

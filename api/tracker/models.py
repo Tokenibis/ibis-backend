@@ -1,7 +1,7 @@
 from django.db import models
 from model_utils.models import TimeStampedModel
 
-from users.models import User
+from ibis.models import User
 
 
 class Log(TimeStampedModel):

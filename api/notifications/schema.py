@@ -185,7 +185,7 @@ class NotificationFilter(django_filters.FilterSet):
         fields = []
 
     def filter_for_user(self, qs, name, value):
-        notifier = ibis.models.IbisUser.objects.get(
+        notifier = ibis.models.User.objects.get(
             pk=from_global_id(value)[1]).notifier
         return qs.filter(notifier=notifier)
 

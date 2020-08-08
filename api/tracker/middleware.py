@@ -13,7 +13,7 @@ def TrackerMiddleware(get_response):
             if request.method == 'POST' and 'graphql' in request.path:
                 body = json.loads(request.body.decode())
                 log = models.Log.objects.create()
-                log.user = ibis.models.IbisUser.objects.get(pk=request.user.id)
+                log.user = ibis.models.User.objects.get(pk=request.user.id)
 
                 if 'operationName' in body:
                     log.graphql_operation = body['operationName']
@@ -30,7 +30,7 @@ def TrackerMiddleware(get_response):
 
                     log.response_code = response.status_code
                 log.save()
-        except ibis.models.IbisUser.DoesNotExist:
+        except ibis.models.User.DoesNotExist:
             pass
         except RawPostDataException:
             pass

@@ -93,8 +93,8 @@ class Model:
         self.deposit_categories = []
         self.email_templates = []
         self.donation_messages = []
-        self.ibisUsers = []
         self.users = []
+        self.general_users = []
         self.people = []
         self.organizations = []
         self.deposits = []
@@ -209,17 +209,17 @@ class Model:
             score,
             date_joined=None,
     ):
-        pk = len(self.users) + 1
+        pk = len(self.general_users) + 1
 
         unique_name = re.sub(r'\W+', '_', name).lower()[:15]
         i = 0
-        while unique_name in [x['fields']['last_name'] for x in self.users]:
+        while unique_name in [x['fields']['last_name'] for x in self.general_users]:
             i += 1
             suffix = '_{}'.format(i)
             unique_name = unique_name[:15 - len(suffix)] + suffix
 
-        self.users.append({
-            'model': 'users.User',
+        self.general_users.append({
+            'model': 'users.GeneralUser',
             'pk': pk,
             'fields': {
                 'username': unique_name,
@@ -231,8 +231,8 @@ class Model:
             }
         })
 
-        self.ibisUsers.append({
-            'model': 'ibis.IbisUser',
+        self.users.append({
+            'model': 'ibis.user',
             'pk': pk,
             'fields': {
                 'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
@@ -289,11 +289,11 @@ class Model:
         return pk
 
     def add_person(self, first, last, description, score, date_joined=None):
-        pk = len(self.users) + 1
+        pk = len(self.general_users) + 1
         username = '{}_{}_{}'.format(pk, first, last)[:15].lower()
 
-        self.users.append({
-            'model': 'users.User',
+        self.general_users.append({
+            'model': 'users.GeneralUser',
             'pk': pk,
             'fields': {
                 'username': username,
@@ -305,8 +305,8 @@ class Model:
             }
         })
 
-        self.ibisUsers.append({
-            'model': 'ibis.IbisUser',
+        self.users.append({
+            'model': 'ibis.user',
             'pk': pk,
             'fields': {
                 'following': [],
@@ -522,7 +522,7 @@ class Model:
         return pk
 
     def add_follow(self, source, target):
-        user = next((x for x in self.ibisUsers if x['pk'] == source), None)
+        user = next((x for x in self.users if x['pk'] == source), None)
         following = user['fields']['following']
         if target not in following:
             following.append(target)
@@ -549,12 +549,12 @@ class Model:
         for x in serializable_deposits:
             x['fields']['created'] = str(x['fields']['created'])
 
-        serializable_users = copy.deepcopy(self.users)
+        serializable_users = copy.deepcopy(self.general_users)
         for x in serializable_users:
             x['fields']['date_joined'] = str(x['fields']['date_joined'])
 
-        partial_ibisUsers = copy.deepcopy(self.ibisUsers)
-        for x in partial_ibisUsers:
+        partial_users = copy.deepcopy(self.users)
+        for x in partial_users:
             del x['fields']['following']
 
         partial_entries = copy.deepcopy(serializable_entries)
@@ -563,14 +563,14 @@ class Model:
 
         return [
             serializable_users,
-            partial_ibisUsers,
+            partial_users,
             self.organization_categories,
             self.deposit_categories,
             self.email_templates,
             self.donation_messages,
             self.organizations,
             self.people,
-            self.ibisUsers,
+            self.users,
             serializable_deposits,
             partial_entries,
             self.donations,

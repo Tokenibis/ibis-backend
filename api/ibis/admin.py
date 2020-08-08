@@ -36,7 +36,7 @@ class EntryOrganizationAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
         if db_field.name == 'user':
-            kwargs['queryset'] = models.IbisUser.objects.filter(
+            kwargs['queryset'] = models.User.objects.filter(
                 organization__isnull=False)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
