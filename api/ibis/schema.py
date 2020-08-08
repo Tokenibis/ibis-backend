@@ -344,12 +344,12 @@ class CommentFilter(django_filters.FilterSet):
         return qs.filter(parent_id=from_global_id(value)[1])
 
 
-# --- Nonprofit Category ---------------------------------------------------- #
+# --- Organization Category ---------------------------------------------------- #
 
 
-class NonprofitCategoryNode(DjangoObjectType):
+class OrganizationCategoryNode(DjangoObjectType):
     class Meta:
-        model = models.NonprofitCategory
+        model = models.OrganizationCategory
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -589,7 +589,7 @@ class DonationCreate(Mutation):
             raise GraphQLError('Arguments do not satisfy constraints')
 
         user_obj = models.IbisUser.objects.get(pk=from_global_id(user)[1])
-        target_obj = models.Nonprofit.objects.get(pk=from_global_id(target)[1])
+        target_obj = models.Organization.objects.get(pk=from_global_id(target)[1])
 
         try:
             assert user_obj.balance() - amount >= 0
@@ -745,7 +745,7 @@ class NewsCreate(Mutation):
     ):
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Nonprofit.objects.filter(
+                and models.Organization.objects.filter(
                     id=info.context.user.id).exists()):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -790,7 +790,7 @@ class NewsUpdate(Mutation):
     ):
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Nonprofit.objects.filter(
+                and models.Organization.objects.filter(
                     id=info.context.user.id).exists()):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -876,7 +876,7 @@ class EventCreate(Mutation):
     ):
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Nonprofit.objects.filter(
+                and models.Organization.objects.filter(
                     id=info.context.user.id).exists()):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -930,7 +930,7 @@ class EventUpdate(Mutation):
     ):
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Nonprofit.objects.filter(
+                and models.Organization.objects.filter(
                     id=info.context.user.id).exists()):
             raise GraphQLError('You do not have sufficient permission')
 
@@ -977,9 +977,9 @@ class IbisUserNode(UserNode):
     following_count = graphene.Int()
     follower_count = graphene.Int()
     following_count_person = graphene.Int()
-    following_count_nonprofit = graphene.Int()
+    following_count_organization = graphene.Int()
     follower_count_person = graphene.Int()
-    follower_count_nonprofit = graphene.Int()
+    follower_count_organization = graphene.Int()
 
     donation_with_count = graphene.Int()
     transaction_with_count = graphene.Int()
@@ -1012,15 +1012,15 @@ class IbisUserNode(UserNode):
     def resolve_following_count_person(self, *args, **kwargs):
         return len([x for x in self.following.all() if hasattr(x, 'person')])
 
-    def resolve_following_count_nonprofit(self, *args, **kwargs):
+    def resolve_following_count_organization(self, *args, **kwargs):
         return len(
-            [x for x in self.following.all() if hasattr(x, 'nonprofit')])
+            [x for x in self.following.all() if hasattr(x, 'organization')])
 
     def resolve_follower_count_person(self, *args, **kwargs):
         return len([x for x in self.follower.all() if hasattr(x, 'person')])
 
-    def resolve_follower_count_nonprofit(self, *args, **kwargs):
-        return len([x for x in self.follower.all() if hasattr(x, 'nonprofit')])
+    def resolve_follower_count_organization(self, *args, **kwargs):
+        return len([x for x in self.follower.all() if hasattr(x, 'organization')])
 
     def resolve_donation_with_count(self, info, *args, **kwargs):
         return EntryNode.get_queryset(
@@ -1058,15 +1058,15 @@ class IbisUserNode(UserNode):
         return queryset
 
 
-# --- Nonprofit ------------------------------------------------------------- #
+# --- Organization ------------------------------------------------------------- #
 
 
-class NonprofitNode(IbisUserNode):
+class OrganizationNode(IbisUserNode):
 
     fundraised = graphene.Int()
 
     class Meta:
-        model = models.Nonprofit
+        model = models.Organization
         exclude = ['email', 'password']
         filter_fields = []
         interfaces = (IbisUserNodeInterface, )
@@ -1075,7 +1075,7 @@ class NonprofitNode(IbisUserNode):
         return self.fundraised()
 
 
-class NonprofitUpdate(Mutation):
+class OrganizationUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         username = graphene.String()
@@ -1091,7 +1091,7 @@ class NonprofitUpdate(Mutation):
         banner = Upload()
         score = graphene.Int()
 
-    nonprofit = graphene.Field(NonprofitNode)
+    organization = graphene.Field(OrganizationNode)
 
     def mutate(
             self,
@@ -1114,26 +1114,26 @@ class NonprofitUpdate(Mutation):
                 or info.context.user.id == int(from_global_id(id)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
-        nonprofit = models.Nonprofit.objects.get(pk=from_global_id(id)[1])
+        organization = models.Organization.objects.get(pk=from_global_id(id)[1])
         if username:
-            nonprofit.username = username
+            organization.username = username
         if email:
-            nonprofit.email = email
+            organization.email = email
         if last_name:
-            nonprofit.last_name = last_name
+            organization.last_name = last_name
         if category:
-            nonprofit.category = models.NonprofitCategory.objects.get(
+            organization.category = models.OrganizationCategory.objects.get(
                 pk=from_global_id(category)[1])
         if description:
-            nonprofit.description = description
+            organization.description = description
         if link:
-            nonprofit.link = link
+            organization.link = link
         if type(privacy_donation) == bool:
-            nonprofit.privacy_donation = privacy_donation
+            organization.privacy_donation = privacy_donation
         if type(privacy_transaction) == bool:
-            nonprofit.privacy_transaction = privacy_transaction
+            organization.privacy_transaction = privacy_transaction
         if type(privacy_deposit) == bool:
-            nonprofit.privacy_deposit = privacy_deposit
+            organization.privacy_deposit = privacy_deposit
         if avatar:
             tmp = os.path.join(
                 settings.MEDIA_ROOT,
@@ -1151,12 +1151,12 @@ class NonprofitUpdate(Mutation):
                 )
                 im.save(path)
 
-                nonprofit.avatar = '{}{}{}'.format(
+                organization.avatar = '{}{}{}'.format(
                     settings.API_ROOT_PATH,
                     settings.MEDIA_URL,
                     '/'.join(path.rsplit('/')[-3:]),
                 )
-                nonprofit.save()
+                organization.save()
             except Exception as e:
                 raise e
             finally:
@@ -1178,19 +1178,19 @@ class NonprofitUpdate(Mutation):
                 )
                 im.save(path)
 
-                nonprofit.banner = '{}{}{}'.format(
+                organization.banner = '{}{}{}'.format(
                     settings.API_ROOT_PATH,
                     settings.MEDIA_URL,
                     '/'.join(path.rsplit('/')[-3:]),
                 )
-                nonprofit.save()
+                organization.save()
             except Exception as e:
                 raise e
             finally:
                 os.remove(tmp)
 
-        nonprofit.save()
-        return NonprofitUpdate(nonprofit=nonprofit)
+        organization.save()
+        return OrganizationUpdate(organization=organization)
 
 
 # --- Person ---------------------------------------------------------------- #
@@ -1592,10 +1592,10 @@ class RsvpDelete(RsvpMutation):
 
 class Query(object):
 
-    nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
+    organization_category = relay.Node.Field(OrganizationCategoryNode)
     deposit_category = relay.Node.Field(DepositCategoryNode)
     ibis_user = IbisUserNodeInterface.Field(IbisUserNode)
-    nonprofit = IbisUserNodeInterface.Field(NonprofitNode)
+    organization = IbisUserNodeInterface.Field(OrganizationNode)
     person = IbisUserNodeInterface.Field(PersonNode)
     bot = IbisUserNodeInterface.Field(BotNode)
     withdrawal = relay.Node.Field(WithdrawalNode)
@@ -1607,8 +1607,8 @@ class Query(object):
     post = EntryNodeInterface.Field(PostNode)
     comment = EntryNodeInterface.Field(CommentNode)
 
-    all_nonprofit_categories = DjangoFilterConnectionField(
-        NonprofitCategoryNode)
+    all_organization_categories = DjangoFilterConnectionField(
+        OrganizationCategoryNode)
     all_deposit_categories = DjangoFilterConnectionField(DepositCategoryNode)
     all_ibis_users = DjangoFilterConnectionField(
         IbisUserNode,
@@ -1622,8 +1622,8 @@ class Query(object):
         BotNode,
         filterset_class=IbisUserFilter,
     )
-    all_nonprofits = DjangoFilterConnectionField(
-        NonprofitNode,
+    all_organizations = DjangoFilterConnectionField(
+        OrganizationNode,
         filterset_class=IbisUserFilter,
     )
     all_deposits = DjangoFilterConnectionField(
@@ -1673,7 +1673,7 @@ class Mutation(graphene.ObjectType):
     create_bookmark = BookmarkCreate.Field()
     create_RSVP = RsvpCreate.Field()
 
-    update_nonprofit = NonprofitUpdate.Field()
+    update_organization = OrganizationUpdate.Field()
     update_person = PersonUpdate.Field()
     update_bot = BotUpdate.Field()
     update_news = NewsUpdate.Field()

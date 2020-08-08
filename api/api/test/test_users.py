@@ -33,7 +33,7 @@ class PermissionTestCase(BaseTestCase):
                 op_name='DonationCreate',
                 variables={
                     'user': to_global_id('IbisUserNode', user.id),
-                    'target': self.nonprofit.gid,
+                    'target': self.organization.gid,
                     'amount': 100,
                     'description': 'This is a donation',
                 },
@@ -215,14 +215,14 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Nonprofit'],
-                op_name='Nonprofit',
+                self.gql['Organization'],
+                op_name='Organization',
                 variables={
-                    'id': self.nonprofit.gid,
+                    'id': self.organization.gid,
                 },
             ).content)
-        success['Nonprofit'] = 'errors' not in result and bool(
-            result['data']['nonprofit']['id'])
+        success['Organization'] = 'errors' not in result and bool(
+            result['data']['organization']['id'])
 
         result = json.loads(
             self.query(
@@ -350,8 +350,8 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['NonprofitList'],
-                op_name='NonprofitList',
+                self.gql['OrganizationList'],
+                op_name='OrganizationList',
                 variables={
                     'self': user.gid,
                     'orderBy': '-created',
@@ -359,21 +359,21 @@ class PermissionTestCase(BaseTestCase):
                     'after': 1,
                 },
             ).content)
-        success['NonprofitList'] = 'errors' not in result and len(
-            result['data']['allNonprofits']['edges']) > 0
+        success['OrganizationList'] = 'errors' not in result and len(
+            result['data']['allOrganizations']['edges']) > 0
 
         result = json.loads(
             self.query(
-                self.gql['NonprofitUpdate'],
-                op_name='NonprofitUpdate',
+                self.gql['OrganizationUpdate'],
+                op_name='OrganizationUpdate',
                 variables={
-                    'id': self.me_nonprofit.gid,
+                    'id': self.me_organization.gid,
                     'privacyDonation': False,
                     'privacyTransaction': False,
                 },
             ).content)
-        success['NonprofitUpdate'] = 'errors' not in result and result['data'][
-            'updateNonprofit']['nonprofit']['id']
+        success['OrganizationUpdate'] = 'errors' not in result and result['data'][
+            'updateOrganization']['organization']['id']
 
         result = json.loads(
             self.query(
@@ -564,7 +564,7 @@ class PermissionTestCase(BaseTestCase):
                 op_name='DonationForm',
                 variables={
                     'id': to_global_id('IbisUserNode', user.id),
-                    'target': self.nonprofit.gid,
+                    'target': self.organization.gid,
                 },
             ).content)
         success['DonationForm'] = 'errors' not in result and bool(
@@ -640,7 +640,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['WithdrawalList'],
                 op_name='WithdrawalList',
                 variables={
-                    'withUser': self.me_nonprofit.gid,
+                    'withUser': self.me_organization.gid,
                     'orderBy': '-created',
                     'first': 25,
                 },
@@ -698,7 +698,7 @@ class PermissionTestCase(BaseTestCase):
     # logged in users can see all of their own information
     def test_person(self):
         expected_fail = [
-            'NonprofitUpdate',
+            'OrganizationUpdate',
             'NewsCreate',
             'NewsUpdate',
             'EventCreate',
@@ -711,13 +711,13 @@ class PermissionTestCase(BaseTestCase):
         assert not any(x[1] for x in results.items() if x[0] in expected_fail)
 
     # logged in users can see all of their own information
-    def test_nonprofit(self):
+    def test_organization(self):
         expected_fail = [
             'PersonUpdate',
             'PostCreate',
         ]
-        self._client.force_login(self.me_nonprofit)
-        results = self.run_all(self.me_nonprofit)
+        self._client.force_login(self.me_organization)
+        results = self.run_all(self.me_organization)
         assert all(x[1] for x in results.items() if x[0] not in expected_fail)
         assert not any(x[1] for x in results.items() if x[0] in expected_fail)
 
@@ -744,9 +744,9 @@ class PermissionTestCase(BaseTestCase):
             'LikeDelete': False,
             'News': True,
             'NewsList': True,
-            'Nonprofit': True,
-            'NonprofitList': True,
-            'NonprofitUpdate': False,
+            'Organization': True,
+            'OrganizationList': True,
+            'OrganizationUpdate': False,
             'NotificationClicked': False,
             'NotificationList': False,
             'Notifier': False,

@@ -89,14 +89,14 @@ class Markov(object):
 
 class Model:
     def __init__(self):
-        self.nonprofit_categories = []
+        self.organization_categories = []
         self.deposit_categories = []
         self.email_templates = []
         self.donation_messages = []
         self.ibisUsers = []
         self.users = []
         self.people = []
-        self.nonprofits = []
+        self.organizations = []
         self.deposits = []
         self.withdrawals = []
         self.entries = []
@@ -148,11 +148,11 @@ class Model:
     def _random_time(self):
         return self.now - timedelta(seconds=random.randint(0, WINDOW))
 
-    def add_nonprofit_category(self, title, description):
-        pk = len(self.nonprofit_categories) + 1
+    def add_organization_category(self, title, description):
+        pk = len(self.organization_categories) + 1
 
-        self.nonprofit_categories.append({
-            'model': 'ibis.NonProfitCategory',
+        self.organization_categories.append({
+            'model': 'ibis.OrganizationCategory',
             'pk': pk,
             'fields': {
                 'title': title,
@@ -201,7 +201,7 @@ class Model:
             },
         })
 
-    def add_nonprofit(
+    def add_organization(
             self,
             name,
             description,
@@ -242,8 +242,8 @@ class Model:
             },
         })
 
-        self.nonprofits.append({
-            'model': 'ibis.Nonprofit',
+        self.organizations.append({
+            'model': 'ibis.Organization',
             'pk': pk,
             'fields': {
                 'category': category,
@@ -263,7 +263,7 @@ class Model:
             score,
             created=None,
     ):
-        assert target in [x['pk'] for x in self.nonprofits]
+        assert target in [x['pk'] for x in self.organizations]
         pk = len(self.entries) + 1
 
         self.entries.append({
@@ -332,7 +332,7 @@ class Model:
             description,
             score,
     ):
-        assert target not in [x['pk'] for x in self.nonprofits]
+        assert target not in [x['pk'] for x in self.organizations]
         pk = len(self.entries) + 1
 
         self.entries.append({
@@ -358,15 +358,15 @@ class Model:
 
         return pk
 
-    def add_news(self, nonprofit, title, description, score):
-        assert nonprofit in [x['pk'] for x in self.nonprofits]
+    def add_news(self, organization, title, description, score):
+        assert organization in [x['pk'] for x in self.organizations]
         pk = len(self.entries) + 1
 
         self.entries.append({
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': nonprofit,
+                'user': organization,
                 'description': description,
                 'like': [],
                 'created': self._random_time(),
@@ -389,7 +389,7 @@ class Model:
 
     def add_event(
             self,
-            nonprofit,
+            organization,
             title,
             description,
             date,
@@ -397,14 +397,14 @@ class Model:
             address,
             score,
     ):
-        assert nonprofit in [x['pk'] for x in self.nonprofits]
+        assert organization in [x['pk'] for x in self.organizations]
         pk = len(self.entries) + 1
 
         self.entries.append({
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': nonprofit,
+                'user': organization,
                 'description': description,
                 'like': [],
                 'created': self._random_time(),
@@ -564,11 +564,11 @@ class Model:
         return [
             serializable_users,
             partial_ibisUsers,
-            self.nonprofit_categories,
+            self.organization_categories,
             self.deposit_categories,
             self.email_templates,
             self.donation_messages,
-            self.nonprofits,
+            self.organizations,
             self.people,
             self.ibisUsers,
             serializable_deposits,
@@ -590,7 +590,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--num_person', type=int, required=True)
-        parser.add_argument('--num_nonprofit', type=int, required=True)
+        parser.add_argument('--num_organization', type=int, required=True)
         parser.add_argument('--num_deposit', type=int, required=True)
         parser.add_argument('--num_withdrawal', type=int, required=True)
         parser.add_argument('--num_donation', type=int, required=True)
@@ -607,7 +607,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.run(
             num_person=options['num_person'],
-            num_nonprofit=options['num_nonprofit'],
+            num_organization=options['num_organization'],
             num_deposit=options['num_deposit'],
             num_withdrawal=options['num_withdrawal'],
             num_donation=options['num_donation'],
@@ -625,7 +625,7 @@ class Command(BaseCommand):
     def run(
             self,
             num_person,
-            num_nonprofit,
+            num_organization,
             num_deposit,
             num_withdrawal,
             num_donation,
@@ -639,7 +639,7 @@ class Command(BaseCommand):
             num_bookmark,
             num_like,
     ):
-        assert num_deposit >= num_person + num_nonprofit
+        assert num_deposit >= num_person + num_organization
 
         random.seed(0)
         model = Model()
@@ -647,7 +647,7 @@ class Command(BaseCommand):
         # load data
         markov = Markov(os.path.join(DIR, 'data/corpus'))
 
-        with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
+        with open(os.path.join(DIR, 'data/organization_categories.json')) as fd:
             np_cat_raw = json.load(fd)
 
         with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
@@ -655,7 +655,7 @@ class Command(BaseCommand):
 
         email_templates = make_email_templates()
 
-        with open(os.path.join(DIR, 'data/nonprofits.json')) as fd:
+        with open(os.path.join(DIR, 'data/organizations.json')) as fd:
             np_raw = sorted(json.load(fd), key=lambda x: x['name'])
 
         with open(os.path.join(DIR, 'data/names.txt')) as fd:
@@ -690,9 +690,9 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/addresses.json')) as fd:
             addresses = json.load(fd)
 
-        # make nonprofit categories from charity navigator categories
-        nonprofit_categories = [
-            model.add_nonprofit_category(x, np_cat_raw[x]) for x in np_cat_raw
+        # make organization categories from charity navigator categories
+        organization_categories = [
+            model.add_organization_category(x, np_cat_raw[x]) for x in np_cat_raw
         ]
 
         # make deposit categories from charity navigator categories
@@ -714,22 +714,22 @@ class Command(BaseCommand):
             for x in json.load(fd):
                 model.add_donation_message(x)
 
-        # add special first nonprofit
-        model.add_nonprofit(
+        # add special first organization
+        model.add_organization(
             'Token Ibis',
-            'First nonprofit',
-            random.choice(nonprofit_categories),
+            'First organization',
+            random.choice(organization_categories),
             random.randint(0, 100),
         )
 
-        # make nonprofits from scraped list of real nonprofits
-        nonprofits = [
-            model.add_nonprofit(
+        # make organizations from scraped list of real organizations
+        organizations = [
+            model.add_organization(
                 x['name'],
                 x['description'],
-                random.choice(nonprofit_categories),
+                random.choice(organization_categories),
                 random.randint(0, 100),
-            ) for x in np_raw[:num_nonprofit - 1]
+            ) for x in np_raw[:num_organization - 1]
         ]
 
         # make people
@@ -752,8 +752,8 @@ class Command(BaseCommand):
                 created=model.now - timedelta(seconds=WINDOW + 2),
             )
 
-        # initial donations for nonprofits
-        for nonprofit in nonprofits:
+        # initial donations for organizations
+        for organization in organizations:
             donor = random.choice(people)
             model.add_deposit(
                 donor,
@@ -763,7 +763,7 @@ class Command(BaseCommand):
             )
             model.add_donation(
                 donor,
-                nonprofit,
+                organization,
                 1000000,
                 'initial',
                 0,
@@ -771,7 +771,7 @@ class Command(BaseCommand):
             )
 
         # make random deposits
-        for i in range(num_deposit - (num_person + num_nonprofit)):
+        for i in range(num_deposit - (num_person + num_organization)):
             model.add_deposit(
                 random.choice(people),
                 random.randint(1, 10000),
@@ -781,18 +781,18 @@ class Command(BaseCommand):
         # make random deposits
         for i in range(num_withdrawal):
             model.add_withdrawal(
-                random.choice(nonprofits),
+                random.choice(organizations),
                 random.randint(1, 10000),
             )
 
         # make random donations
         donations = []
-        for i in range(num_donation - len(nonprofits)):
-            donor = random.choice(people + nonprofits)
+        for i in range(num_donation - len(organizations)):
+            donor = random.choice(people + organizations)
             donations.append(
                 model.add_donation(
                     donor,
-                    random.choice([x for x in nonprofits if x != donor]),
+                    random.choice([x for x in organizations if x != donor]),
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
@@ -801,7 +801,7 @@ class Command(BaseCommand):
         # make random transactions
         transactions = []
         for i in range(num_transaction):
-            sender = random.choice(people + nonprofits)
+            sender = random.choice(people + organizations)
             transactions.append(
                 model.add_transaction(
                     sender,
@@ -833,7 +833,7 @@ class Command(BaseCommand):
             description = '.'.join(sentences)
             news.append(
                 model.add_news(
-                    random.choice(nonprofits),
+                    random.choice(organizations),
                     title,
                     description,
                     random.randint(0, 100),
@@ -852,7 +852,7 @@ class Command(BaseCommand):
             address = random.choice(addresses)
             events.append(
                 model.add_event(
-                    random.choice(nonprofits),
+                    random.choice(organizations),
                     title,
                     markov.generate_markov_text(size=60),
                     date_next.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
@@ -888,7 +888,7 @@ class Command(BaseCommand):
                 size=random.randint(25, 100))
             comments.append(
                 model.add_comment(
-                    random.choice(people + nonprofits),
+                    random.choice(people + organizations),
                     parent,
                     description,
                     random.randint(0, 100),
@@ -896,27 +896,27 @@ class Command(BaseCommand):
 
         # add followers
         for i in range(num_follow):
-            source, target = random.sample(people + nonprofits, 2)
+            source, target = random.sample(people + organizations, 2)
             model.add_follow(source, target)
 
         # add rsvps
         for i in range(num_rsvp):
             model.add_rsvp(
-                random.choice(people + nonprofits),
+                random.choice(people + organizations),
                 random.choice(events),
             )
 
         # add bookmarks
         for i in range(num_bookmark):
             model.add_bookmark(
-                random.choice(people + nonprofits),
+                random.choice(people + organizations),
                 random.choice(news + posts))
 
         # add likes
         likeable = transactions + donations + news + events + posts + comments
         for i in range(num_like):
             model.add_like(
-                random.choice(people + nonprofits),
+                random.choice(people + organizations),
                 random.choice(likeable),
             )
 

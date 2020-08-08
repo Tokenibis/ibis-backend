@@ -30,8 +30,8 @@ class BotTestCase(BaseTestCase):
         'LikeDelete',
         'News',
         'NewsList',
-        'Nonprofit',
-        'NonprofitList',
+        'Organization',
+        'OrganizationList',
         'Person',
         'PersonList',
         'PersonUpdate',
@@ -156,7 +156,7 @@ class BotTestCase(BaseTestCase):
                 op_name='DonationCreate',
                 variables={
                     'user': to_global_id('IbisUserNode', user.id),
-                    'target': self.nonprofit.gid,
+                    'target': self.organization.gid,
                     'amount': 100,
                     'description': 'This is a donation',
                 },
@@ -297,27 +297,27 @@ class BotTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql_bot['Nonprofit'],
-                op_name='Nonprofit',
+                self.gql_bot['Organization'],
+                op_name='Organization',
                 variables={
-                    'id': self.nonprofit.gid,
+                    'id': self.organization.gid,
                 },
             ).content)
-        success['Nonprofit'] = 'errors' not in result and bool(
-            result['data']['nonprofit']['id'])
+        success['Organization'] = 'errors' not in result and bool(
+            result['data']['organization']['id'])
 
         result = json.loads(
             self.query(
-                self.gql_bot['NonprofitList'],
-                op_name='NonprofitList',
+                self.gql_bot['OrganizationList'],
+                op_name='OrganizationList',
                 variables={
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
-        success['NonprofitList'] = 'errors' not in result and len(
-            result['data']['allNonprofits']['edges']) > 0
+        success['OrganizationList'] = 'errors' not in result and len(
+            result['data']['allOrganizations']['edges']) > 0
 
         result = json.loads(
             self.query(

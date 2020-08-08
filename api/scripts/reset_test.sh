@@ -19,7 +19,7 @@ sudo -u postgres createdb ibis
 cd $DIR/.. && \
     python3 manage.py make_fixtures \
 	    --num_person 100 \
-	    --num_nonprofit 50 \
+	    --num_organization 50 \
 	    --num_deposit 200 \
 	    --num_withdrawal 100 \
 	    --num_donation 400 \

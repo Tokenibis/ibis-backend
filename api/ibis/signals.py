@@ -8,21 +8,21 @@ def scoreFundraisedDescending(sender, instance, created, raw, **kwargs):
     if raw or not created:
         return
 
-    nonprofits = list(
-        models.Nonprofit.objects.exclude(username=settings.IBIS_USERNAME_ROOT))
-    nonprofits.sort(key=lambda x: x.fundraised(), reverse=True)
-    for i, nonprofit in enumerate(nonprofits):
-        if nonprofit.score != i + 1:
-            nonprofit.score = i + 1
-            nonprofit.save()
+    organizations = list(
+        models.Organization.objects.exclude(username=settings.IBIS_USERNAME_ROOT))
+    organizations.sort(key=lambda x: x.fundraised(), reverse=True)
+    for i, organization in enumerate(organizations):
+        if organization.score != i + 1:
+            organization.score = i + 1
+            organization.save()
 
 
-score_nonprofit = {
+score_organization = {
     'fundraised_descending': scoreFundraisedDescending,
 }
 
-if settings.SIGNAL_SCORE_NONPROFIT:
+if settings.SIGNAL_SCORE_ORGANIZATION:
     post_save.connect(
-        score_nonprofit[settings.SIGNAL_SCORE_NONPROFIT],
+        score_organization[settings.SIGNAL_SCORE_ORGANIZATION],
         sender=models.Donation,
     )

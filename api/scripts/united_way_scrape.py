@@ -7,7 +7,7 @@ import requests
 
 from lxml import html
 
-URL = 'https://uwcnm.org/how-we-help/supporting-nonprofits/community-fund/current-grantees?page={}'
+URL = 'https://uwcnm.org/how-we-help/supporting-organizations/community-fund/current-grantees?page={}'
 
 
 def parse(url):
@@ -41,7 +41,7 @@ def run():
         results.extend(parse(URL.format(i)))
         time.sleep(2)
 
-    with open('nonprofits.json', 'w') as fd:
+    with open('organizations.json', 'w') as fd:
         json.dump(results, fd)
 
 

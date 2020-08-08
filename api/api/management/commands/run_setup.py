@@ -53,8 +53,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        with open(os.path.join(DIR, 'data/nonprofit_categories.json')) as fd:
-            nonprofit_categories = json.load(fd)
+        with open(os.path.join(DIR, 'data/organization_categories.json')) as fd:
+            organization_categories = json.load(fd)
 
         with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
             deposit_categories = json.load(fd)
@@ -62,10 +62,10 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/donation_messages.json')) as fd:
             donation_messages = json.load(fd)
 
-        for cat in sorted(nonprofit_categories.keys()):
-            models.NonprofitCategory.objects.create(
+        for cat in sorted(organization_categories.keys()):
+            models.OrganizationCategory.objects.create(
                 title=cat,
-                description=nonprofit_categories[cat],
+                description=organization_categories[cat],
             )
 
         for cat in deposit_categories:
@@ -109,8 +109,8 @@ class Command(BaseCommand):
         app.sites.add(site)
         app.save()
 
-        # the first nonprofit is special; the name/info can be changed later
-        models.Nonprofit.objects.create(
+        # the first organization is special; the name/info can be changed later
+        models.Organization.objects.create(
             username='tokenibis',
             first_name='',
             last_name='Token Ibis',

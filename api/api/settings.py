@@ -231,7 +231,7 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 
 def APP_LINK_RESOLVER(reference):
     lookup = {
-        'Nonprofit': '/Nonprofit/Nonprofit?id={}',
+        'Organization': '/Organization/Organization?id={}',
         'Donation': '/Donation/Donation?id={}',
         'Person': '/Person/Person?id={}',
         'Transaction': '/Transaction/Transaction?id={}',
@@ -342,6 +342,6 @@ API_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
 
 APP_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['app'])
 
-SIGNAL_SCORE_NONPROFIT = 'fundraised_descending'
+SIGNAL_SCORE_ORGANIZATION = 'fundraised_descending'
 
 UNSUBSCRIBE_EMAIL = 'unsubscribe@tokenibis.org?subject=unsubscribe'

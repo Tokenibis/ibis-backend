@@ -8,8 +8,8 @@ def AuthenticateAllMiddleware(get_response):
     def middleware(request):
         if settings.AUTHENTICATE_AS == 'person':
             user = ibis.models.Person.objects.all().first()
-        elif settings.AUTHENTICATE_AS == 'nonprofit':
-            user = ibis.models.Nonprofit.objects.all().first()
+        elif settings.AUTHENTICATE_AS == 'organization':
+            user = ibis.models.Organization.objects.all().first()
         else:
             raise ValueError('Unknown test authentication type')
 

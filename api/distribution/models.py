@@ -76,7 +76,7 @@ def get_distribution_amount(time):
 
 def get_control_history(time):
     """Calculate the historical control (goal, adjusted donations) as a
-    timeseries. The effective donation adjusts for outbound nonprofit
+    timeseries. The effective donation adjusts for outbound organization
     transactions as well as user deposits. The control error can be
     calculated as the difference of each pair of data points.
 
@@ -104,12 +104,12 @@ def get_control_history(time):
                             created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of outbound donations
                     x.amount for x in ibis.models.Donation.objects.filter(
-                        user__nonprofit__isnull=False,
+                        user__organization__isnull=False,
                         created__gte=to_step_start(x.created),
                         created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of outbound transactions
                     x.amount for x in ibis.models.Transaction.objects.filter(
-                        user__nonprofit__isnull=False,
+                        user__organization__isnull=False,
                         created__gte=to_step_start(x.created),
                         created__lt=to_step_start(x.created, offset=1))),
             ]),

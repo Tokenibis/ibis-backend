@@ -135,9 +135,9 @@ class Rsvpable(models.Model):
         abstract = True
 
 
-class NonprofitCategory(models.Model):
+class OrganizationCategory(models.Model):
     class Meta:
-        verbose_name_plural = 'nonprofit categories'
+        verbose_name_plural = 'organization categories'
 
     title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
     description = models.TextField(validators=[MinLengthValidator(1)])
@@ -146,12 +146,12 @@ class NonprofitCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Nonprofit(IbisUser):
+class Organization(IbisUser):
     class Meta:
-        verbose_name = "Nonprofit"
+        verbose_name = "Organization"
 
     category = models.ForeignKey(
-        NonprofitCategory,
+        OrganizationCategory,
         on_delete=models.CASCADE,
         null=True,
     )
@@ -305,7 +305,7 @@ class Deposit(TimeStampedModel, Valuable, Hideable):
 
 class Withdrawal(TimeStampedModel, Valuable):
     user = models.ForeignKey(
-        Nonprofit,
+        Organization,
         on_delete=models.CASCADE,
     )
     description = models.TextField(blank=True)
@@ -320,7 +320,7 @@ class Withdrawal(TimeStampedModel, Valuable):
 
 class Donation(Entry, Valuable, Hideable):
     target = models.ForeignKey(
-        Nonprofit,
+        Organization,
         on_delete=models.CASCADE,
     )
 

@@ -8,9 +8,9 @@ urlpatterns = [
         name='settings',
     ),
     path(
-        'nonprofit_settings/<int:pk>/<str:token>/',
-        views.NonprofitSettingsView.as_view(),
-        name='nonprofit_settings',
+        'organization_settings/<int:pk>/<str:token>/',
+        views.OrganizationSettingsView.as_view(),
+        name='organization_settings',
     ),
     path(
         'unsubscribe/<int:pk>/<str:token>/',

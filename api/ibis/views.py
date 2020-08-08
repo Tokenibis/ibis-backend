@@ -128,7 +128,7 @@ class PasswordLoginView(generics.GenericAPIView):
                 to_global_id('IbisUserNode', str(user.id)),
                 'user_type':
                 'person' if models.Person.objects.filter(
-                    id=user.id) else 'nonprofit',
+                    id=user.id) else 'organization',
             })
         else:
             return response.Response({
@@ -228,7 +228,7 @@ class IdentifyView(generics.GenericAPIView):
         if models.IbisUser.objects.filter(id=request.user.id).exists():
             user_id = to_global_id('IbisUserNode', str(request.user.id))
             user_type = 'person' if models.Person.objects.filter(
-                id=request.user.id).exists() else 'nonprofit'
+                id=request.user.id).exists() else 'organization'
         else:
             user_id = ''
             user_type = ''

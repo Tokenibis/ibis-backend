@@ -277,7 +277,7 @@ class NotificationUpdate(Mutation):
 
 
 class DonationMessageFilter(django_filters.FilterSet):
-    nonprofit = GlobalIDFilter(method='filter_nonprofit')
+    organization = GlobalIDFilter(method='filter_organization')
     random = django_filters.BooleanFilter(method='filter_random')
 
     class Meta:
@@ -287,9 +287,9 @@ class DonationMessageFilter(django_filters.FilterSet):
     def filter_random(self, qs, name, value):
         return qs.order_by('?')
 
-    def filter_nonprofit(self, qs, name, value):
+    def filter_organization(self, qs, name, value):
         return qs.annotate(
-            nonprofit_id=Value(
+            organization_id=Value(
                 from_global_id(value)[1],
                 output_field=PositiveIntegerField(),
             ))
@@ -307,10 +307,10 @@ class DonationMessageNode(DjangoObjectType):
         test = graphene.String()
 
     def resolve_description(self, *args, **kwargs):
-        if hasattr(self, 'nonprofit_id'):
+        if hasattr(self, 'organization_id'):
             return self.description.format(
-                nonprofit=ibis.models.Nonprofit.objects.get(
-                    id=self.nonprofit_id))
+                organization=ibis.models.Organization.objects.get(
+                    id=self.organization_id))
         return self.description
 
 

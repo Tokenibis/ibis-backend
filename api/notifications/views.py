@@ -25,10 +25,10 @@ class SettingsView(UpdateView):
             return HttpResponseRedirect(settings.REDIRECT_URL_NOTIFICATIONS)
         if self.request.path.split(
                 '/'
-        )[-4] != 'nonprofit_settings' and models.Nonprofit.objects.filter(
+        )[-4] != 'organization_settings' and models.Organization.objects.filter(
                 id=notifier.user.id).exists():
             return HttpResponseRedirect(
-                reverse('nonprofit_settings', kwargs=kwargs))
+                reverse('organization_settings', kwargs=kwargs))
 
         return super().post(*args, **kwargs)
 
@@ -43,7 +43,7 @@ class SettingsView(UpdateView):
         return reverse('settings_success')
 
 
-class NonprofitSettingsView(SettingsView):
+class OrganizationSettingsView(SettingsView):
     fields = (
         'email_follow',
         'email_donation',
@@ -97,4 +97,4 @@ class DonationMessageView(View):
     def get(self, request, *args, **kwargs):
         return HttpResponse(
             DonationMessage.objects.order_by("?").first().description.format(
-                nonprofit=kwargs['name']))
+                organization=kwargs['name']))

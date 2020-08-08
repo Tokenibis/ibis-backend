@@ -62,8 +62,8 @@ class NotificationTestCase(BaseTestCase):
                     'description'] += '\n\n@{}--email@example.com) and @{}'.format(
                         models.Person.objects.exclude(
                             id=self.person.id).first().username,
-                        models.Nonprofit.objects.exclude(
-                            id=self.nonprofit.id).first().username,
+                        models.Organization.objects.exclude(
+                            id=self.organization.id).first().username,
                     )
 
             query = self.gql[op_name]
@@ -147,7 +147,7 @@ class NotificationTestCase(BaseTestCase):
             category=models.DepositCategory.objects.first(),
         )
 
-        self.person.following.add(self.nonprofit)
+        self.person.following.add(self.organization)
         self.person.following.add(self.me_person)
 
         def run(op_type, c, mention=False, delete=False):

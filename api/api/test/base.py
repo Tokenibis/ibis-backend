@@ -19,7 +19,7 @@ logging.disable(logging.CRITICAL)
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 NUM_PERSON = 10
-NUM_NONPROFIT = 10
+NUM_ORGANIZATION = 10
 NUM_DEPOSIT = 30
 NUM_WITHDRAWAL = 30
 NUM_DONATION = 100
@@ -47,7 +47,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
     call_command(
         'make_fixtures',
         num_person=NUM_PERSON,
-        num_nonprofit=NUM_NONPROFIT,
+        num_organization=NUM_ORGANIZATION,
         num_deposit=NUM_DEPOSIT,
         num_withdrawal=NUM_WITHDRAWAL,
         num_donation=NUM_DONATION,
@@ -93,9 +93,9 @@ class BaseTestCase(GraphQLTestCase):
         'NewsCreate',
         'NewsList',
         'NewsUpdate',
-        'Nonprofit',
-        'NonprofitList',
-        'NonprofitUpdate',
+        'Organization',
+        'OrganizationList',
+        'OrganizationUpdate',
         'NotificationClicked',
         'NotificationList',
         'Notifier',
@@ -137,7 +137,7 @@ class BaseTestCase(GraphQLTestCase):
 
         self.assertCountEqual(self.gql.keys(), self.operations)
         assert len(models.Person.objects.all()) == NUM_PERSON
-        assert len(models.Nonprofit.objects.all()) == NUM_NONPROFIT
+        assert len(models.Organization.objects.all()) == NUM_ORGANIZATION
         assert len(models.Donation.objects.all()) == NUM_DONATION
         assert len(models.Transaction.objects.all()) == NUM_TRANSACTION
         assert len(models.News.objects.all()) == NUM_NEWS
@@ -162,13 +162,13 @@ class BaseTestCase(GraphQLTestCase):
                 email='person@example.com',
             )
 
-            self.me_nonprofit = models.Nonprofit.objects.create(
-                username='nonprofit',
+            self.me_organization = models.Organization.objects.create(
+                username='organization',
                 password='password',
-                first_name='Nonprofit',
-                last_name='McNonprofitFace',
-                email='nonprofit@example.com',
-                category=models.NonprofitCategory.objects.first(),
+                first_name='Organization',
+                last_name='McOrganizationFace',
+                email='organization@example.com',
+                category=models.OrganizationCategory.objects.first(),
             )
 
             models.Deposit.objects.create(
@@ -179,13 +179,13 @@ class BaseTestCase(GraphQLTestCase):
             )
 
             models.Deposit.objects.create(
-                user=self.me_nonprofit,
+                user=self.me_organization,
                 amount=400,
                 payment_id='unique_2',
                 category=models.DepositCategory.objects.first(),
             )
 
-            self.nonprofit = models.Nonprofit.objects.all().first()
+            self.organization = models.Organization.objects.all().first()
             self.person = models.Person.objects.all().first()
             self.donation = models.Donation.objects.all().first()
             self.transaction = models.Transaction.objects.all().first()
@@ -194,10 +194,10 @@ class BaseTestCase(GraphQLTestCase):
             self.post = models.Post.objects.all().first()
 
             self.me_person.gid = to_global_id('IbisUserNode', self.me_person.id)
-            self.me_nonprofit.gid = to_global_id('IbisUserNode',
-                                                 self.me_nonprofit.id)
-            self.nonprofit.gid = to_global_id('IbisUserNode',
-                                              self.nonprofit.id)
+            self.me_organization.gid = to_global_id('IbisUserNode',
+                                                 self.me_organization.id)
+            self.organization.gid = to_global_id('IbisUserNode',
+                                              self.organization.id)
             self.person.gid = to_global_id('IbisUserNode', self.person.id)
             self.donation.gid = to_global_id('EntryNode', self.donation.id)
             self.transaction.gid = to_global_id('EntryNode',
@@ -206,29 +206,29 @@ class BaseTestCase(GraphQLTestCase):
             self.event.gid = to_global_id('EntryNode', self.event.id)
             self.post.gid = to_global_id('EntryNode', self.post.id)
 
-            # make sure that me_person, me_nonprofit, and person have notifications
+            # make sure that me_person, me_organization, and person have notifications
             donation_me_person = models.Donation.objects.create(
                 user=self.me_person,
-                target=self.nonprofit,
+                target=self.organization,
                 amount=100,
                 description='My donation',
             )
-            donation_me_nonprofit = models.Donation.objects.create(
-                user=self.me_nonprofit,
-                target=self.nonprofit,
+            donation_me_organization = models.Donation.objects.create(
+                user=self.me_organization,
+                target=self.organization,
                 amount=100,
                 description='My donation',
             )
             donation_person = models.Donation.objects.create(
                 user=self.person,
-                target=self.nonprofit,
+                target=self.organization,
                 amount=100,
                 description='Person\'s donation',
             )
 
-            # make sure me_nonprofit has one withdrawal
+            # make sure me_organization has one withdrawal
             models.Withdrawal.objects.create(
-                user=self.me_nonprofit,
+                user=self.me_organization,
                 amount=100,
                 description='This is a withdrawal',
             )
@@ -250,7 +250,7 @@ class BaseTestCase(GraphQLTestCase):
                     'user':
                     self.person.gid,
                     'target':
-                    to_global_id('DonationNode', donation_me_nonprofit.id),
+                    to_global_id('DonationNode', donation_me_organization.id),
                 },
             )
             self._client.logout()
@@ -279,7 +279,7 @@ class BaseTestCase(GraphQLTestCase):
 
             models.Donation.objects.create(
                 user=self.person,
-                target=self.nonprofit,
+                target=self.organization,
                 amount=100,
                 description='External donation',
             )

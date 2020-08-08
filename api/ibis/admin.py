@@ -3,8 +3,8 @@ from django.contrib import admin
 import ibis.models as models
 
 
-@admin.register(models.Nonprofit)
-class NonprofitAdmin(admin.ModelAdmin):
+@admin.register(models.Organization)
+class OrganizationAdmin(admin.ModelAdmin):
     readonly_fields = ('balance_str', 'fundraised_str')
 
     def balance_str(self, obj):
@@ -25,7 +25,7 @@ class PersonAdmin(admin.ModelAdmin):
         return '${:.2f}'.format(obj.donated() / 100)
 
 
-class EntryNonprofitAdmin(admin.ModelAdmin):
+class EntryOrganizationAdmin(admin.ModelAdmin):
     exclude = (
         'score',
         'bookmark',
@@ -37,14 +37,14 @@ class EntryNonprofitAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
         if db_field.name == 'user':
             kwargs['queryset'] = models.IbisUser.objects.filter(
-                nonprofit__isnull=False)
+                organization__isnull=False)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-admin.site.register(models.News, EntryNonprofitAdmin)
-admin.site.register(models.Event, EntryNonprofitAdmin)
+admin.site.register(models.News, EntryOrganizationAdmin)
+admin.site.register(models.Event, EntryOrganizationAdmin)
 
-admin.site.register(models.NonprofitCategory)
+admin.site.register(models.OrganizationCategory)
 admin.site.register(models.DepositCategory)
 admin.site.register(models.Deposit)
 admin.site.register(models.Withdrawal)

@@ -35,16 +35,16 @@ class TransferTestCase(BaseTestCase):
             category=models.DepositCategory.objects.first(),
         )
 
-        assert not transfer('DonationCreate', self.nonprofit, -1)
-        assert not transfer('DonationCreate', self.nonprofit, 0.5)
-        assert not transfer('DonationCreate', self.nonprofit, 0)
-        assert not transfer('DonationCreate', self.nonprofit,
+        assert not transfer('DonationCreate', self.organization, -1)
+        assert not transfer('DonationCreate', self.organization, 0.5)
+        assert not transfer('DonationCreate', self.organization, 0)
+        assert not transfer('DonationCreate', self.organization,
                             settings.MAX_TRANSFER + 1)
-        assert transfer('DonationCreate', self.nonprofit,
+        assert transfer('DonationCreate', self.organization,
                         settings.MAX_TRANSFER)
-        assert transfer('DonationCreate', self.nonprofit,
+        assert transfer('DonationCreate', self.organization,
                         self.me_person.balance())
-        assert not transfer('DonationCreate', self.nonprofit, 1)
+        assert not transfer('DonationCreate', self.organization, 1)
 
         models.Deposit.objects.create(
             user=self.me_person,
@@ -151,13 +151,13 @@ class TransferTestCase(BaseTestCase):
             for x in models.Person.objects.all()
         }
 
-        nonprofit_state = {
+        organization_state = {
             x: {
                 'balance': x.balance(),
                 'donated': x.donated(),
                 'fundraised': x.fundraised(),
             }
-            for x in models.Nonprofit.objects.all()
+            for x in models.Organization.objects.all()
         }
 
         step = sum(person_state[x]['balance']
@@ -177,28 +177,28 @@ class TransferTestCase(BaseTestCase):
             elif choice == donate:
                 if random.random() < 0.8:  # person donates
                     user = random.choice(list(person_state.keys()))
-                    target = random.choice(list(nonprofit_state.keys()))
+                    target = random.choice(list(organization_state.keys()))
                     result = donate(user, target, amount)
 
                     if person_state[user]['balance'] - amount >= 0:
                         assert 'errors' not in result
                         person_state[user]['balance'] -= amount
                         person_state[user]['donated'] += amount
-                        nonprofit_state[target]['balance'] += amount
-                        nonprofit_state[target]['fundraised'] += amount
+                        organization_state[target]['balance'] += amount
+                        organization_state[target]['fundraised'] += amount
                     else:
                         assert 'errors' in result
-                else:  # nonprofit donates
-                    user = random.choice(list(nonprofit_state.keys()))
-                    target = random.choice(list(nonprofit_state.keys()))
+                else:  # organization donates
+                    user = random.choice(list(organization_state.keys()))
+                    target = random.choice(list(organization_state.keys()))
                     result = donate(user, target, amount)
 
-                    if nonprofit_state[user]['balance'] - amount >= 0:
+                    if organization_state[user]['balance'] - amount >= 0:
                         assert 'errors' not in result
-                        nonprofit_state[user]['balance'] -= amount
-                        nonprofit_state[user]['donated'] += amount
-                        nonprofit_state[target]['balance'] += amount
-                        nonprofit_state[target]['fundraised'] += amount
+                        organization_state[user]['balance'] -= amount
+                        organization_state[user]['donated'] += amount
+                        organization_state[target]['balance'] += amount
+                        organization_state[target]['fundraised'] += amount
                     else:
                         assert 'errors' in result
 
@@ -214,25 +214,25 @@ class TransferTestCase(BaseTestCase):
                         person_state[target]['balance'] += amount
                     else:
                         assert 'errors' in result
-                else:  # nonprofit transacts
-                    user = random.choice(list(nonprofit_state.keys()))
+                else:  # organization transacts
+                    user = random.choice(list(organization_state.keys()))
                     target = random.choice(list(person_state.keys()))
                     result = transact(user, target, amount)
 
-                    if nonprofit_state[user]['balance'] - amount >= 0:
+                    if organization_state[user]['balance'] - amount >= 0:
                         assert 'errors' not in result
-                        nonprofit_state[user]['balance'] -= amount
+                        organization_state[user]['balance'] -= amount
                         person_state[target]['balance'] += amount
                     else:
                         assert 'errors' in result
 
             if choice == withdraw:
-                user = random.choice(list(nonprofit_state.keys()))
+                user = random.choice(list(organization_state.keys()))
                 result = withdraw(user, amount)
 
-                if nonprofit_state[user]['balance'] - amount >= 0:
+                if organization_state[user]['balance'] - amount >= 0:
                     assert result
-                    nonprofit_state[user]['balance'] -= amount
+                    organization_state[user]['balance'] -= amount
                 else:
                     assert not result
 
@@ -240,6 +240,6 @@ class TransferTestCase(BaseTestCase):
             assert person_state[x]['balance'] == x.balance()
             assert person_state[x]['donated'] == x.donated()
 
-        for x in nonprofit_state:
-            assert nonprofit_state[x]['balance'] == x.balance()
-            assert nonprofit_state[x]['fundraised'] == x.fundraised()
+        for x in organization_state:
+            assert organization_state[x]['balance'] == x.balance()
+            assert organization_state[x]['fundraised'] == x.fundraised()

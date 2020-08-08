@@ -194,7 +194,7 @@ class DistributionTestCase(BaseTestCase):
                         if random.random() < 0.5:
                             self._donate(
                                 user=x,
-                                target=ibis.models.Nonprofit.objects.order_by(
+                                target=ibis.models.Organization.objects.order_by(
                                     '?').first(),
                                 amount=y,
                             )
@@ -210,7 +210,7 @@ class DistributionTestCase(BaseTestCase):
                     activity[x] += 1
 
             for x in users:
-                if ibis.models.Nonprofit.objects.filter(
+                if ibis.models.Organization.objects.filter(
                         id=x.id).exists() and x.balance() > 1000:
                     ibis.models.Withdrawal.objects.create(
                         user=x,
@@ -228,7 +228,7 @@ class DistributionTestCase(BaseTestCase):
                     for y in amounts:
                         self._donate(
                             user=x,
-                            target=ibis.models.Nonprofit.objects.order_by(
+                            target=ibis.models.Organization.objects.order_by(
                                 '?').first(),
                             amount=y,
                         )
@@ -270,13 +270,13 @@ class DistributionTestCase(BaseTestCase):
                         ).aggregate(Sum('amount'))['amount__sum']),
                     -_none_zero(
                         ibis.models.Donation.objects.filter(
-                            user__nonprofit__isnull=False,
+                            user__organization__isnull=False,
                             created__gte=x,
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
                     -_none_zero(
                         ibis.models.Transaction.objects.filter(
-                            user__nonprofit__isnull=False,
+                            user__organization__isnull=False,
                             created__gte=x,
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
@@ -314,7 +314,7 @@ class DistributionTestCase(BaseTestCase):
 
         with freeze_time(TEST_TIME.astimezone(utc).date()) as frozen_datetime:
 
-            sink = ibis.models.Nonprofit.objects.last()
+            sink = ibis.models.Organization.objects.last()
 
             # number of weeks since last active (last week == 0)
             for x in ibis.models.IbisUser.objects.exclude(id=sink.id):
@@ -349,7 +349,7 @@ class DistributionTestCase(BaseTestCase):
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Nonprofit.objects.
+                        list(activity) + list(ibis.models.Organization.objects.
                                               all()[:int(len(activity) / 2)]),
                         int(len(activity) / 2),
                     ),
@@ -386,7 +386,7 @@ class DistributionTestCase(BaseTestCase):
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Nonprofit.objects.
+                        list(activity) + list(ibis.models.Organization.objects.
                                               all()[:int(len(activity) / 4)]),
                         len(activity),
                     ),
@@ -408,7 +408,7 @@ class DistributionTestCase(BaseTestCase):
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Nonprofit.objects.
+                        list(activity) + list(ibis.models.Organization.objects.
                                               all()[:int(len(activity) / 4)]),
                         len(activity),
                     ),
