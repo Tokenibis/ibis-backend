@@ -68,19 +68,19 @@ def handleDonationCreate(sender, instance, created, **kwargs):
     )
 
 
-@receiver(post_save, sender=ibis.models.Transaction)
-def handleTransactionCreate(sender, instance, created, **kwargs):
+@receiver(post_save, sender=ibis.models.Reward)
+def handleRewardCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
     entry = ibis.models.Entry.objects.get(pk=instance.pk)
 
     reference = '{}:{}'.format(
-        ibis.models.Transaction.__name__,
+        ibis.models.Reward.__name__,
         to_global_id('EntryNode', instance.pk),
     )
 
-    models.TransactionNotification.objects.create(
+    models.RewardNotification.objects.create(
         notifier=instance.target.notifier,
         reference=reference,
         description='{} sent you ${:.2f}'.format(
@@ -180,8 +180,8 @@ def handleCommentCreate(sender, instance, created, **kwargs):
         if models.get_submodel(
                 parent,
                 ibis.models.Entry,
-        ) == ibis.models.Transaction:
-            notifiers.append(parent.transaction.target.user.notifier)
+        ) == ibis.models.Reward:
+            notifiers.append(parent.reward.target.user.notifier)
 
         for notifier in notifiers:
             if notifier not in [x['notifier'] for x in notification_info

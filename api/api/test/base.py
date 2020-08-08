@@ -23,7 +23,7 @@ NUM_ORGANIZATION = 10
 NUM_DEPOSIT = 30
 NUM_WITHDRAWAL = 30
 NUM_DONATION = 100
-NUM_TRANSACTION = 100
+NUM_REWARD = 100
 NUM_NEWS = 100
 NUM_EVENT = 100
 NUM_POST = 100
@@ -51,7 +51,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         num_deposit=NUM_DEPOSIT,
         num_withdrawal=NUM_WITHDRAWAL,
         num_donation=NUM_DONATION,
-        num_transaction=NUM_TRANSACTION,
+        num_reward=NUM_REWARD,
         num_news=NUM_NEWS,
         num_event=NUM_EVENT,
         num_post=NUM_POST,
@@ -80,8 +80,8 @@ class BaseTestCase(GraphQLTestCase):
         'Event',
         'EventCreate',
         'EventList',
-        'EventUpdate',
         'EventListFilter',
+        'EventUpdate',
         'Finance',
         'FollowCreate',
         'FollowDelete',
@@ -92,28 +92,28 @@ class BaseTestCase(GraphQLTestCase):
         'NewsCreate',
         'NewsList',
         'NewsUpdate',
-        'Organization',
-        'OrganizationList',
-        'OrganizationUpdate',
         'NotificationClicked',
         'NotificationList',
         'Notifier',
         'NotifierSeen',
         'NotifierUpdate',
+        'Organization',
+        'OrganizationList',
+        'OrganizationUpdate',
         'Person',
         'PersonList',
         'PersonUpdate',
         'Post',
         'PostCreate',
         'PostList',
+        'Reward',
+        'RewardCreate',
+        'RewardForm',
+        'RewardList',
         'RsvpCreate',
         'RsvpDelete',
         'Settings',
         'SideMenu',
-        'Transaction',
-        'TransactionCreate',
-        'TransactionForm',
-        'TransactionList',
         'UserList',
         'WithdrawalList',
     ]
@@ -139,7 +139,7 @@ class BaseTestCase(GraphQLTestCase):
         assert len(models.Person.objects.all()) == NUM_PERSON
         assert len(models.Organization.objects.all()) == NUM_ORGANIZATION
         assert len(models.Donation.objects.all()) == NUM_DONATION
-        assert len(models.Transaction.objects.all()) == NUM_TRANSACTION
+        assert len(models.Reward.objects.all()) == NUM_REWARD
         assert len(models.News.objects.all()) == NUM_NEWS
         assert len(models.Event.objects.all()) == NUM_EVENT
         assert len(models.Post.objects.all()) == NUM_POST
@@ -188,7 +188,7 @@ class BaseTestCase(GraphQLTestCase):
             self.organization = models.Organization.objects.all().first()
             self.person = models.Person.objects.all().first()
             self.donation = models.Donation.objects.all().first()
-            self.transaction = models.Transaction.objects.all().first()
+            self.reward = models.Reward.objects.all().first()
             self.news = models.News.objects.all().first()
             self.event = models.Event.objects.all().first()
             self.post = models.Post.objects.all().first()
@@ -200,8 +200,8 @@ class BaseTestCase(GraphQLTestCase):
                                               self.organization.id)
             self.person.gid = to_global_id('UserNode', self.person.id)
             self.donation.gid = to_global_id('EntryNode', self.donation.id)
-            self.transaction.gid = to_global_id('EntryNode',
-                                                self.transaction.id)
+            self.reward.gid = to_global_id('EntryNode',
+                                                self.reward.id)
             self.news.gid = to_global_id('EntryNode', self.news.id)
             self.event.gid = to_global_id('EntryNode', self.event.id)
             self.post.gid = to_global_id('EntryNode', self.post.id)
@@ -284,12 +284,12 @@ class BaseTestCase(GraphQLTestCase):
                 description='External donation',
             )
 
-            models.Transaction.objects.create(
+            models.Reward.objects.create(
                 user=self.person,
                 target=models.Person.objects.exclude(
                     pk=self.person.id).first(),
                 amount=100,
-                description='External transaction',
+                description='External reward',
             )
 
     def query(self, query, op_name, variables):

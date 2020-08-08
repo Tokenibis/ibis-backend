@@ -24,7 +24,7 @@ class NotificationTestCase(BaseTestCase):
                     'DonationNode',
                     models.Donation.objects.filter(
                         user=self.person).first().id)
-            elif op_name == 'TransactionCreate':
+            elif op_name == 'RewardCreate':
                 variables['description'] = 'description'
                 variables['target'] = self.person.gid
                 variables['amount'] = 1
@@ -134,7 +134,7 @@ class NotificationTestCase(BaseTestCase):
             return result['data']['user']['notifier']['unseenCount']
 
         self.person.notifier.email_follow = True
-        self.person.notifier.email_transaction = True
+        self.person.notifier.email_reward = True
         self.person.notifier.email_comment = True
         self.person.notifier.email_like = True
 
@@ -173,8 +173,8 @@ class NotificationTestCase(BaseTestCase):
             run('Follow', count, delete=True)
             run('Like', count + 1, delete=True)
             run('Like', count + 1, delete=True)
-            run('Transaction', count + 2)
-            run('Transaction', count + 3, mention=True)
+            run('Reward', count + 2)
+            run('Reward', count + 3, mention=True)
             run('Comment', count + 4)
             run('Comment', count + 5, mention=True)
             run('News', count + 6)

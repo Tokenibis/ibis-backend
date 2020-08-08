@@ -13,7 +13,7 @@ class SettingsView(UpdateView):
     template_name = 'settings.html'
     fields = (
         'email_follow',
-        'email_transaction',
+        'email_reward',
         'email_comment',
         'email_mention',
         'email_deposit',

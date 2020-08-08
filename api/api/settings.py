@@ -235,7 +235,7 @@ def APP_LINK_RESOLVER(reference):
         'Person': '/Person/Person?id={}',
         'Bot': '/Bot/Bot?id={}',
         'Donation': '/Donation/Donation?id={}',
-        'Transaction': '/Transaction/Transaction?id={}',
+        'Reward': '/Reward/Reward?id={}',
         'News': '/News/News?id={}',
         'Event': '/Event/Event?id={}',
         'Post': '/Post/Post?id={}',
@@ -257,7 +257,7 @@ BOT_GAS_INITIAL = 10000000
 BOT_GAS_MUTATION = {
     'createDeposit': 100,
     'createDonation': 100,
-    'createTransaction': 100,
+    'createReward': 100,
     'createNews': 100,
     'createEvent': 100,
     'createPost': 100,

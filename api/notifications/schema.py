@@ -17,7 +17,7 @@ import ibis.models
 class NotifierNode(DjangoObjectType):
     email_follow = graphene.Boolean()
     email_donation = graphene.Boolean()
-    email_transaction = graphene.Boolean()
+    email_reward = graphene.Boolean()
     email_comment = graphene.Boolean()
     email_mention = graphene.Boolean()
     email_ubp = graphene.Boolean()
@@ -45,11 +45,11 @@ class NotifierNode(DjangoObjectType):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_donation
 
-    def resolve_email_transaction(self, info, *args, **kwargs):
+    def resolve_email_reward(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
             raise GraphQLError('You do not have sufficient permission')
-        return self.email_transaction
+        return self.email_reward
 
     def resolve_email_comment(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
@@ -113,7 +113,7 @@ class NotifierUpdate(Mutation):
     class Arguments:
         id = graphene.ID(required=True)
         email_follow = graphene.Boolean()
-        email_transaction = graphene.Boolean()
+        email_reward = graphene.Boolean()
         email_donation = graphene.Boolean()
         email_deposit = graphene.Boolean()
         email_ubp = graphene.Boolean()
@@ -130,7 +130,7 @@ class NotifierUpdate(Mutation):
             info,
             id,
             email_follow=None,
-            email_transaction=None,
+            email_reward=None,
             email_donation=None,
             email_deposit=None,
             email_ubp=None,
@@ -149,8 +149,8 @@ class NotifierUpdate(Mutation):
 
         if type(email_follow) == bool:
             notifier.email_follow = email_follow
-        if type(email_transaction) == bool:
-            notifier.email_transaction = email_transaction
+        if type(email_reward) == bool:
+            notifier.email_reward = email_reward
         if type(email_donation) == bool:
             notifier.email_donation = email_donation
         if type(email_deposit) == bool:

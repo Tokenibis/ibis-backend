@@ -101,7 +101,7 @@ class Model:
         self.withdrawals = []
         self.entries = []
         self.donations = []
-        self.transactions = []
+        self.rewards = []
         self.news = []
         self.events = []
         self.posts = []
@@ -324,7 +324,7 @@ class Model:
 
         return pk
 
-    def add_transaction(
+    def add_reward(
             self,
             source,
             target,
@@ -346,8 +346,8 @@ class Model:
             }
         })
 
-        self.transactions.append({
-            'model': 'ibis.Transaction',
+        self.rewards.append({
+            'model': 'ibis.Reward',
             'pk': pk,
             'fields': {
                 'target': target,
@@ -574,7 +574,7 @@ class Model:
             serializable_deposits,
             partial_entries,
             self.donations,
-            self.transactions,
+            self.rewards,
             self.news,
             self.events,
             self.posts,
@@ -594,7 +594,7 @@ class Command(BaseCommand):
         parser.add_argument('--num_deposit', type=int, required=True)
         parser.add_argument('--num_withdrawal', type=int, required=True)
         parser.add_argument('--num_donation', type=int, required=True)
-        parser.add_argument('--num_transaction', type=int, required=True)
+        parser.add_argument('--num_reward', type=int, required=True)
         parser.add_argument('--num_news', type=int, required=True)
         parser.add_argument('--num_event', type=int, required=True)
         parser.add_argument('--num_post', type=int, required=True)
@@ -611,7 +611,7 @@ class Command(BaseCommand):
             num_deposit=options['num_deposit'],
             num_withdrawal=options['num_withdrawal'],
             num_donation=options['num_donation'],
-            num_transaction=options['num_transaction'],
+            num_reward=options['num_reward'],
             num_news=options['num_news'],
             num_event=options['num_event'],
             num_post=options['num_post'],
@@ -629,7 +629,7 @@ class Command(BaseCommand):
             num_deposit,
             num_withdrawal,
             num_donation,
-            num_transaction,
+            num_reward,
             num_news,
             num_event,
             num_post,
@@ -798,12 +798,12 @@ class Command(BaseCommand):
                     random.randint(0, 100),
                 ))
 
-        # make random transactions
-        transactions = []
-        for i in range(num_transaction):
+        # make random rewards
+        rewards = []
+        for i in range(num_reward):
             sender = random.choice(people + organizations)
-            transactions.append(
-                model.add_transaction(
+            rewards.append(
+                model.add_reward(
                     sender,
                     random.choice([x for x in people if x != sender]),
                     random.randint(1, 10000),
@@ -881,7 +881,7 @@ class Command(BaseCommand):
         # make fake comments
         comments = []
         for i in range(num_comment):
-            commentable = transactions + donations + news + events + posts\
+            commentable = rewards + donations + news + events + posts\
                 + comments
             parent = random.choice(commentable)
             description = markov.generate_markov_text(
@@ -913,7 +913,7 @@ class Command(BaseCommand):
                 random.choice(news + posts))
 
         # add likes
-        likeable = transactions + donations + news + events + posts + comments
+        likeable = rewards + donations + news + events + posts + comments
         for i in range(num_like):
             model.add_like(
                 random.choice(people + organizations),

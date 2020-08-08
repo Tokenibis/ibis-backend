@@ -37,9 +37,9 @@ class BotTestCase(BaseTestCase):
         'Post',
         'PostCreate',
         'PostList',
-        'Transaction',
-        'TransactionCreate',
-        'TransactionList',
+        'Reward',
+        'RewardCreate',
+        'RewardList',
         'User',
         'UserList',
     ]
@@ -407,41 +407,41 @@ class BotTestCase(BaseTestCase):
 
         # result = json.loads(
         #     self.query(
-        #         self.gql_bot['Transaction'],
-        #         op_name='Transaction',
+        #         self.gql_bot['Reward'],
+        #         op_name='Reward',
         #         variables={
-        #             'id': self.transaction.gid,
+        #             'id': self.reward.gid,
         #         },
         #     ).content)
-        # success['Transaction'] = 'errors' not in result and bool(
-        #     result['data']['transaction']['id'])
+        # success['Reward'] = 'errors' not in result and bool(
+        #     result['data']['reward']['id'])
 
         result = json.loads(
             self.query(
-                self.gql_bot['TransactionCreate'],
-                op_name='TransactionCreate',
+                self.gql_bot['RewardCreate'],
+                op_name='RewardCreate',
                 variables={
                     'user': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                     'amount': 100,
-                    'description': 'This is a transaction',
+                    'description': 'This is a reward',
                 },
             ).content)
-        success['TransactionCreate'] = 'errors' not in result and result[
-            'data']['createTransaction']['transaction']['id']
+        success['RewardCreate'] = 'errors' not in result and result[
+            'data']['createReward']['reward']['id']
 
         result = json.loads(
             self.query(
-                self.gql_bot['TransactionList'],
-                op_name='TransactionList',
+                self.gql_bot['RewardList'],
+                op_name='RewardList',
                 variables={
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
                 },
             ).content)
-        success['TransactionList'] = 'errors' not in result and len(
-            result['data']['allTransactions']['edges']) > 0
+        success['RewardList'] = 'errors' not in result and len(
+            result['data']['allRewards']['edges']) > 0
 
         return success
 

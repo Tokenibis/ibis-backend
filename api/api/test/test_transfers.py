@@ -50,20 +50,20 @@ class TransferTestCase(BaseTestCase):
             user=self.me_person,
             amount=int(
                 (settings.MAX_TRANSFER - self.me_person.balance()) * 1.5),
-            payment_id='unique_test_transfer_limit_transaction',
+            payment_id='unique_test_transfer_limit_reward',
             category=models.DepositCategory.objects.first(),
         )
 
-        assert not transfer('TransactionCreate', self.person, -1)
-        assert not transfer('TransactionCreate', self.person, 0.5)
-        assert not transfer('TransactionCreate', self.person, 0)
-        assert not transfer('TransactionCreate', self.person,
+        assert not transfer('RewardCreate', self.person, -1)
+        assert not transfer('RewardCreate', self.person, 0.5)
+        assert not transfer('RewardCreate', self.person, 0)
+        assert not transfer('RewardCreate', self.person,
                             settings.MAX_TRANSFER + 1)
-        assert transfer('TransactionCreate', self.person,
+        assert transfer('RewardCreate', self.person,
                         settings.MAX_TRANSFER)
-        assert transfer('TransactionCreate', self.person,
+        assert transfer('RewardCreate', self.person,
                         self.me_person.balance())
-        assert not transfer('TransactionCreate', self.person, 1)
+        assert not transfer('RewardCreate', self.person, 1)
 
     # send money around randomly and make sure that balances agree at the end
     def test_transfer_dynamic(self):
@@ -121,13 +121,13 @@ class TransferTestCase(BaseTestCase):
             self._client.force_login(user)
             result = json.loads(
                 self.query(
-                    self.gql['TransactionCreate'],
-                    op_name='TransactionCreate',
+                    self.gql['RewardCreate'],
+                    op_name='RewardCreate',
                     variables={
                         'user': to_global_id('UserNode', user.id),
                         'target': to_global_id('UserNode', target.id),
                         'amount': amount,
-                        'description': 'This is a transaction',
+                        'description': 'This is a reward',
                     },
                 ).content)
             self._client.logout()

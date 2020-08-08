@@ -43,17 +43,17 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['TransactionCreate'],
-                op_name='TransactionCreate',
+                self.gql['RewardCreate'],
+                op_name='RewardCreate',
                 variables={
                     'user': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                     'amount': 100,
-                    'description': 'This is a transaction',
+                    'description': 'This is a reward',
                 },
             ).content)
-        success['TransactionCreate'] = 'errors' not in result and result[
-            'data']['createTransaction']['transaction']['id']
+        success['RewardCreate'] = 'errors' not in result and result[
+            'data']['createReward']['reward']['id']
 
         result = json.loads(
             self.query(
@@ -248,14 +248,14 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Transaction'],
-                op_name='Transaction',
+                self.gql['Reward'],
+                op_name='Reward',
                 variables={
-                    'id': self.transaction.gid,
+                    'id': self.reward.gid,
                 },
             ).content)
-        success['Transaction'] = 'errors' not in result and bool(
-            result['data']['transaction']['id'])
+        success['Reward'] = 'errors' not in result and bool(
+            result['data']['reward']['id'])
 
         result = json.loads(
             self.query(
@@ -369,7 +369,7 @@ class PermissionTestCase(BaseTestCase):
                 variables={
                     'id': self.me_organization.gid,
                     'privacyDonation': False,
-                    'privacyTransaction': False,
+                    'privacyReward': False,
                 },
             ).content)
         success['OrganizationUpdate'] = 'errors' not in result and result['data'][
@@ -405,8 +405,8 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['TransactionList'],
-                op_name='TransactionList',
+                self.gql['RewardList'],
+                op_name='RewardList',
                 variables={
                     'self': user.gid,
                     'orderBy': '-created',
@@ -414,8 +414,8 @@ class PermissionTestCase(BaseTestCase):
                     'after': 1,
                 },
             ).content)
-        success['TransactionList'] = 'errors' not in result and len(
-            result['data']['allTransactions']['edges']) > 0
+        success['RewardList'] = 'errors' not in result and len(
+            result['data']['allRewards']['edges']) > 0
 
         result = json.loads(
             self.query(
@@ -572,14 +572,14 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['TransactionForm'],
-                op_name='TransactionForm',
+                self.gql['RewardForm'],
+                op_name='RewardForm',
                 variables={
                     'id': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                 },
             ).content)
-        success['TransactionForm'] = 'errors' not in result and bool(
+        success['RewardForm'] = 'errors' not in result and bool(
             result['data']['user']['id'])
 
         result = json.loads(
@@ -589,7 +589,7 @@ class PermissionTestCase(BaseTestCase):
                 variables={
                     'id': self.me_person.gid,
                     'privacyDonation': False,
-                    'privacyTransaction': False,
+                    'privacyReward': False,
                 },
             ).content)
         success['PersonUpdate'] = 'errors' not in result and result['data'][
@@ -603,7 +603,7 @@ class PermissionTestCase(BaseTestCase):
                     'id': user.gid,
                     'emailFollow': True,
                     'emailDonation': True,
-                    'emailTransaction': True,
+                    'emailReward': True,
                 },
             ).content)
         success['NotifierUpdate'] = 'errors' not in result and result['data'][
@@ -672,17 +672,17 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['TransactionList'],
-                op_name='TransactionList',
+                self.gql['RewardList'],
+                op_name='RewardList',
                 variables={
                     'withUser': person.gid,
                     'orderBy': '-created',
                     'first': 2,
                 },
             ).content)
-        success['TransactionList'] = 'errors' not in result and any(
+        success['RewardList'] = 'errors' not in result and any(
             x['node']['user']['id'] == to_global_id('UserNode', person.id)
-            for x in result['data']['allTransactions']['edges'])
+            for x in result['data']['allRewards']['edges'])
 
         return success
 
@@ -762,10 +762,10 @@ class PermissionTestCase(BaseTestCase):
             'RsvpDelete': False,
             'Settings': False,
             'SideMenu': True,
-            'Transaction': True,
-            'TransactionCreate': False,
-            'TransactionForm': True,
-            'TransactionList': True,
+            'Reward': True,
+            'RewardCreate': False,
+            'RewardForm': True,
+            'RewardList': True,
         }
 
         self._client.force_login(self.me_person)
@@ -783,7 +783,7 @@ class PermissionTestCase(BaseTestCase):
             x.private = True
             x.save()
 
-        for x in models.Transaction.objects.all():
+        for x in models.Reward.objects.all():
             x.private = True
             x.save()
 

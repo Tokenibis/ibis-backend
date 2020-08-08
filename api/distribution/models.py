@@ -77,7 +77,7 @@ def get_distribution_amount(time):
 def get_control_history(time):
     """Calculate the historical control (goal, adjusted donations) as a
     timeseries. The effective donation adjusts for outbound organization
-    transactions as well as user deposits. The control error can be
+    rewards as well as user deposits. The control error can be
     calculated as the difference of each pair of data points.
 
     """
@@ -107,8 +107,8 @@ def get_control_history(time):
                         user__organization__isnull=False,
                         created__gte=to_step_start(x.created),
                         created__lt=to_step_start(x.created, offset=1))),
-                -sum(  # sum of outbound transactions
-                    x.amount for x in ibis.models.Transaction.objects.filter(
+                -sum(  # sum of outbound rewards
+                    x.amount for x in ibis.models.Reward.objects.filter(
                         user__organization__isnull=False,
                         created__gte=to_step_start(x.created),
                         created__lt=to_step_start(x.created, offset=1))),
@@ -119,7 +119,7 @@ def get_control_history(time):
 
 def get_distribution_shares(time, initial=[]):
     """Calculate the relative UBP share for each active person based on the
-    recency of their last activity (donation or transaction).
+    recency of their last activity (donation or reward).
     """
 
     step = to_step_start(time)
@@ -129,7 +129,7 @@ def get_distribution_shares(time, initial=[]):
     for x in ibis.models.Person.objects.exclude(distributor__eligible=False):
         activity = x.entry_set.filter(
             Q(donation__isnull=False)
-            | Q(transaction__isnull=False)).filter(
+            | Q(reward__isnull=False)).filter(
                 created__lt=step).order_by('created').last()
         last = to_step_start(
             localtime(activity.created) if activity else to_step_start(

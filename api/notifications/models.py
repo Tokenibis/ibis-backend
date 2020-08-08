@@ -49,8 +49,8 @@ class Notifier(models.Model):
         verbose_name='donation',
         default=True,
     )
-    email_transaction = models.BooleanField(
-        verbose_name='transaction',
+    email_reward = models.BooleanField(
+        verbose_name='reward',
         default=True,
     )
     email_comment = models.BooleanField(
@@ -238,9 +238,9 @@ class DonationNotification(Notification):
             logger.error('No email template found')
 
 
-class TransactionNotification(Notification):
+class RewardNotification(Notification):
     subject = models.ForeignKey(
-        ibis.models.Transaction,
+        ibis.models.Reward,
         on_delete=models.CASCADE,
     )
 
@@ -251,8 +251,8 @@ class TransactionNotification(Notification):
             return
 
         try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_transaction:
-                subject, body, html = EmailTemplateTransaction.choose(
+            if not STATE['LOADING_DATA'] and self.notifier.email_reward:
+                subject, body, html = EmailTemplateReward.choose(
                 ).make_email(self, self.subject)
                 Email.objects.create(
                     notification=self,
@@ -585,20 +585,20 @@ class EmailTemplateDonation(EmailTemplate):
         )
 
 
-class EmailTemplateTransaction(EmailTemplate):
+class EmailTemplateReward(EmailTemplate):
     def clean(self):
         super()._check_keys([], ['sender', 'link'])
 
-    def make_email(self, notification, transaction):
+    def make_email(self, notification, reward):
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
             self.body.format(
-                sender=str(transaction.user),
+                sender=str(reward.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                sender=str(transaction.user),
+                sender=str(reward.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )

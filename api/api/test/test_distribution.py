@@ -60,13 +60,13 @@ class DistributionTestCase(BaseTestCase):
         self._client.force_login(user)
         assert 'errors' not in json.loads(
             self.query(
-                self.gql['TransactionCreate'],
-                op_name='TransactionCreate',
+                self.gql['RewardCreate'],
+                op_name='RewardCreate',
                 variables={
                     'user': to_global_id('UserNode', user.id),
                     'target': to_global_id('UserNode', target.id),
                     'amount': amount,
-                    'description': 'This is a transaction',
+                    'description': 'This is a reward',
                 },
             ).content)
 
@@ -275,7 +275,7 @@ class DistributionTestCase(BaseTestCase):
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
                     -_none_zero(
-                        ibis.models.Transaction.objects.filter(
+                        ibis.models.Reward.objects.filter(
                             user__organization__isnull=False,
                             created__gte=x,
                             created__lt=x + timedelta(days=7),

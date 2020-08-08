@@ -248,9 +248,9 @@ class DonationFilter(TransferFilter):
         fields = []
 
 
-class TransactionFilter(TransferFilter):
+class RewardFilter(TransferFilter):
     class Meta:
-        model = models.Transaction
+        model = models.Reward
         fields = []
 
 
@@ -512,10 +512,10 @@ class EntryNode(DjangoObjectType):
              (Q(donation__private=False)
               | Q(user_id=info.context.user.id)
               | Q(donation__target_id=info.context.user.id)))
-            | (Q(transaction__isnull=False) &
-               (Q(transaction__private=False)
+            | (Q(reward__isnull=False) &
+               (Q(reward__private=False)
                 | Q(user_id=info.context.user.id)
-                | Q(transaction__target_id=info.context.user.id))))
+                | Q(reward__target_id=info.context.user.id))))
 
 
 # --- Donation -------------------------------------------------------------- #
@@ -608,10 +608,10 @@ class DonationCreate(Mutation):
         return DonationCreate(donation=donation)
 
 
-# --- Transaction ----------------------------------------------------------- #
+# --- Reward ----------------------------------------------------------- #
 
 
-class TransactionNode(EntryNode):
+class RewardNode(EntryNode):
     amount = graphene.Int()
 
     bookmark = DjangoFilterConnectionField(
@@ -620,7 +620,7 @@ class TransactionNode(EntryNode):
     )
 
     class Meta:
-        model = models.Transaction
+        model = models.Reward
         filter_fields = []
         interfaces = (EntryNodeInterface, )
 
@@ -643,9 +643,9 @@ class TransactionNode(EntryNode):
             | Q(target_id=info.context.user.id)).distinct()
 
 
-class TransactionCreate(Mutation):
+class RewardCreate(Mutation):
     class Meta:
-        model = models.Transaction
+        model = models.Reward
 
     class Arguments:
         user = graphene.ID(required=True)
@@ -655,7 +655,7 @@ class TransactionCreate(Mutation):
         private = graphene.Boolean()
         score = graphene.Int()
 
-    transaction = graphene.Field(TransactionNode)
+    reward = graphene.Field(RewardNode)
 
     def mutate(
             self,
@@ -686,7 +686,7 @@ class TransactionCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Balance would be below zero')
 
-        transaction = models.Transaction.objects.create(
+        reward = models.Reward.objects.create(
             user=user_obj,
             description=description,
             target=target_obj,
@@ -695,7 +695,7 @@ class TransactionCreate(Mutation):
             score=score,
         )
 
-        return TransactionCreate(transaction=transaction)
+        return RewardCreate(reward=reward)
 
 
 # --- News ------------------------------------------------------------------ #
@@ -982,7 +982,7 @@ class UserNode(GeneralUserNode):
     follower_count_organization = graphene.Int()
 
     donation_with_count = graphene.Int()
-    transaction_with_count = graphene.Int()
+    reward_with_count = graphene.Int()
     news_count = graphene.Int()
     event_count = graphene.Int()
     post_count = graphene.Int()
@@ -1029,12 +1029,12 @@ class UserNode(GeneralUserNode):
                 (Q(donation__user__id=self.id)
                  | Q(donation__target_id=self.id))), info).count()
 
-    def resolve_transaction_with_count(self, info, *args, **kwargs):
+    def resolve_reward_with_count(self, info, *args, **kwargs):
         return EntryNode.get_queryset(
             models.Entry.objects.filter(
-                Q(transaction__isnull=False) &
-                (Q(transaction__user__id=self.id)
-                 | Q(transaction__target_id=self.id))), info).count()
+                Q(reward__isnull=False) &
+                (Q(reward__user__id=self.id)
+                 | Q(reward__target_id=self.id))), info).count()
 
     def resolve_news_count(self, *args, **kwargs):
         return models.News.objects.filter(user__id=self.id).count()
@@ -1085,7 +1085,7 @@ class OrganizationUpdate(Mutation):
         last_name = graphene.String()
         link = graphene.String()
         privacy_donation = graphene.Boolean()
-        privacy_transaction = graphene.Boolean()
+        privacy_reward = graphene.Boolean()
         privacy_deposit = graphene.Boolean()
         avatar = Upload()
         banner = Upload()
@@ -1104,7 +1104,7 @@ class OrganizationUpdate(Mutation):
             last_name='',
             link='',
             privacy_donation=None,
-            privacy_transaction=None,
+            privacy_reward=None,
             privacy_deposit=None,
             avatar=None,
             banner=None,
@@ -1130,8 +1130,8 @@ class OrganizationUpdate(Mutation):
             organization.link = link
         if type(privacy_donation) == bool:
             organization.privacy_donation = privacy_donation
-        if type(privacy_transaction) == bool:
-            organization.privacy_transaction = privacy_transaction
+        if type(privacy_reward) == bool:
+            organization.privacy_reward = privacy_reward
         if type(privacy_deposit) == bool:
             organization.privacy_deposit = privacy_deposit
         if avatar:
@@ -1219,7 +1219,7 @@ class PersonUpdate(Mutation):
         first_name = graphene.String()
         last_name = graphene.String()
         privacy_donation = graphene.Boolean()
-        privacy_transaction = graphene.Boolean()
+        privacy_reward = graphene.Boolean()
         privacy_deposit = graphene.Boolean()
         avatar = Upload()
         score = graphene.Int()
@@ -1236,7 +1236,7 @@ class PersonUpdate(Mutation):
             first_name='',
             last_name='',
             privacy_donation=None,
-            privacy_transaction=None,
+            privacy_reward=None,
             privacy_deposit=None,
             avatar=None,
             score=None,
@@ -1258,8 +1258,8 @@ class PersonUpdate(Mutation):
             person.first_name = last_name
         if type(privacy_donation) == bool:
             person.privacy_donation = privacy_donation
-        if type(privacy_transaction) == bool:
-            person.privacy_transaction = privacy_transaction
+        if type(privacy_reward) == bool:
+            person.privacy_reward = privacy_reward
         if type(privacy_deposit) == bool:
             person.privacy_deposit = privacy_deposit
         if avatar:
@@ -1317,7 +1317,7 @@ class BotUpdate(Mutation):
         first_name = graphene.String()
         last_name = graphene.String()
         privacy_donation = graphene.Boolean()
-        privacy_transaction = graphene.Boolean()
+        privacy_reward = graphene.Boolean()
         privacy_deposit = graphene.Boolean()
         avatar = Upload()
         tank = graphene.Int()
@@ -1335,7 +1335,7 @@ class BotUpdate(Mutation):
             first_name='',
             last_name='',
             privacy_donation=None,
-            privacy_transaction=None,
+            privacy_reward=None,
             privacy_deposit=None,
             avatar=None,
             tank=None,
@@ -1358,8 +1358,8 @@ class BotUpdate(Mutation):
             bot.first_name = last_name
         if type(privacy_donation) == bool:
             bot.privacy_donation = privacy_donation
-        if type(privacy_transaction) == bool:
-            bot.privacy_transaction = privacy_transaction
+        if type(privacy_reward) == bool:
+            bot.privacy_reward = privacy_reward
         if type(privacy_deposit) == bool:
             bot.privacy_deposit = privacy_deposit
         if avatar:
@@ -1673,7 +1673,7 @@ class Query(object):
     withdrawal = relay.Node.Field(WithdrawalNode)
     deposit = relay.Node.Field(DepositNode)
     donation = EntryNodeInterface.Field(DonationNode)
-    transaction = EntryNodeInterface.Field(TransactionNode)
+    reward = EntryNodeInterface.Field(RewardNode)
     news = EntryNodeInterface.Field(NewsNode)
     event = EntryNodeInterface.Field(EventNode)
     post = EntryNodeInterface.Field(PostNode)
@@ -1710,9 +1710,9 @@ class Query(object):
         DonationNode,
         filterset_class=DonationFilter,
     )
-    all_transactions = DjangoFilterConnectionField(
-        TransactionNode,
-        filterset_class=TransactionFilter,
+    all_rewards = DjangoFilterConnectionField(
+        RewardNode,
+        filterset_class=RewardFilter,
     )
     all_news = DjangoFilterConnectionField(
         NewsNode,
@@ -1735,7 +1735,7 @@ class Query(object):
 class Mutation(graphene.ObjectType):
     create_deposit = DepositCreate.Field()
     create_donation = DonationCreate.Field()
-    create_transaction = TransactionCreate.Field()
+    create_reward = RewardCreate.Field()
     create_news = NewsCreate.Field()
     create_event = EventCreate.Field()
     create_post = PostCreate.Field()
