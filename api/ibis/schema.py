@@ -23,6 +23,31 @@ from users.schema import UserNode
 
 AVATAR_SIZE = (528, 528)
 
+
+class IbisUserNodeInterface(relay.Node):
+    @staticmethod
+    def to_global_id(type, id):
+        return to_global_id(IbisUserNode.__name__, id)
+
+    @staticmethod
+    def get_node_from_global_id(info, global_id, only_type=None):
+        if only_type:
+            return only_type.get_node(info, from_global_id(global_id)[1])
+        return IbisUserNode.get_node(info, from_global_id(global_id)[1])
+
+
+class EntryNodeInterface(relay.Node):
+    @staticmethod
+    def to_global_id(type, id):
+        return to_global_id(EntryNode.__name__, id)
+
+    @staticmethod
+    def get_node_from_global_id(info, global_id, only_type=None):
+        if only_type:
+            return only_type.get_node(info, from_global_id(global_id)[1])
+        return EntryNode.get_node(info, from_global_id(global_id)[1])
+
+
 # --- Filters --------------------------------------------------------------- #
 
 
@@ -443,7 +468,7 @@ class EntryNode(DjangoObjectType):
     class Meta:
         model = models.Entry
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     def resolve_description(self, *args, **kwargs):
         return self.resolve_description()
@@ -507,7 +532,7 @@ class DonationNode(EntryNode):
     class Meta:
         model = models.Donation
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
@@ -597,7 +622,7 @@ class TransactionNode(EntryNode):
     class Meta:
         model = models.Transaction
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
@@ -685,7 +710,7 @@ class NewsNode(EntryNode):
     class Meta:
         model = models.News
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
@@ -804,7 +829,7 @@ class EventNode(EntryNode):
     class Meta:
         model = models.Event
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
@@ -967,7 +992,7 @@ class IbisUserNode(UserNode):
         model = models.IbisUser
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (IbisUserNodeInterface, )
 
     def resolve_name(self, *args, **kwargs):
         return str(self)
@@ -1044,7 +1069,7 @@ class NonprofitNode(IbisUserNode):
         model = models.Nonprofit
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (IbisUserNodeInterface, )
 
     def resolve_fundraised(self, *args, **kwargs):
         return self.fundraised()
@@ -1179,7 +1204,7 @@ class PersonNode(IbisUserNode, UserNode):
         model = models.Person
         exclude = ['email', 'password']
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (IbisUserNodeInterface, )
 
     def resolve_donated(self, *args, **kwargs):
         return self.donated()
@@ -1278,7 +1303,7 @@ class BotNode(PersonNode):
     class Meta:
         model = models.Bot
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (IbisUserNodeInterface, )
 
 
 class BotUpdate(PersonUpdate):
@@ -1314,7 +1339,7 @@ class PostNode(EntryNode):
     class Meta:
         model = models.Post
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     def resolve_bookmark(self, *args, **kwargs):
         return self.bookmark
@@ -1366,7 +1391,7 @@ class CommentNode(EntryNode):
     class Meta:
         model = models.Comment
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (EntryNodeInterface, )
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1569,18 +1594,18 @@ class Query(object):
 
     nonprofit_category = relay.Node.Field(NonprofitCategoryNode)
     deposit_category = relay.Node.Field(DepositCategoryNode)
-    ibis_user = relay.Node.Field(IbisUserNode)
-    nonprofit = relay.Node.Field(NonprofitNode)
-    person = relay.Node.Field(PersonNode)
-    bot = relay.Node.Field(BotNode)
+    ibis_user = IbisUserNodeInterface.Field(IbisUserNode)
+    nonprofit = IbisUserNodeInterface.Field(NonprofitNode)
+    person = IbisUserNodeInterface.Field(PersonNode)
+    bot = IbisUserNodeInterface.Field(BotNode)
     withdrawal = relay.Node.Field(WithdrawalNode)
     deposit = relay.Node.Field(DepositNode)
-    donation = relay.Node.Field(DonationNode)
-    transaction = relay.Node.Field(TransactionNode)
-    news = relay.Node.Field(NewsNode)
-    event = relay.Node.Field(EventNode)
-    post = relay.Node.Field(PostNode)
-    comment = relay.Node.Field(CommentNode)
+    donation = EntryNodeInterface.Field(DonationNode)
+    transaction = EntryNodeInterface.Field(TransactionNode)
+    news = EntryNodeInterface.Field(NewsNode)
+    event = EntryNodeInterface.Field(EventNode)
+    post = EntryNodeInterface.Field(PostNode)
+    comment = EntryNodeInterface.Field(CommentNode)
 
     all_nonprofit_categories = DjangoFilterConnectionField(
         NonprofitCategoryNode)

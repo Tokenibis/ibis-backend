@@ -50,7 +50,7 @@ class DistributionTestCase(BaseTestCase):
                 op_name='DonationCreate',
                 variables={
                     'user': to_global_id('IbisUserNode', user.id),
-                    'target': to_global_id('NonprofitNode', target.id),
+                    'target': to_global_id('IbisUserNode', target.id),
                     'amount': amount,
                     'description': 'This is a donation',
                 },
@@ -64,7 +64,7 @@ class DistributionTestCase(BaseTestCase):
                 op_name='TransactionCreate',
                 variables={
                     'user': to_global_id('IbisUserNode', user.id),
-                    'target': to_global_id('PersonNode', target.id),
+                    'target': to_global_id('IbisUserNode', target.id),
                     'amount': amount,
                     'description': 'This is a transaction',
                 },

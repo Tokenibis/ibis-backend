@@ -193,18 +193,18 @@ class BaseTestCase(GraphQLTestCase):
             self.event = models.Event.objects.all().first()
             self.post = models.Post.objects.all().first()
 
-            self.me_person.gid = to_global_id('PersonNode', self.me_person.id)
-            self.me_nonprofit.gid = to_global_id('NonprofitNode',
+            self.me_person.gid = to_global_id('IbisUserNode', self.me_person.id)
+            self.me_nonprofit.gid = to_global_id('IbisUserNode',
                                                  self.me_nonprofit.id)
-            self.nonprofit.gid = to_global_id('NonprofitNode',
+            self.nonprofit.gid = to_global_id('IbisUserNode',
                                               self.nonprofit.id)
-            self.person.gid = to_global_id('PersonNode', self.person.id)
-            self.donation.gid = to_global_id('DonationNode', self.donation.id)
-            self.transaction.gid = to_global_id('TransactionNode',
+            self.person.gid = to_global_id('IbisUserNode', self.person.id)
+            self.donation.gid = to_global_id('EntryNode', self.donation.id)
+            self.transaction.gid = to_global_id('EntryNode',
                                                 self.transaction.id)
-            self.news.gid = to_global_id('NewsNode', self.news.id)
-            self.event.gid = to_global_id('EventNode', self.event.id)
-            self.post.gid = to_global_id('PostNode', self.post.id)
+            self.news.gid = to_global_id('EntryNode', self.news.id)
+            self.event.gid = to_global_id('EntryNode', self.event.id)
+            self.post.gid = to_global_id('EntryNode', self.post.id)
 
             # make sure that me_person, me_nonprofit, and person have notifications
             donation_me_person = models.Donation.objects.create(

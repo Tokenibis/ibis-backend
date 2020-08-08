@@ -53,7 +53,7 @@ def handleDonationCreate(sender, instance, created, **kwargs):
 
     reference = '{}:{}'.format(
         ibis.models.Donation.__name__,
-        to_global_id('DonationNode', instance.pk),
+        to_global_id('EntryNode', instance.pk),
     )
 
     models.DonationNotification.objects.create(
@@ -77,7 +77,7 @@ def handleTransactionCreate(sender, instance, created, **kwargs):
 
     reference = '{}:{}'.format(
         ibis.models.Transaction.__name__,
-        to_global_id('TransactionNode', instance.pk),
+        to_global_id('EntryNode', instance.pk),
     )
 
     models.TransactionNotification.objects.create(
@@ -101,7 +101,7 @@ def handleNewsCreate(sender, instance, created, **kwargs):
 
     reference = '{}:{}'.format(
         ibis.models.News.__name__,
-        to_global_id('NewsNode', instance.pk),
+        to_global_id('EntryNode', instance.pk),
     )
 
     for target in entry.user.follower.all():
@@ -123,7 +123,7 @@ def handleEventCreate(sender, instance, created, **kwargs):
 
     reference = '{}:{}'.format(
         ibis.models.Event.__name__,
-        to_global_id('EventNode', instance.pk),
+        to_global_id('EntryNode', instance.pk),
     )
 
     for target in entry.user.follower.all():
@@ -145,7 +145,7 @@ def handlePostCreate(sender, instance, created, **kwargs):
 
     reference = '{}:{}'.format(
         ibis.models.Post.__name__,
-        to_global_id('PostNode', instance.pk),
+        to_global_id('EntryNode', instance.pk),
     )
 
     for target in entry.user.follower.all():

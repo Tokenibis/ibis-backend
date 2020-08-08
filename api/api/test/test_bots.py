@@ -71,7 +71,7 @@ class BotTestCase(BaseTestCase):
             last_name='McBotFace',
             email='bot@example.com',
         )
-        self.bot.gid = to_global_id('PersonNode', self.bot.id)
+        self.bot.gid = to_global_id('IbisUserNode', self.bot.id)
 
         models.Deposit.objects.create(
             user=self.bot,
@@ -98,7 +98,7 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['BotUpdate'],
                 op_name='BotUpdate',
                 variables={
-                    'id': to_global_id('BotNode', self.bot.id),
+                    'id': to_global_id('IbisUserNode', self.bot.id),
                     'tank': settings.BOT_GAS_INITIAL + 1,
                 },
             ).content)
