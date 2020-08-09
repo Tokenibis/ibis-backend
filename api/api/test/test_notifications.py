@@ -14,22 +14,26 @@ from lxml import etree
 class NotificationTestCase(BaseTestCase):
     def test_notifications(self):
         def create_operation(op_name, mention=False):
-            variables = {'user': self.me_person.gid}
+            variables = {}
             types = {}
 
             if op_name == 'FollowCreate':
+                variables['user'] = self.me_person.gid
                 variables['target'] = self.person.gid
             elif op_name == 'LikeCreate':
+                variables['user'] = self.me_person.gid
                 variables['target'] = to_global_id(
                     'DonationNode',
                     models.Donation.objects.filter(
                         user=self.person).first().id)
             elif op_name == 'RewardCreate':
-                variables['description'] = 'description'
+                variables['user'] = self.me_bot.gid
                 variables['target'] = self.person.gid
+                variables['description'] = 'description'
                 variables['amount'] = 1
             elif op_name == 'CommentCreate':
                 variables['description'] = 'description'
+                variables['user'] = self.me_person.gid
                 variables['parent'] = to_global_id(
                     'DonationNode',
                     models.Donation.objects.filter(
@@ -38,11 +42,13 @@ class NotificationTestCase(BaseTestCase):
                 variables['self'] = self.me_person.gid
             elif op_name == 'NewsCreate':
                 variables['description'] = 'description'
+                variables['user'] = self.me_organization.gid
                 variables['title'] = 'title'
                 variables['link'] = 'link'
                 variables['image'] = 'image'
             elif op_name == 'EventCreate':
                 variables['description'] = 'description'
+                variables['user'] = self.me_organization.gid
                 variables['title'] = 'title'
                 variables['link'] = 'link'
                 variables['image'] = 'image'
@@ -52,19 +58,18 @@ class NotificationTestCase(BaseTestCase):
                 types['duration'] = 'Int!'
             elif op_name == 'PostCreate':
                 variables['description'] = 'description'
+                variables['user'] = self.me_person.gid
                 variables['title'] = 'title'
             else:
                 raise KeyError
 
             if mention:
-                assert 'description' in variables
-                variables[
-                    'description'] += '\n\n@{}--email@example.com) and @{}'.format(
-                        models.Person.objects.exclude(
-                            id=self.person.id).first().username,
-                        models.Organization.objects.exclude(
-                            id=self.organization.id).first().username,
-                    )
+                variables['description'] += '\n\n@{}--email@example.com) and @{}'.format(
+                    models.Person.objects.exclude(
+                        id=self.person.id).first().username,
+                    models.Organization.objects.exclude(
+                        id=self.organization.id).first().username,
+                )
 
             query = self.gql[op_name]
 
@@ -143,11 +148,11 @@ class NotificationTestCase(BaseTestCase):
         models.Deposit.objects.create(
             user=self.me_person,
             amount=200,
-            payment_id='unique_test_notifications',
-            category=models.DepositCategory.objects.first(),
+            description='unique_test_notifications',
+            category=models.ExchangeCategory.objects.first(),
         )
 
-        self.person.following.add(self.organization)
+        self.person.following.add(self.me_organization)
         self.person.following.add(self.me_person)
 
         def run(op_type, c, mention=False, delete=False):

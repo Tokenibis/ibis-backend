@@ -11,8 +11,8 @@ def handleDepositCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    if ibis.models.DepositCategory.objects.filter(title='ubp').exists(
-    ) and instance.category == ibis.models.DepositCategory.objects.get(
+    if ibis.models.ExchangeCategory.objects.filter(title='ubp').exists(
+    ) and instance.category == ibis.models.ExchangeCategory.objects.get(
             title='ubp'):
         description = 'You have a fresh ${:.2f} waiting for you'.format(
             instance.amount / 100)
@@ -49,8 +49,6 @@ def handleDonationCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    entry = ibis.models.Entry.objects.get(pk=instance.pk)
-
     reference = '{}:{}'.format(
         ibis.models.Donation.__name__,
         to_global_id('EntryNode', instance.pk),
@@ -60,7 +58,7 @@ def handleDonationCreate(sender, instance, created, **kwargs):
         notifier=instance.target.notifier,
         reference=reference,
         description='{} donated ${:.2f}'.format(
-            str(entry.user),
+            str(instance.user),
             instance.amount / 100,
         ),
         subject=instance,
@@ -73,8 +71,6 @@ def handleRewardCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    entry = ibis.models.Entry.objects.get(pk=instance.pk)
-
     reference = '{}:{}'.format(
         ibis.models.Reward.__name__,
         to_global_id('EntryNode', instance.pk),
@@ -84,7 +80,7 @@ def handleRewardCreate(sender, instance, created, **kwargs):
         notifier=instance.target.notifier,
         reference=reference,
         description='{} sent you ${:.2f}'.format(
-            str(entry.user),
+            str(instance.user),
             instance.amount / 100,
         ),
         subject=instance,
@@ -97,18 +93,16 @@ def handleNewsCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    entry = ibis.models.Entry.objects.get(pk=instance.pk)
-
     reference = '{}:{}'.format(
         ibis.models.News.__name__,
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in entry.user.follower.all():
+    for target in instance.user.follower.all():
         models.NewsNotification.objects.create(
             notifier=target.user.notifier,
             reference=reference,
-            description='{} released a news story'.format(str(entry.user)),
+            description='{} released a news story'.format(str(instance.user)),
             subject=instance,
             created=instance.created,
         )
@@ -119,18 +113,16 @@ def handleEventCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    entry = ibis.models.Entry.objects.get(pk=instance.pk)
-
     reference = '{}:{}'.format(
         ibis.models.Event.__name__,
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in entry.user.follower.all():
+    for target in instance.user.follower.all():
         models.EventNotification.objects.create(
             notifier=target.user.notifier,
             reference=reference,
-            description='{} planned an new event'.format(str(entry.user)),
+            description='{} planned an new event'.format(str(instance.user)),
             subject=instance,
             created=instance.created,
         )
@@ -141,19 +133,17 @@ def handlePostCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    entry = ibis.models.Entry.objects.get(pk=instance.pk)
-
     reference = '{}:{}'.format(
         ibis.models.Post.__name__,
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in entry.user.follower.all():
+    for target in instance.user.follower.all():
         notifier = target.user.notifier
         models.PostNotification.objects.create(
             notifier=notifier,
             reference=reference,
-            description='{} made a new post'.format(str(entry.user)),
+            description='{} made a new post'.format(str(instance.user)),
             subject=instance,
             created=instance.created,
         )
@@ -164,14 +154,16 @@ def handleCommentCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    entry = ibis.models.Entry.objects.get(pk=instance.pk)
     current = instance
 
     notification_info = []
 
     while hasattr(current, 'comment'):
         parent = current.comment.parent
-        notifiers = [parent.user.user.notifier]
+        notifiers = [models.get_submodel(
+            parent,
+            ibis.models.Entry,
+        ).objects.get(pk=parent.pk).user.notifier]
         if models.get_submodel(
                 parent,
                 ibis.models.Entry,
@@ -185,9 +177,9 @@ def handleCommentCreate(sender, instance, created, **kwargs):
 
         for notifier in notifiers:
             if notifier not in [x['notifier'] for x in notification_info
-                                ] and notifier != entry.user.notifier:
+                                ] and notifier != instance.user.notifier:
                 description = '{} replied to your {}'.format(
-                    str(entry.user),
+                    str(instance.user),
                     models.get_submodel(
                         parent,
                         ibis.models.Entry,
@@ -207,7 +199,7 @@ def handleCommentCreate(sender, instance, created, **kwargs):
 
     if notification_info:
         notification_info[-1]['description'] = '{} replied to your {}'.format(
-            str(entry.user), ref_type.lower())
+            str(instance.user), ref_type.lower())
 
     for info in notification_info:
         models.CommentNotification.objects.create(
@@ -258,7 +250,10 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
     if action == 'post_add':
         for pk in pk_set:
             user = ibis.models.User.objects.get(pk=pk)
-            notifier = entry.user.notifier
+            notifier = models.get_submodel(
+                entry,
+                ibis.models.Entry,
+            ).objects.get(pk=instance.pk).user.notifier
             description = '{} liked your {}'.format(
                 str(user),
                 models.get_submodel(
@@ -292,8 +287,12 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
 
     elif action == 'post_remove':
         for pk in pk_set:
+            notifier = models.get_submodel(
+                entry,
+                ibis.models.Entry,
+            ).objects.get(pk=instance.pk).user.notifier
             models.LikeNotification.objects.filter(
-                notifier=entry.user.notifier,
+                notifier=notifier,
                 subject=entry,
                 user=ibis.models.User.objects.get(pk=pk),
             ).delete()
@@ -307,7 +306,10 @@ def handleMentionUpdate(sender, instance, action, pk_set, **kwargs):
             if not ibis.models.User.objects.get(pk=pk).can_see(entry):
                 continue
             description = '{} mentioned you in a {}'.format(
-                entry.user,
+                models.get_submodel(
+                    entry,
+                    ibis.models.Entry,
+                ).objects.get(pk=instance.pk).user,
                 models.get_submodel(entry, ibis.models.Entry).__name__.lower(),
             )
 

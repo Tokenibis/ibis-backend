@@ -90,11 +90,12 @@ class Markov(object):
 class Model:
     def __init__(self):
         self.organization_categories = []
-        self.deposit_categories = []
+        self.exchange_categories = []
         self.email_templates = []
         self.donation_messages = []
         self.users = []
         self.general_users = []
+        self.bots = []
         self.people = []
         self.organizations = []
         self.deposits = []
@@ -162,11 +163,11 @@ class Model:
 
         return pk
 
-    def add_deposit_category(self, title):
-        pk = len(self.deposit_categories) + 1
+    def add_exchange_category(self, title):
+        pk = len(self.exchange_categories) + 1
 
-        self.deposit_categories.append({
-            'model': 'ibis.DepositCategory',
+        self.exchange_categories.append({
+            'model': 'ibis.ExchangeCategory',
             'pk': pk,
             'fields': {
                 'title': title,
@@ -213,7 +214,9 @@ class Model:
 
         unique_name = re.sub(r'\W+', '_', name).lower()[:15]
         i = 0
-        while unique_name in [x['fields']['last_name'] for x in self.general_users]:
+        while unique_name in [
+                x['fields']['last_name'] for x in self.general_users
+        ]:
             i += 1
             suffix = '_{}'.format(i)
             unique_name = unique_name[:15 - len(suffix)] + suffix
@@ -232,7 +235,7 @@ class Model:
         })
 
         self.users.append({
-            'model': 'ibis.user',
+            'model': 'ibis.User',
             'pk': pk,
             'fields': {
                 'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
@@ -270,7 +273,6 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': source,
                 'description': description,
                 'like': [],
                 'created': created if created else self._random_time(),
@@ -280,6 +282,7 @@ class Model:
             'model': 'ibis.Donation',
             'pk': pk,
             'fields': {
+                'user': source,
                 'target': target,
                 'amount': amount,
                 'score': score,
@@ -306,7 +309,7 @@ class Model:
         })
 
         self.users.append({
-            'model': 'ibis.user',
+            'model': 'ibis.User',
             'pk': pk,
             'fields': {
                 'following': [],
@@ -324,14 +327,48 @@ class Model:
 
         return pk
 
-    def add_reward(
-            self,
-            source,
-            target,
-            amount,
-            description,
-            score,
-    ):
+    def add_bot(self, name, description, score, date_joined=None):
+        pk = len(self.general_users) + 1
+        username = '{}_{}'.format(pk, name)[:15].lower()
+
+        self.general_users.append({
+            'model': 'users.GeneralUser',
+            'pk': pk,
+            'fields': {
+                'username': username,
+                'last_name': name,
+                'email': '{}@example.com'.format(username),
+                'date_joined':
+                date_joined if date_joined else self._random_time(),
+            }
+        })
+
+        self.users.append({
+            'model': 'ibis.User',
+            'pk': pk,
+            'fields': {
+                'following': [],
+                'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
+                'description': description,
+                'score': score,
+            }
+        })
+
+        self.people.append({
+            'model': 'ibis.Bot',
+            'pk': pk,
+            'fields': {},
+        })
+
+        return pk
+
+    def add_reward(self,
+                   source,
+                   target,
+                   amount,
+                   description,
+                   score,
+                   challenge=None):
         assert target not in [x['pk'] for x in self.organizations]
         pk = len(self.entries) + 1
 
@@ -339,7 +376,6 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': source,
                 'description': description,
                 'like': [],
                 'created': self._random_time(),
@@ -350,9 +386,11 @@ class Model:
             'model': 'ibis.Reward',
             'pk': pk,
             'fields': {
+                'user': source,
                 'target': target,
                 'amount': amount,
                 'score': score,
+                'accomplishment': challenge,
             }
         })
 
@@ -366,7 +404,6 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': organization,
                 'description': description,
                 'like': [],
                 'created': self._random_time(),
@@ -377,6 +414,7 @@ class Model:
             'model': 'ibis.News',
             'pk': pk,
             'fields': {
+                'user': organization,
                 'title': title,
                 'bookmark': [],
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
@@ -404,7 +442,6 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': organization,
                 'description': description,
                 'like': [],
                 'created': self._random_time(),
@@ -415,6 +452,7 @@ class Model:
             'model': 'ibis.Event',
             'pk': pk,
             'fields': {
+                'user': organization,
                 'title': title,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
@@ -435,7 +473,6 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user': user,
                 'description': description,
                 'like': [],
                 'created': self._random_time(),
@@ -446,7 +483,35 @@ class Model:
             'model': 'ibis.Post',
             'pk': pk,
             'fields': {
+                'user': user,
                 'title': title,
+                'score': score,
+                'bookmark': [],
+            }
+        })
+
+        return pk
+
+    def add_challenge(self, user, title, description, active, score):
+        pk = len(self.entries) + 1
+
+        self.entries.append({
+            'model': 'ibis.Entry',
+            'pk': pk,
+            'fields': {
+                'description': description,
+                'like': [],
+                'created': self._random_time(),
+            }
+        })
+
+        self.posts.append({
+            'model': 'ibis.Challenge',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'title': title,
+                'active': active,
                 'score': score,
                 'bookmark': [],
             }
@@ -461,8 +526,6 @@ class Model:
             'model': 'ibis.Entry',
             'pk': pk,
             'fields': {
-                'user':
-                user,
                 'description':
                 description,
                 'like': [],
@@ -478,6 +541,7 @@ class Model:
             'model': 'ibis.Comment',
             'pk': pk,
             'fields': {
+                'user': user,
                 'parent': parent,
                 'score': score,
             }
@@ -490,14 +554,14 @@ class Model:
 
         sha = hashlib.sha256()
         sha.update(str(pk).encode())
-        payment_id = '{}'.format(sha.hexdigest())
+        description = '{}'.format(sha.hexdigest())
 
         self.deposits.append({
             'model': 'ibis.Deposit',
             'pk': pk,
             'fields': {
                 'user': user,
-                'payment_id': payment_id,
+                'description': description,
                 'amount': amount,
                 'category': category,
                 'created': created if created else self._random_time(),
@@ -506,7 +570,7 @@ class Model:
 
         return pk
 
-    def add_withdrawal(self, user, amount):
+    def add_withdrawal(self, user, amount, category, created=None):
         pk = len(self.withdrawals) + 1
 
         self.deposits.append({
@@ -516,6 +580,8 @@ class Model:
                 'user': user,
                 'amount': amount,
                 'created': self._random_time(),
+                'category': category,
+                'created': created if created else self._random_time(),
             }
         })
 
@@ -565,7 +631,7 @@ class Model:
             serializable_users,
             partial_users,
             self.organization_categories,
-            self.deposit_categories,
+            self.exchange_categories,
             self.email_templates,
             self.donation_messages,
             self.organizations,
@@ -589,6 +655,7 @@ class Command(BaseCommand):
     help = 'Generate/regenerate fixture.json file in ibis/fixtures'
 
     def add_arguments(self, parser):
+        parser.add_argument('--num_bot', type=int, required=True)
         parser.add_argument('--num_person', type=int, required=True)
         parser.add_argument('--num_organization', type=int, required=True)
         parser.add_argument('--num_deposit', type=int, required=True)
@@ -598,6 +665,7 @@ class Command(BaseCommand):
         parser.add_argument('--num_news', type=int, required=True)
         parser.add_argument('--num_event', type=int, required=True)
         parser.add_argument('--num_post', type=int, required=True)
+        parser.add_argument('--num_challenge', type=int, required=True)
         parser.add_argument('--num_comment', type=int, required=True)
         parser.add_argument('--num_follow', type=int, required=True)
         parser.add_argument('--num_rsvp', type=int, required=True)
@@ -606,6 +674,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.run(
+            num_bot=options['num_bot'],
             num_person=options['num_person'],
             num_organization=options['num_organization'],
             num_deposit=options['num_deposit'],
@@ -615,6 +684,7 @@ class Command(BaseCommand):
             num_news=options['num_news'],
             num_event=options['num_event'],
             num_post=options['num_post'],
+            num_challenge=options['num_challenge'],
             num_comment=options['num_comment'],
             num_follow=options['num_follow'],
             num_rsvp=options['num_rsvp'],
@@ -624,6 +694,7 @@ class Command(BaseCommand):
 
     def run(
             self,
+            num_bot,
             num_person,
             num_organization,
             num_deposit,
@@ -633,13 +704,14 @@ class Command(BaseCommand):
             num_news,
             num_event,
             num_post,
+            num_challenge,
             num_comment,
             num_follow,
             num_rsvp,
             num_bookmark,
             num_like,
     ):
-        assert num_deposit >= num_person + num_organization
+        assert num_deposit >= num_person
 
         random.seed(0)
         model = Model()
@@ -647,10 +719,11 @@ class Command(BaseCommand):
         # load data
         markov = Markov(os.path.join(DIR, 'data/corpus'))
 
-        with open(os.path.join(DIR, 'data/organization_categories.json')) as fd:
+        with open(os.path.join(DIR,
+                               'data/organization_categories.json')) as fd:
             np_cat_raw = json.load(fd)
 
-        with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
+        with open(os.path.join(DIR, 'data/exchange_categories.json')) as fd:
             dp_cat_raw = json.load(fd)
 
         email_templates = make_email_templates()
@@ -692,12 +765,13 @@ class Command(BaseCommand):
 
         # make organization categories from charity navigator categories
         organization_categories = [
-            model.add_organization_category(x, np_cat_raw[x]) for x in np_cat_raw
+            model.add_organization_category(x, np_cat_raw[x])
+            for x in np_cat_raw
         ]
 
         # make deposit categories from charity navigator categories
-        deposit_categories = [
-            model.add_deposit_category(x) for x in dp_cat_raw
+        exchange_categories = [
+            model.add_exchange_category(x) for x in dp_cat_raw
         ]
 
         for template_type, templates in email_templates.items():
@@ -743,12 +817,30 @@ class Command(BaseCommand):
             ) for x in people_raw[:num_person]
         ]
 
-        # make deposit money for all users
+        # make bots
+        bots = [
+            model.add_bot(
+                x,
+                markov.generate_markov_text(size=200),
+                random.randint(0, 100),
+            ) for x in random.sample(nouns, num_bot)
+        ]
+
+        # make deposit money for all people
         for person in people:
             model.add_deposit(
                 person,
                 1000000,
-                random.choice(deposit_categories),
+                random.choice(exchange_categories),
+                created=model.now - timedelta(seconds=WINDOW + 2),
+            )
+
+        # make deposit money for all bots
+        for bot in bots:
+            model.add_deposit(
+                bot,
+                100000,
+                random.choice(exchange_categories),
                 created=model.now - timedelta(seconds=WINDOW + 2),
             )
 
@@ -758,7 +850,7 @@ class Command(BaseCommand):
             model.add_deposit(
                 donor,
                 1000000,
-                random.choice(deposit_categories),
+                random.choice(exchange_categories),
                 created=model.now - timedelta(seconds=WINDOW + 2),
             )
             model.add_donation(
@@ -771,41 +863,20 @@ class Command(BaseCommand):
             )
 
         # make random deposits
-        for i in range(num_deposit - (num_person + num_organization)):
+        for i in range(num_deposit - (num_person + num_organization + num_bot)):
             model.add_deposit(
                 random.choice(people),
                 random.randint(1, 10000),
-                random.choice(deposit_categories),
-            )
-
-        # make random deposits
-        for i in range(num_withdrawal):
-            model.add_withdrawal(
-                random.choice(organizations),
-                random.randint(1, 10000),
+                random.choice(exchange_categories),
             )
 
         # make random donations
         donations = []
         for i in range(num_donation - len(organizations)):
-            donor = random.choice(people + organizations)
             donations.append(
                 model.add_donation(
-                    donor,
-                    random.choice([x for x in organizations if x != donor]),
-                    random.randint(1, 10000),
-                    markov.generate_markov_text(),
-                    random.randint(0, 100),
-                ))
-
-        # make random rewards
-        rewards = []
-        for i in range(num_reward):
-            sender = random.choice(people + organizations)
-            rewards.append(
-                model.add_reward(
-                    sender,
-                    random.choice([x for x in people if x != sender]),
+                    random.choice(people),
+                    random.choice(organizations),
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
@@ -876,6 +947,36 @@ class Command(BaseCommand):
                     title,
                     description,
                     random.randint(0, 100),
+                ))
+
+        # make fake challenges
+        challenge = []
+        for i in range(num_challenge):
+            title = 'I challenge you to {} a {}?'.format(
+                random.choice(verbs).lower(),
+                random.choice(nouns).lower(),
+            )
+            description = markov.generate_markov_text(size=200)
+            challenge.append(
+                model.add_challenge(
+                    random.choice(people),
+                    title,
+                    description,
+                    random.choice([True, False]),
+                    random.randint(0, 100),
+                ))
+
+        # make random rewards
+        rewards = []
+        for i in range(num_reward):
+            rewards.append(
+                model.add_reward(
+                    random.choice(bots),
+                    random.choice(people),
+                    random.randint(1, 10000),
+                    markov.generate_markov_text(),
+                    random.randint(0, 100),
+                    random.choice(challenge),
                 ))
 
         # make fake comments

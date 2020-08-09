@@ -75,7 +75,6 @@ class User(GeneralUser, Scoreable):
     avatar = models.TextField(validators=[MinLengthValidator(1)])
     description = models.TextField(blank=True, null=True)
 
-
     def __str__(self):
         return '{}{}{}'.format(
             self.first_name,
@@ -87,26 +86,21 @@ class User(GeneralUser, Scoreable):
         return sum([
             +sum([x.amount for x in Deposit.objects.filter(user=self.id)]),
             +sum([x.amount for x in Donation.objects.filter(target=self.id)]),
-            +sum(
-                [x.amount
-                 for x in Reward.objects.filter(target=self.id)]),
+            +sum([x.amount for x in Reward.objects.filter(target=self.id)]),
             -sum([x.amount for x in Donation.objects.filter(user=self.id)]),
             -sum([x.amount for x in Reward.objects.filter(user=self.id)]),
             -sum([x.amount for x in Withdrawal.objects.filter(user=self.id)]),
         ])
-
-    def donated(self):
-        return sum([x.amount for x in Donation.objects.filter(user=self)])
 
     def can_see(self, entry):
         if hasattr(entry, 'comment'):
             entry = entry.comment.get_root()
 
         if hasattr(entry, 'donation') and entry.donation.private:
-            return self.id == entry.user.id or self.id == entry.donation.target.id
+            return self.id == entry.donation.user.id or self.id == entry.donation.target.id
 
         if hasattr(entry, 'reward') and entry.reward.private:
-            return self.id == entry.user.id or self.id == entry.reward.target.id
+            return self.id == entry.reward.user.id or self.id == entry.reward.target.id
 
         return True
 
@@ -143,10 +137,30 @@ class OrganizationCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Organization(User):
-    class Meta:
-        verbose_name = "Organization"
+class Bot(User):
+    privacy_reward = models.BooleanField(default=False)
+    gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
+    tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
 
+
+class Person(User):
+    class Meta:
+        verbose_name = "Person"
+        verbose_name_plural = "People"
+
+    reward_from = models.ManyToManyField(
+        Bot,
+        related_name='reward_to',
+        through='Reward',
+        symmetrical=False,
+    )
+    privacy_donation = models.BooleanField(default=False)
+
+    def donated(self):
+        return sum([x.amount for x in Donation.objects.filter(user=self)])
+
+
+class Organization(User):
     category = models.ForeignKey(
         OrganizationCategory,
         on_delete=models.CASCADE,
@@ -156,7 +170,7 @@ class Organization(User):
     banner = models.TextField(validators=[MinLengthValidator(1)])
 
     donation_from = models.ManyToManyField(
-        User,
+        Person,
         related_name='donation_to',
         through='Donation',
         symmetrical=False,
@@ -166,35 +180,10 @@ class Organization(User):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
 
 
-class Person(User):
-    class Meta:
-        verbose_name = "Person"
-        verbose_name_plural = "People"
-
-    reward_from = models.ManyToManyField(
-        User,
-        related_name='reward_to',
-        through='Reward',
-        symmetrical=False,
-    )
-    privacy_donation = models.BooleanField(default=False)
-
-
-class Bot(User):
-    privacy_reward = models.BooleanField(default=False)
-    gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
-    tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
-
-
 class Entry(TimeStampedModel, Scoreable):
     class Meta:
         verbose_name = "Entry"
         verbose_name_plural = "Entries"
-
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-    )
 
     description = models.TextField(validators=[MinLengthValidator(1)])
 
@@ -272,9 +261,9 @@ class Entry(TimeStampedModel, Scoreable):
         return description
 
 
-class DepositCategory(models.Model):
+class ExchangeCategory(models.Model):
     class Meta:
-        verbose_name_plural = 'deposit categories'
+        verbose_name_plural = 'Exchange categories'
 
     title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
 
@@ -282,17 +271,19 @@ class DepositCategory(models.Model):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Deposit(TimeStampedModel, Valuable, Hideable):
+class Exchange(TimeStampedModel, Valuable):
+    class Meta:
+        abstract = True
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
     )
     category = models.ForeignKey(
-        DepositCategory,
+        ExchangeCategory,
         on_delete=models.CASCADE,
     )
-    payment_id = models.TextField(
-        unique=True, validators=[MinLengthValidator(1)])
+    description = models.TextField()
 
     def __str__(self):
         return '{}:{}:{:.2f}'.format(
@@ -302,55 +293,22 @@ class Deposit(TimeStampedModel, Valuable, Hideable):
         )
 
 
-class Withdrawal(TimeStampedModel, Valuable):
-    user = models.ForeignKey(
-        Organization,
-        on_delete=models.CASCADE,
-    )
-    description = models.TextField(blank=True)
-
-    def __str__(self):
-        return '{}:{}:{:.2f}'.format(
-            self.pk,
-            self.user,
-            self.amount / 100,
-        )
+class Deposit(Exchange):
+    pass
 
 
-class Donation(Entry, Valuable, Hideable):
-    target = models.ForeignKey(
-        Organization,
-        on_delete=models.CASCADE,
-    )
-
-    def __str__(self):
-        return '{}:{}->{}:{:.2f}'.format(
-            self.pk,
-            self.user,
-            self.target,
-            self.amount / 100,
-        )
-
-
-class Reward(Entry, Valuable, Hideable):
-    target = models.ForeignKey(
-        Person,
-        on_delete=models.CASCADE,
-    )
-
-    def __str__(self):
-        return '{}:{}->{}:{:.2f}'.format(
-            self.pk,
-            self.user,
-            self.target,
-            self.amount / 100,
-        )
+class Withdrawal(Exchange):
+    pass
 
 
 class News(Entry):
     class Meta:
         verbose_name_plural = 'news'
 
+    user = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+    )
     title = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
     link = models.TextField(blank=True)
@@ -360,6 +318,10 @@ class News(Entry):
 
 
 class Event(Entry, Rsvpable):
+    user = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+    )
     title = models.TextField(validators=[MinLengthValidator(1)])
     image = models.TextField(validators=[MinLengthValidator(1)])
     address = models.TextField(blank=True)
@@ -371,11 +333,72 @@ class Event(Entry, Rsvpable):
         return '{} ({})'.format(self.title, self.id)
 
 
+class Donation(Entry, Valuable, Hideable):
+    user = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+    )
+    target = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+    )
+
+    def __str__(self):
+        return '{}:{}->{}:{:.2f}'.format(
+            self.pk,
+            self.user,
+            self.target,
+            self.amount / 100,
+        )
+
+
 class Post(Entry):
+    user = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+    )
     title = models.TextField(validators=[MinLengthValidator(1)])
 
 
+class Challenge(Entry):
+    user = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+    )
+    title = models.TextField(validators=[MinLengthValidator(1)])
+    active = models.BooleanField()
+
+
+class Reward(Entry, Valuable, Hideable):
+    user = models.ForeignKey(
+        Bot,
+        on_delete=models.CASCADE,
+    )
+    target = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+    )
+    accomplishment = models.ForeignKey(
+        Challenge,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
+
+    def __str__(self):
+        return '{}:{}->{}:{:.2f}'.format(
+            self.pk,
+            self.user,
+            self.target,
+            self.amount / 100,
+        )
+
+
 class Comment(Entry):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+    )
     parent = models.ForeignKey(
         Entry,
         related_name='parent_of',

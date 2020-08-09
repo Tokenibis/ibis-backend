@@ -45,7 +45,7 @@ admin.site.register(models.News, EntryOrganizationAdmin)
 admin.site.register(models.Event, EntryOrganizationAdmin)
 
 admin.site.register(models.OrganizationCategory)
-admin.site.register(models.DepositCategory)
+admin.site.register(models.ExchangeCategory)
 admin.site.register(models.Deposit)
 admin.site.register(models.Withdrawal)
 admin.site.register(models.Entry)

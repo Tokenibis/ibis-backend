@@ -247,10 +247,10 @@ class PaymentView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
-        payment_id, net, fee = self.paypal_client.get_order(
+        description, net, fee = self.paypal_client.get_order(
             request.data['orderID'])
 
-        if not (payment_id and net):
+        if not (description and net):
             logger.error('Error fetching order information')
             return response.Response({
                 'depositID': '',
@@ -260,8 +260,8 @@ class PaymentView(generics.GenericAPIView):
         deposit = models.Deposit.objects.create(
             user=user,
             amount=net,
-            payment_id='paypal:{}:{}'.format(fee, payment_id),
-            category=models.DepositCategory.objects.get(title='paypal'),
+            description='paypal:{}:{}'.format(fee, description),
+            category=models.ExchangeCategory.objects.get(title='paypal'),
         )
 
         return response.Response({

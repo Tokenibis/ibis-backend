@@ -20,7 +20,6 @@ class BotTestCase(BaseTestCase):
         'CommentCreate',
         'CommentList',
         'Donation',
-        'DonationCreate',
         'DonationList',
         'Event',
         'EventList',
@@ -65,22 +64,6 @@ class BotTestCase(BaseTestCase):
                 assert definition.selection_set.selections[
                     0].name.value in settings.BOT_GAS_MUTATION
 
-        self.bot = models.Bot.objects.create(
-            username='bot',
-            password='password',
-            first_name='Bot',
-            last_name='McBotFace',
-            email='bot@example.com',
-        )
-        self.bot.gid = to_global_id('UserNode', self.bot.id)
-
-        models.Deposit.objects.create(
-            user=self.bot,
-            amount=300,
-            payment_id='unique_bot_1',
-            category=models.DepositCategory.objects.first(),
-        )
-
     def run_all(self, user):
         success = {}
         result = json.loads(
@@ -99,7 +82,7 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['Bot'],
                 op_name='Bot',
                 variables={
-                    'id': self.bot.gid,
+                    'id': self.me_bot.gid,
                 },
             ).content)
         success['Bot'] = 'errors' not in result and bool(
@@ -123,7 +106,7 @@ class BotTestCase(BaseTestCase):
                 self.gql_bot['BotUpdate'],
                 op_name='BotUpdate',
                 variables={
-                    'id': to_global_id('UserNode', self.bot.id),
+                    'id': to_global_id('UserNode', self.me_bot.id),
                     'tank': settings.BOT_GAS_INITIAL + 1,
                 },
             ).content)
@@ -174,20 +157,6 @@ class BotTestCase(BaseTestCase):
             ).content)
         success['Donation'] = 'errors' not in result and bool(
             result['data']['donation']['id'])
-
-        result = json.loads(
-            self.query(
-                self.gql_bot['DonationCreate'],
-                op_name='DonationCreate',
-                variables={
-                    'user': to_global_id('UserNode', user.id),
-                    'target': self.organization.gid,
-                    'amount': 100,
-                    'description': 'This is a donation',
-                },
-            ).content)
-        success['DonationCreate'] = 'errors' not in result and result['data'][
-            'createDonation']['donation']['id']
 
         result = json.loads(
             self.query(
@@ -448,11 +417,11 @@ class BotTestCase(BaseTestCase):
     # staff can do everything
     def test_staff(self):
         self._client.force_login(self.staff)
-        assert all(self.run_all(self.bot).values())
+        assert all(self.run_all(self.me_bot).values())
 
     # bots can do everything
     def test_bot(self):
-        self._client.force_login(self.bot)
-        assert all(self.run_all(self.bot).values())
+        self._client.force_login(self.me_bot)
+        assert all(self.run_all(self.me_bot).values())
 
     # TODO: test that the metering deduction works as advertised

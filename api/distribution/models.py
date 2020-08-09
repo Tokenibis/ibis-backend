@@ -76,9 +76,9 @@ def get_distribution_amount(time):
 
 def get_control_history(time):
     """Calculate the historical control (goal, adjusted donations) as a
-    timeseries. The effective donation adjusts for outbound organization
-    rewards as well as user deposits. The control error can be
-    calculated as the difference of each pair of data points.
+    timeseries. The effective donation adjusts for user deposits. The
+    control error can be calculated as the difference of each pair of
+    data points.
 
     """
 
@@ -98,20 +98,10 @@ def get_control_history(time):
                         created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of non-UBP deposits
                     x.amount for x in ibis.models.Deposit.objects.exclude(
-                        category=ibis.models.DepositCategory.
+                        category=ibis.models.ExchangeCategory.
                         objects.get(title=settings.IBIS_CATEGORY_UBP)).filter(
                             created__gte=to_step_start(x.created),
                             created__lt=to_step_start(x.created, offset=1))),
-                -sum(  # sum of outbound donations
-                    x.amount for x in ibis.models.Donation.objects.filter(
-                        user__organization__isnull=False,
-                        created__gte=to_step_start(x.created),
-                        created__lt=to_step_start(x.created, offset=1))),
-                -sum(  # sum of outbound rewards
-                    x.amount for x in ibis.models.Reward.objects.filter(
-                        user__organization__isnull=False,
-                        created__gte=to_step_start(x.created),
-                        created__lt=to_step_start(x.created, offset=1))),
             ]),
         ] for x in goals
     ]
@@ -119,7 +109,7 @@ def get_control_history(time):
 
 def get_distribution_shares(time, initial=[]):
     """Calculate the relative UBP share for each active person based on the
-    recency of their last activity (donation or reward).
+    recency of their last activity (registration or donation).
     """
 
     step = to_step_start(time)
@@ -127,9 +117,7 @@ def get_distribution_shares(time, initial=[]):
     # calculate raw relative shares
     raw = {}
     for x in ibis.models.Person.objects.exclude(distributor__eligible=False):
-        activity = x.entry_set.filter(
-            Q(donation__isnull=False)
-            | Q(reward__isnull=False)).filter(
+        activity = x.donation_set.filter(
                 created__lt=step).order_by('created').last()
         last = to_step_start(
             localtime(activity.created) if activity else to_step_start(
@@ -181,15 +169,15 @@ class Distributor(models.Model):
         """
         if self.eligible and not self.person.deposit_set.filter(
                 created__gte=to_step_start(time),
-                category=ibis.models.DepositCategory.objects.get(
+                category=ibis.models.ExchangeCategory.objects.get(
                     title=settings.IBIS_CATEGORY_UBP),
         ).exists():
             ibis.models.Deposit.objects.create(
                 user=self.person,
                 amount=amount,
-                payment_id='ubp:{}'.format(
+                description='ubp:{}'.format(
                     sha256(str(random.random()).encode('utf-8')).hexdigest()),
-                category=ibis.models.DepositCategory.objects.get(
+                category=ibis.models.ExchangeCategory.objects.get(
                     title=settings.IBIS_CATEGORY_UBP),
                 created=time,
             )
@@ -203,7 +191,7 @@ class Distributor(models.Model):
         """
 
         if self.person.deposit_set.filter(
-                category=ibis.models.DepositCategory.objects.get(
+                category=ibis.models.ExchangeCategory.objects.get(
                     title=settings.IBIS_CATEGORY_UBP)).exists():
             return
 
@@ -220,7 +208,7 @@ class Distributor(models.Model):
             population_discount = len(shares) / (
                 ibis.models.Deposit.objects.filter(
                     created__gte=to_step_start(time),
-                    category=ibis.models.DepositCategory.objects.get(
+                    category=ibis.models.ExchangeCategory.objects.get(
                         title=settings.IBIS_CATEGORY_UBP),
                 ).count() + 1)
 

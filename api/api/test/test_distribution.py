@@ -18,7 +18,7 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 TS_WEEKS = 9
 SS_WEEKS = 15
 
-UBP_CATEGORY = ibis.models.DepositCategory.objects.get(
+UBP_CATEGORY = ibis.models.ExchangeCategory.objects.get(
     title=settings.IBIS_CATEGORY_UBP)
 
 EPSILON = 1.0
@@ -56,7 +56,7 @@ class DistributionTestCase(BaseTestCase):
                 },
             ).content)
 
-    def _transact(self, user, target, amount):
+    def _reward(self, user, target, amount):
         self._client.force_login(user)
         assert 'errors' not in json.loads(
             self.query(
@@ -74,8 +74,8 @@ class DistributionTestCase(BaseTestCase):
         ibis.models.Deposit.objects.create(
             user=user,
             amount=amount,
-            payment_id=str(random.random()),
-            category=ibis.models.DepositCategory.objects.exclude(
+            description=str(random.random()),
+            category=ibis.models.ExchangeCategory.objects.exclude(
                 id=UBP_CATEGORY).first(),
         )
 
@@ -176,9 +176,9 @@ class DistributionTestCase(BaseTestCase):
                         ibis.models.Deposit.objects.create(
                             user=x,
                             amount=10000,
-                            category=ibis.models.DepositCategory.objects.
+                            category=ibis.models.ExchangeCategory.objects.
                             exclude(id=UBP_CATEGORY.id).first(),
-                            payment_id=str(random.random()),
+                            description=str(random.random()),
                         )
 
                     # randomly give away roughly half of balance
@@ -190,16 +190,17 @@ class DistributionTestCase(BaseTestCase):
                         for a in amounts
                     ]
                     amounts = [x if x else 1 for x in amounts]
+
                     for y in amounts:
-                        if random.random() < 0.5:
+                        if y > 0 and type(x) == ibis.models.Person:
                             self._donate(
                                 user=x,
-                                target=ibis.models.Organization.objects.order_by(
-                                    '?').first(),
+                                target=ibis.models.Organization.objects.
+                                order_by('?').first(),
                                 amount=y,
                             )
-                        else:
-                            self._transact(
+                        elif y > 0 and type(x) == ibis.models.Bot:
+                            self._reward(
                                 user=x,
                                 target=ibis.models.Person.objects.order_by(
                                     '?').first(),
@@ -208,14 +209,6 @@ class DistributionTestCase(BaseTestCase):
                     activity[x] = 0
                 else:
                     activity[x] += 1
-
-            for x in users:
-                if ibis.models.Organization.objects.filter(
-                        id=x.id).exists() and x.balance() > 1000:
-                    ibis.models.Withdrawal.objects.create(
-                        user=x,
-                        amount=x.balance() - 1000,
-                    )
 
         def _tick_steady_state(activity):
             # users who are already active send money and are active to eachother
@@ -226,12 +219,20 @@ class DistributionTestCase(BaseTestCase):
                     ]
                     amounts = [a / sum(amounts) * x.balance() for a in amounts]
                     for y in amounts:
-                        self._donate(
-                            user=x,
-                            target=ibis.models.Organization.objects.order_by(
-                                '?').first(),
-                            amount=y,
-                        )
+                        if y > 0 and type(x) == ibis.models.Person:
+                            self._donate(
+                                user=x,
+                                target=ibis.models.Organization.objects.
+                                order_by('?').first(),
+                                amount=y,
+                            )
+                        elif y > 0 and type(x) == ibis.models.Bot:
+                            self._reward(
+                                user=x,
+                                target=ibis.models.Person.objects.order_by(
+                                    '?').first(),
+                                amount=y,
+                            )
                     activity[x] = 0
                 else:
                     activity[x] += 1
@@ -269,18 +270,6 @@ class DistributionTestCase(BaseTestCase):
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
                     -_none_zero(
-                        ibis.models.Donation.objects.filter(
-                            user__organization__isnull=False,
-                            created__gte=x,
-                            created__lt=x + timedelta(days=7),
-                        ).aggregate(Sum('amount'))['amount__sum']),
-                    -_none_zero(
-                        ibis.models.Reward.objects.filter(
-                            user__organization__isnull=False,
-                            created__gte=x,
-                            created__lt=x + timedelta(days=7),
-                        ).aggregate(Sum('amount'))['amount__sum']),
-                    -_none_zero(
                         ibis.models.Deposit.objects.exclude(
                             category=UBP_CATEGORY).filter(
                                 created__gte=x,
@@ -314,26 +303,21 @@ class DistributionTestCase(BaseTestCase):
 
         with freeze_time(TEST_TIME.astimezone(utc).date()) as frozen_datetime:
 
-            sink = ibis.models.Organization.objects.last()
-
             # number of weeks since last active (last week == 0)
-            for x in ibis.models.User.objects.exclude(id=sink.id):
+            for x in ibis.models.User.objects.all():
                 ibis.models.Deposit.objects.create(
                     user=x,
                     amount=2000,
                     category=UBP_CATEGORY,
-                    payment_id=str(random.random()),
+                    description=str(random.random()),
                 )
-                self._donate(
+                ibis.models.Withdrawal.objects.create(
                     user=x,
-                    target=sink,
-                    amount=x.balance() - 1000,
+                    amount=max(x.balance() - 1000, 0),
+                    category=ibis.models.ExchangeCategory.objects.get(
+                        title='admin'),
                 )
 
-            ibis.models.Withdrawal.objects.create(
-                user=sink,
-                amount=sink.balance() - 1000,
-            )
             activity = {x: 0 for x in ibis.models.Person.objects.all()}
 
             # make sure everything has settled
@@ -349,8 +333,8 @@ class DistributionTestCase(BaseTestCase):
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Organization.objects.
-                                              all()[:int(len(activity) / 2)]),
+                        list(activity) + list(ibis.models.Bot.objects.all()
+                                              [:int(len(activity) / 2)]),
                         int(len(activity) / 2),
                     ),
                 )
@@ -383,11 +367,18 @@ class DistributionTestCase(BaseTestCase):
             # Epoch 3: surge
             for _ in range(TS_WEEKS):
                 # add random number of users every week
+                for x in ibis.models.Bot.objects.all():
+                    ibis.models.Deposit.objects.create(
+                        user=x,
+                        amount=10000,
+                        category=ibis.models.ExchangeCategory.objects.get(title='admin'),
+                    )
+
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Organization.objects.
-                                              all()[:int(len(activity) / 4)]),
+                        list(activity) + list(ibis.models.Bot.objects.all()
+                                              [:int(len(activity) / 4)]),
                         len(activity),
                     ),
                 )
@@ -408,8 +399,8 @@ class DistributionTestCase(BaseTestCase):
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Organization.objects.
-                                              all()[:int(len(activity) / 4)]),
+                        list(activity) + list(ibis.models.Bot.objects.all()
+                                              [:int(len(activity) / 4)]),
                         len(activity),
                     ),
                 )

@@ -56,8 +56,8 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/organization_categories.json')) as fd:
             organization_categories = json.load(fd)
 
-        with open(os.path.join(DIR, 'data/deposit_categories.json')) as fd:
-            deposit_categories = json.load(fd)
+        with open(os.path.join(DIR, 'data/exchange_categories.json')) as fd:
+            exchange_categories = json.load(fd)
 
         with open(os.path.join(DIR, 'data/donation_messages.json')) as fd:
             donation_messages = json.load(fd)
@@ -68,8 +68,8 @@ class Command(BaseCommand):
                 description=organization_categories[cat],
             )
 
-        for cat in deposit_categories:
-            models.DepositCategory.objects.create(title=cat, )
+        for cat in exchange_categories:
+            models.ExchangeCategory.objects.create(title=cat, )
 
         for message in donation_messages:
             notifications.models.DonationMessage.objects.create(

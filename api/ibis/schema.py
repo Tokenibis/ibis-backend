@@ -337,8 +337,8 @@ class CommentFilter(django_filters.FilterSet):
         fields = []
 
     def filter_has_parent(self, qs, name, value):
-        if not (self.request.user.is_superuser or
-                models.User.objects.get(id=self.request.user.id).can_see(
+        if not (self.request.user.is_superuser
+                or models.User.objects.get(id=self.request.user.id).can_see(
                     models.Entry.objects.get(id=from_global_id(value)[1]))):
             raise GraphQLError('You do not have sufficient permission')
         return qs.filter(parent_id=from_global_id(value)[1])
@@ -363,9 +363,9 @@ class OrganizationCategoryNode(DjangoObjectType):
 # --- Deposit Category ------------------------------------------------------ #
 
 
-class DepositCategoryNode(DjangoObjectType):
+class ExchangeCategoryNode(DjangoObjectType):
     class Meta:
-        model = models.DepositCategory
+        model = models.ExchangeCategory
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -397,12 +397,12 @@ class DepositCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        payment_id = graphene.String(required=True)
+        description = graphene.String(required=True)
         category = graphene.ID(required=True)
 
     deposit = graphene.Field(DepositNode)
 
-    def mutate(self, info, user, amount, payment_id, category):
+    def mutate(self, info, user, amount, description, category):
         if not info.context.user.is_superuser:
             raise GraphQLError('You are not a staff member')
 
@@ -417,8 +417,8 @@ class DepositCreate(Mutation):
         deposit = models.Deposit.objects.create(
             user=user_obj,
             amount=amount,
-            payment_id=payment_id,
-            category=models.DepositCategory.objects.get(
+            description=description,
+            category=models.ExchangeCategory.objects.get(
                 pk=from_global_id(category)[1]),
         )
         deposit.save()
@@ -588,8 +588,9 @@ class DonationCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Arguments do not satisfy constraints')
 
-        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
-        target_obj = models.Organization.objects.get(pk=from_global_id(target)[1])
+        user_obj = models.Person.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Organization.objects.get(
+            pk=from_global_id(target)[1])
 
         try:
             assert user_obj.balance() - amount >= 0
@@ -678,7 +679,7 @@ class RewardCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Arguments do not satisfy constraints')
 
-        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
+        user_obj = models.Bot.objects.get(pk=from_global_id(user)[1])
         target_obj = models.Person.objects.get(pk=from_global_id(target)[1])
 
         try:
@@ -750,7 +751,7 @@ class NewsCreate(Mutation):
             raise GraphQLError('You do not have sufficient permission')
 
         news = models.News.objects.create(
-            user=models.User.objects.get(pk=from_global_id(user)[1]),
+            user=models.Organization.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
             link=link,
@@ -796,7 +797,8 @@ class NewsUpdate(Mutation):
 
         news = models.News.objects.get(pk=from_global_id(id)[1])
         if user:
-            news.user = models.User.objects.get(pk=from_global_id(user)[1])
+            news.user = models.Organization.objects.get(
+                pk=from_global_id(user)[1])
         if description:
             news.description = description
         if title:
@@ -881,7 +883,7 @@ class EventCreate(Mutation):
             raise GraphQLError('You do not have sufficient permission')
 
         event = models.Event.objects.create(
-            user=models.User.objects.get(pk=from_global_id(user)[1]),
+            user=models.Organization.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
             image=image,
@@ -936,7 +938,7 @@ class EventUpdate(Mutation):
 
         event = models.Event.objects.get(pk=from_global_id(id)[1])
         if user:
-            event.user = models.User.objects.get(
+            event.user = models.Organization.objects.get(
                 pk=from_global_id(user)[1])
         if description:
             event.description = description
@@ -980,12 +982,6 @@ class UserNode(GeneralUserNode):
     following_count_organization = graphene.Int()
     follower_count_person = graphene.Int()
     follower_count_organization = graphene.Int()
-
-    donation_with_count = graphene.Int()
-    reward_with_count = graphene.Int()
-    news_count = graphene.Int()
-    event_count = graphene.Int()
-    post_count = graphene.Int()
     event_rsvp_count = graphene.Int()
 
     class Meta:
@@ -1020,33 +1016,8 @@ class UserNode(GeneralUserNode):
         return len([x for x in self.follower.all() if hasattr(x, 'person')])
 
     def resolve_follower_count_organization(self, *args, **kwargs):
-        return len([x for x in self.follower.all() if hasattr(x, 'organization')])
-
-    def resolve_donation_with_count(self, info, *args, **kwargs):
-        return EntryNode.get_queryset(
-            models.Entry.objects.filter(
-                Q(donation__isnull=False) &
-                (Q(donation__user__id=self.id)
-                 | Q(donation__target_id=self.id))), info).count()
-
-    def resolve_reward_with_count(self, info, *args, **kwargs):
-        return EntryNode.get_queryset(
-            models.Entry.objects.filter(
-                Q(reward__isnull=False) &
-                (Q(reward__user__id=self.id)
-                 | Q(reward__target_id=self.id))), info).count()
-
-    def resolve_news_count(self, *args, **kwargs):
-        return models.News.objects.filter(user__id=self.id).count()
-
-    def resolve_event_count(self, *args, **kwargs):
-        return models.Event.objects.filter(
-            user__id=self.id,
-            date__gte=localtime(),
-        ).count()
-
-    def resolve_post_count(self, *args, **kwargs):
-        return models.Post.objects.filter(user__id=self.id).count()
+        return len(
+            [x for x in self.follower.all() if hasattr(x, 'organization')])
 
     def resolve_event_rsvp_count(self, *args, **kwargs):
         return self.rsvp_for_event.filter(date__gte=localtime()).count()
@@ -1064,6 +1035,9 @@ class UserNode(GeneralUserNode):
 class OrganizationNode(UserNode):
 
     fundraised = graphene.Int()
+    news_count = graphene.Int()
+    event_count = graphene.Int()
+    donation_received_count = graphene.Int()
 
     class Meta:
         model = models.Organization
@@ -1073,6 +1047,18 @@ class OrganizationNode(UserNode):
 
     def resolve_fundraised(self, *args, **kwargs):
         return self.fundraised()
+
+    def resolve_news_count(self, *args, **kwargs):
+        return models.News.objects.filter(user__id=self.id).count()
+
+    def resolve_event_count(self, *args, **kwargs):
+        return models.Event.objects.filter(
+            user__id=self.id,
+            date__gte=localtime(),
+        ).count()
+
+    def resolve_donation_received_count(self, info, *args, **kwargs):
+        return self.donation_from.count()
 
 
 class OrganizationUpdate(Mutation):
@@ -1114,7 +1100,8 @@ class OrganizationUpdate(Mutation):
                 or info.context.user.id == int(from_global_id(id)[1])):
             raise GraphQLError('You do not have sufficient permission')
 
-        organization = models.Organization.objects.get(pk=from_global_id(id)[1])
+        organization = models.Organization.objects.get(
+            pk=from_global_id(id)[1])
         if username:
             organization.username = username
         if email:
@@ -1199,6 +1186,9 @@ class OrganizationUpdate(Mutation):
 class PersonNode(UserNode):
 
     donated = graphene.Int()
+    donation_count = graphene.Int()
+    post_count = graphene.Int()
+    reward_received_count = graphene.Int()
 
     class Meta:
         model = models.Person
@@ -1208,6 +1198,15 @@ class PersonNode(UserNode):
 
     def resolve_donated(self, *args, **kwargs):
         return self.donated()
+
+    def resolve_donation_count(self, info, *args, **kwargs):
+        return self.donation_set.count()
+
+    def resolve_post_count(self, *args, **kwargs):
+        return models.Post.objects.filter(user__id=self.id).count()
+
+    def resolve_reward_received_count(self, info, *args, **kwargs):
+        return self.reward_from.count()
 
 
 class PersonUpdate(Mutation):
@@ -1301,11 +1300,16 @@ class PersonUpdate(Mutation):
 
 class BotNode(UserNode):
 
+    reward_count = graphene.Int()
+
     class Meta:
         model = models.Bot
         exclude = ['email', 'password']
         filter_fields = []
         interfaces = (UserNodeInterface, )
+
+    def resolve_reward_with_count(self, info, *args, **kwargs):
+        return self.reward_set.count()
 
 
 class BotUpdate(Mutation):
@@ -1447,7 +1451,7 @@ class PostCreate(Mutation):
             raise GraphQLError('You do not have sufficient permission')
 
         post = models.Post.objects.create(
-            user=models.User.objects.get(pk=from_global_id(user)[1]),
+            user=models.Person.objects.get(pk=from_global_id(user)[1]),
             title=title,
             description=description,
             score=score,
@@ -1476,9 +1480,8 @@ class CommentNode(EntryNode):
         queryset = cls.get_queryset(cls._meta.model.objects, info)
         try:
             comment = queryset.get(pk=id)
-            if not (info.context.user.is_superuser
-                    or models.User.objects.get(
-                        id=info.context.user.id).can_see(comment)):
+            if not (info.context.user.is_superuser or models.User.objects.get(
+                    id=info.context.user.id).can_see(comment)):
                 raise GraphQLError('You do not have sufficient permission')
             return comment
         except cls._meta.model.DoesNotExist:
@@ -1665,7 +1668,7 @@ class RsvpDelete(RsvpMutation):
 class Query(object):
 
     organization_category = relay.Node.Field(OrganizationCategoryNode)
-    deposit_category = relay.Node.Field(DepositCategoryNode)
+    exchange_category = relay.Node.Field(ExchangeCategoryNode)
     user = UserNodeInterface.Field(UserNode)
     organization = UserNodeInterface.Field(OrganizationNode)
     person = UserNodeInterface.Field(PersonNode)
@@ -1681,7 +1684,7 @@ class Query(object):
 
     all_organization_categories = DjangoFilterConnectionField(
         OrganizationCategoryNode)
-    all_deposit_categories = DjangoFilterConnectionField(DepositCategoryNode)
+    all_exchange_categories = DjangoFilterConnectionField(ExchangeCategoryNode)
     all_users = DjangoFilterConnectionField(
         UserNode,
         filterset_class=UserFilter,

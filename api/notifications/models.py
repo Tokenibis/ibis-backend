@@ -153,7 +153,7 @@ class UbpNotification(Notification):
 
         if not STATE['LOADING_DATA'] and self.notifier.email_ubp:
             if self.notifier.email_ubp and self.subject.user.user.deposit_set.filter(
-                    category=ibis.models.DepositCategory.objects.get(
+                    category=ibis.models.ExchangeCategory.objects.get(
                         title='ubp')).count() == 1:
                 try:
                     subject, body, html = EmailTemplateWelcome.choose(

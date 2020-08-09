@@ -18,20 +18,22 @@ logging.disable(logging.CRITICAL)
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
-NUM_PERSON = 10
-NUM_ORGANIZATION = 10
-NUM_DEPOSIT = 30
-NUM_WITHDRAWAL = 30
-NUM_DONATION = 100
-NUM_REWARD = 100
-NUM_NEWS = 100
-NUM_EVENT = 100
-NUM_POST = 100
-NUM_COMMENT = 100
-NUM_FOLLOW = 100
-NUM_RSVP = 100
 NUM_BOOKMARK = 100
+NUM_BOT = 3
+NUM_CHALLENGE = 100
+NUM_COMMENT = 100
+NUM_DEPOSIT = 30
+NUM_DONATION = 100
+NUM_EVENT = 100
+NUM_FOLLOW = 100
 NUM_LIKE = 100
+NUM_NEWS = 100
+NUM_ORGANIZATION = 10
+NUM_PERSON = 10
+NUM_POST = 100
+NUM_REWARD = 100
+NUM_RSVP = 100
+NUM_WITHDRAWAL = 30
 
 TEST_TIME = localtime(now()).replace(
     year=2020,
@@ -46,20 +48,22 @@ TEST_TIME = localtime(now()).replace(
 with freeze_time(TEST_TIME.astimezone(utc).date()):
     call_command(
         'make_fixtures',
-        num_person=NUM_PERSON,
-        num_organization=NUM_ORGANIZATION,
-        num_deposit=NUM_DEPOSIT,
-        num_withdrawal=NUM_WITHDRAWAL,
-        num_donation=NUM_DONATION,
-        num_reward=NUM_REWARD,
-        num_news=NUM_NEWS,
-        num_event=NUM_EVENT,
-        num_post=NUM_POST,
-        num_comment=NUM_COMMENT,
-        num_follow=NUM_FOLLOW,
-        num_rsvp=NUM_RSVP,
         num_bookmark=NUM_BOOKMARK,
+        num_bot=NUM_BOT,
+        num_challenge=NUM_CHALLENGE,
+        num_comment=NUM_COMMENT,
+        num_deposit=NUM_DEPOSIT,
+        num_donation=NUM_DONATION,
+        num_event=NUM_EVENT,
+        num_follow=NUM_FOLLOW,
         num_like=NUM_LIKE,
+        num_news=NUM_NEWS,
+        num_organization=NUM_ORGANIZATION,
+        num_person=NUM_PERSON,
+        num_post=NUM_POST,
+        num_reward=NUM_REWARD,
+        num_rsvp=NUM_RSVP,
+        num_withdrawal=NUM_WITHDRAWAL,
     )
 
 
@@ -171,37 +175,64 @@ class BaseTestCase(GraphQLTestCase):
                 category=models.OrganizationCategory.objects.first(),
             )
 
+            self.me_bot = models.Bot.objects.create(
+                username='bot',
+                password='password',
+                first_name='Bot',
+                last_name='McBotFace',
+                email='bot@example.com',
+            )
+
             models.Deposit.objects.create(
                 user=self.me_person,
-                amount=300,
-                payment_id='unique_1',
-                category=models.DepositCategory.objects.first(),
+                amount=301,
+                description='unique_1',
+                category=models.ExchangeCategory.objects.first(),
+            )
+
+            models.Withdrawal.objects.create(
+                user=self.me_person,
+                amount=1,
+                description='unique_1',
+                category=models.ExchangeCategory.objects.first(),
             )
 
             models.Deposit.objects.create(
                 user=self.me_organization,
-                amount=400,
-                payment_id='unique_2',
-                category=models.DepositCategory.objects.first(),
+                amount=401,
+                description='unique_2',
+                category=models.ExchangeCategory.objects.first(),
+            )
+
+            models.Deposit.objects.create(
+                user=self.me_bot,
+                amount=300,
+                description='unique_bot_1',
+                category=models.ExchangeCategory.objects.first(),
+            )
+
+            models.Withdrawal.objects.create(
+                user=self.me_organization,
+                amount=1,
+                description='unique_2',
+                category=models.ExchangeCategory.objects.first(),
             )
 
             self.organization = models.Organization.objects.all().first()
             self.person = models.Person.objects.all().first()
             self.donation = models.Donation.objects.all().first()
-            self.reward = models.Reward.objects.all().first()
             self.news = models.News.objects.all().first()
             self.event = models.Event.objects.all().first()
             self.post = models.Post.objects.all().first()
 
             self.me_person.gid = to_global_id('UserNode', self.me_person.id)
             self.me_organization.gid = to_global_id('UserNode',
-                                                 self.me_organization.id)
+                                                    self.me_organization.id)
+            self.me_bot.gid = to_global_id('UserNode', self.me_bot.id)
             self.organization.gid = to_global_id('UserNode',
-                                              self.organization.id)
+                                                 self.organization.id)
             self.person.gid = to_global_id('UserNode', self.person.id)
             self.donation.gid = to_global_id('EntryNode', self.donation.id)
-            self.reward.gid = to_global_id('EntryNode',
-                                                self.reward.id)
             self.news.gid = to_global_id('EntryNode', self.news.id)
             self.event.gid = to_global_id('EntryNode', self.event.id)
             self.post.gid = to_global_id('EntryNode', self.post.id)
@@ -209,12 +240,6 @@ class BaseTestCase(GraphQLTestCase):
             # make sure that me_person, me_organization, and person have notifications
             donation_me_person = models.Donation.objects.create(
                 user=self.me_person,
-                target=self.organization,
-                amount=100,
-                description='My donation',
-            )
-            donation_me_organization = models.Donation.objects.create(
-                user=self.me_organization,
                 target=self.organization,
                 amount=100,
                 description='My donation',
@@ -231,6 +256,7 @@ class BaseTestCase(GraphQLTestCase):
                 user=self.me_organization,
                 amount=100,
                 description='This is a withdrawal',
+                category=models.ExchangeCategory.objects.get(title='admin'),
             )
 
             self._client.force_login(self.person)
@@ -243,18 +269,6 @@ class BaseTestCase(GraphQLTestCase):
                                            donation_me_person.id),
                 },
             )
-            self.query(
-                self.gql['LikeCreate'],
-                op_name='LikeCreate',
-                variables={
-                    'user':
-                    self.person.gid,
-                    'target':
-                    to_global_id('DonationNode', donation_me_organization.id),
-                },
-            )
-            self._client.logout()
-            self._client.force_login(self.me_person)
             self.query(
                 self.gql['LikeCreate'],
                 op_name='LikeCreate',
@@ -273,8 +287,8 @@ class BaseTestCase(GraphQLTestCase):
             models.Deposit.objects.create(
                 user=self.me_person,
                 amount=200,
-                payment_id='unique_3',
-                category=models.DepositCategory.objects.first(),
+                description='unique_3',
+                category=models.ExchangeCategory.objects.first(),
             )
 
             models.Donation.objects.create(
@@ -285,11 +299,10 @@ class BaseTestCase(GraphQLTestCase):
             )
 
             models.Reward.objects.create(
-                user=self.person,
-                target=models.Person.objects.exclude(
-                    pk=self.person.id).first(),
+                user=models.Bot.objects.first(),
+                target=self.person,
                 amount=100,
-                description='External reward',
+                description='External donation',
             )
 
     def query(self, query, op_name, variables):
