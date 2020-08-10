@@ -628,6 +628,100 @@ class PermissionTestCase(BaseTestCase):
         assert len(tracker.models.Log.objects.all()) - init_tracker_len == len(
             success)
 
+        result = json.loads(
+            self.query(
+                self.gql['RewardForm'],
+                op_name='RewardForm',
+                variables={
+                    'id': to_global_id('UserNode', user.id),
+                    'target': self.person.gid,
+                },
+            ).content)
+        success['RewardForm'] = 'errors' not in result and result['data'][
+            'bot'] and bool(result['data']['bot']['id'])
+
+        result = json.loads(
+            self.query(
+                self.gql['RewardCreate'],
+                op_name='RewardCreate',
+                variables={
+                    'user': to_global_id('UserNode', user.id),
+                    'target': self.person.gid,
+                    'amount': 100,
+                    'description': 'This is a reward',
+                },
+            ).content)
+        success['RewardCreate'] = 'errors' not in result and result['data'][
+            'createReward']['reward']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['Challenge'],
+                op_name='Challenge',
+                variables={
+                    'id': self.challenge.gid,
+                },
+            ).content)
+        success['Challenge'] = 'errors' not in result and bool(
+            result['data']['challenge']['id'])
+
+        result = json.loads(
+            self.query(
+                self.gql['ChallengeList'],
+                op_name='ChallengeList',
+                variables={
+                    'self': user.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+        success['ChallengeList'] = 'errors' not in result and len(
+            result['data']['allChallenges']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['ChallengeCreate'],
+                op_name='ChallengeCreate',
+                variables={
+                    'user': user.gid,
+                    'title': 'This is a title',
+                    'description': 'This is a description',
+                    'active': True,
+                    'rewardMin': 10,
+                    'rewardRange': 5,
+                },
+            ).content)
+        success['ChallengeCreate'] = 'errors' not in result and result['data'][
+            'createChallenge']['challenge']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['ChallengeUpdate'],
+                op_name='ChallengeUpdate',
+                variables={
+                    'id':
+                    to_global_id(
+                        'EntryNode',
+                        models.Challenge.objects.last().id,
+                    ),
+                    'user':
+                    user.gid,
+                    'title':
+                    'This is a different title',
+                    'description':
+                    'This is a different description',
+                    'active':
+                    False,
+                    'rewardMin':
+                    11,
+                    'rewardRange':
+                    6,
+                },
+            ).content)
+        success['ChallengeUpdate'] = 'errors' not in result and result['data'][
+            'updateChallenge']['challenge']['id']
+
         return success
 
     def run_privacy(self, person):
@@ -675,6 +769,10 @@ class PermissionTestCase(BaseTestCase):
             'NewsUpdate',
             'EventCreate',
             'EventUpdate',
+            'ChallengeCreate',
+            'ChallengeUpdate',
+            'RewardForm',
+            'RewardCreate',
         ]
         self._client.force_login(self.staff)
         results = self.run_all(self.me_person)
@@ -693,6 +791,10 @@ class PermissionTestCase(BaseTestCase):
             'PersonUpdate',
             'PostCreate',
             'DonationForm',
+            'ChallengeCreate',
+            'ChallengeUpdate',
+            'RewardForm',
+            'RewardCreate',
         ]
         self._client.force_login(self.me_organization)
         results = self.run_all(self.me_organization)
@@ -701,6 +803,29 @@ class PermissionTestCase(BaseTestCase):
 
         self._client.force_login(self.staff)
         results = self.run_all(self.me_organization)
+        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
+        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+
+    # logged in users can see all of their own information
+    def test_bots(self):
+        expected_fail = [
+            'DonationCreate',
+            'PersonUpdate',
+            'PostCreate',
+            'DonationForm',
+            'OrganizationUpdate',
+            'NewsCreate',
+            'NewsUpdate',
+            'EventCreate',
+            'EventUpdate',
+        ]
+        self._client.force_login(self.me_bot)
+        results = self.run_all(self.me_bot)
+        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
+        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+
+        self._client.force_login(self.staff)
+        results = self.run_all(self.me_bot)
         assert all(x[1] for x in results.items() if x[0] not in expected_fail)
         assert not any(x[1] for x in results.items() if x[0] in expected_fail)
 

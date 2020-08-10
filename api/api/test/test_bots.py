@@ -19,6 +19,10 @@ class BotTestCase(BaseTestCase):
         'Comment',
         'CommentCreate',
         'CommentList',
+        'Challenge',
+        'ChallengeCreate',
+        'ChallengeList',
+        'ChallengeUpdate',
         'Donation',
         'DonationList',
         'Event',
@@ -34,7 +38,6 @@ class BotTestCase(BaseTestCase):
         'Person',
         'PersonList',
         'Post',
-        'PostCreate',
         'PostList',
         'Reward',
         'RewardCreate',
@@ -348,19 +351,6 @@ class BotTestCase(BaseTestCase):
         success['Post'] = 'errors' not in result and bool(
             result['data']['post']['id'])
 
-        # result = json.loads(
-        #     self.query(
-        #         self.gql_bot['PostCreate'],
-        #         op_name='PostCreate',
-        #         variables={
-        #             'user': user.gid,
-        #             'title': 'This is a title',
-        #             'description': 'This is a description',
-        #         },
-        #     ).content)
-        # success['PostCreate'] = 'errors' not in result and result['data'][
-        #     'createPost']['post']['id']
-
         result = json.loads(
             self.query(
                 self.gql_bot['PostList'],
@@ -374,16 +364,20 @@ class BotTestCase(BaseTestCase):
         success['PostList'] = 'errors' not in result and len(
             result['data']['allPosts']['edges']) > 0
 
-        # result = json.loads(
-        #     self.query(
-        #         self.gql_bot['Reward'],
-        #         op_name='Reward',
-        #         variables={
-        #             'id': self.reward.gid,
-        #         },
-        #     ).content)
-        # success['Reward'] = 'errors' not in result and bool(
-        #     result['data']['reward']['id'])
+        result = json.loads(
+            self.query(
+                self.gql_bot['Reward'],
+                op_name='Reward',
+                variables={
+                    'id':
+                    to_global_id(
+                        'EntryNode',
+                        models.Reward.objects.first().id,
+                    ),
+                },
+            ).content)
+        success['Reward'] = 'errors' not in result and bool(
+            result['data']['reward']['id'])
 
         result = json.loads(
             self.query(
@@ -396,8 +390,8 @@ class BotTestCase(BaseTestCase):
                     'description': 'This is a reward',
                 },
             ).content)
-        success['RewardCreate'] = 'errors' not in result and result[
-            'data']['createReward']['reward']['id']
+        success['RewardCreate'] = 'errors' not in result and result['data'][
+            'createReward']['reward']['id']
 
         result = json.loads(
             self.query(
@@ -411,6 +405,74 @@ class BotTestCase(BaseTestCase):
             ).content)
         success['RewardList'] = 'errors' not in result and len(
             result['data']['allRewards']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['Challenge'],
+                op_name='Challenge',
+                variables={
+                    'id': self.challenge.gid,
+                },
+            ).content)
+        success['Challenge'] = 'errors' not in result and bool(
+            result['data']['challenge']['id'])
+
+        result = json.loads(
+            self.query(
+                self.gql['ChallengeList'],
+                op_name='ChallengeList',
+                variables={
+                    'self': user.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+        success['ChallengeList'] = 'errors' not in result and len(
+            result['data']['allChallenges']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['ChallengeCreate'],
+                op_name='ChallengeCreate',
+                variables={
+                    'user': user.gid,
+                    'title': 'This is a title',
+                    'description': 'This is a description',
+                    'active': True,
+                    'rangeMin': 10,
+                    'rangeRange': 5,
+                },
+            ).content)
+        success['ChallengeCreate'] = 'errors' not in result and result['data'][
+            'createChallenge']['challenge']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['ChallengeUpdate'],
+                op_name='ChallengeUpdate',
+                variables={
+                    'id':
+                    to_global_id(
+                        'EntryNode',
+                        models.Challenge.objects.last().id,
+                    ),
+                    'user':
+                    user.gid,
+                    'title':
+                    'This is a different title',
+                    'description':
+                    'This is a different description',
+                    'active':
+                    False,
+                    'rangeMin':
+                    11,
+                    'rangeRange':
+                    6,
+                },
+            ).content)
+        success['ChallengeUpdate'] = 'errors' not in result and result['data'][
+            'updateChallenge']['challenge']['id']
 
         return success
 

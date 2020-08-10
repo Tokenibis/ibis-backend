@@ -74,6 +74,10 @@ class BaseTestCase(GraphQLTestCase):
     operations = [
         'BookmarkCreate',
         'BookmarkDelete',
+        'Challenge',
+        'ChallengeCreate',
+        'ChallengeList',
+        'ChallengeUpdate',
         'CommentCreate',
         'CommentList',
         'DepositList',
@@ -218,12 +222,20 @@ class BaseTestCase(GraphQLTestCase):
                 category=models.ExchangeCategory.objects.first(),
             )
 
+            models.Withdrawal.objects.create(
+                user=self.me_bot,
+                amount=1,
+                description='unique_2',
+                category=models.ExchangeCategory.objects.first(),
+            )
+
             self.organization = models.Organization.objects.all().first()
             self.person = models.Person.objects.all().first()
             self.donation = models.Donation.objects.all().first()
             self.news = models.News.objects.all().first()
             self.event = models.Event.objects.all().first()
             self.post = models.Post.objects.all().first()
+            self.challenge = models.Challenge.objects.all().first()
 
             self.me_person.gid = to_global_id('UserNode', self.me_person.id)
             self.me_organization.gid = to_global_id('UserNode',
@@ -236,6 +248,7 @@ class BaseTestCase(GraphQLTestCase):
             self.news.gid = to_global_id('EntryNode', self.news.id)
             self.event.gid = to_global_id('EntryNode', self.event.id)
             self.post.gid = to_global_id('EntryNode', self.post.id)
+            self.challenge.gid = to_global_id('EntryNode', self.challenge.id)
 
             # make sure that me_person, me_organization, and person have notifications
             donation_me_person = models.Donation.objects.create(

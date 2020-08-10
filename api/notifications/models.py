@@ -252,8 +252,8 @@ class RewardNotification(Notification):
 
         try:
             if not STATE['LOADING_DATA'] and self.notifier.email_reward:
-                subject, body, html = EmailTemplateReward.choose(
-                ).make_email(self, self.subject)
+                subject, body, html = EmailTemplateReward.choose().make_email(
+                    self, self.subject)
                 Email.objects.create(
                     notification=self,
                     subject=subject,
@@ -282,6 +282,13 @@ class EventNotification(Notification):
 class PostNotification(Notification):
     subject = models.ForeignKey(
         ibis.models.Post,
+        on_delete=models.CASCADE,
+    )
+
+
+class ChallengeNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Challenge,
         on_delete=models.CASCADE,
     )
 

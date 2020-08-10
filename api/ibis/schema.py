@@ -319,6 +319,20 @@ class PostFilter(EntryFilter):
                                  | Q(title__icontains=value))
 
 
+class ChallengeFilter(EntryFilter):
+    class Meta:
+        model = models.Challenge
+        fields = []
+
+    def filter_search(self, qs, name, value):
+        return qs.annotate(
+            user_name=Concat('user__first_name', Value(' '),
+                             'user__last_name')).filter(
+                                 Q(user_name__icontains=value)
+                                 | Q(user__username__icontains=value)
+                                 | Q(title__icontains=value))
+
+
 class CommentFilter(django_filters.FilterSet):
     has_parent = django_filters.CharFilter(
         method='filter_has_parent',
@@ -1460,6 +1474,127 @@ class PostCreate(Mutation):
         return PostCreate(post=post)
 
 
+# --- Challenge ------------------------------------------------------------------ #
+
+
+class ChallengeNode(EntryNode):
+
+    bookmark = DjangoFilterConnectionField(
+        lambda: UserNode,
+        filterset_class=UserFilter,
+    )
+
+    class Meta:
+        model = models.Challenge
+        filter_fields = []
+        interfaces = (EntryNodeInterface, )
+
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if not info.context.user.is_authenticated:
+            raise GraphQLError('You are not  logged in')
+        return queryset
+
+
+class ChallengeCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        title = graphene.String(required=True)
+        description = graphene.String(required=True)
+        active = graphene.Boolean()
+        reward_min = graphene.Int()
+        reward_range = graphene.Int()
+        score = graphene.Int()
+
+    challenge = graphene.Field(ChallengeNode)
+
+    def mutate(
+            self,
+            info,
+            user,
+            title,
+            description,
+            active,
+            reward_min=None,
+            reward_range=None,
+            score=0,
+    ):
+        if not (info.context.user.is_superuser or
+                (info.context.user.id == int(from_global_id(user)[1]))
+                and models.Bot.objects.filter(
+                    id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
+
+        challenge = models.Challenge.objects.create(
+            user=models.Bot.objects.get(pk=from_global_id(user)[1]),
+            title=title,
+            active=active,
+            description=description,
+            score=score,
+        )
+
+        if type(reward_min) == int:
+            challenge.reward_min = reward_min
+        if type(reward_range) == int:
+            challenge.reward_range = reward_range
+        challenge.save()
+
+        return ChallengeCreate(challenge=challenge)
+
+
+class ChallengeUpdate(Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+        user = graphene.ID()
+        title = graphene.String()
+        description = graphene.String()
+        active = graphene.Boolean()
+        reward_min = graphene.Int()
+        reward_range = graphene.Int()
+        score = graphene.Int()
+
+    challenge = graphene.Field(ChallengeNode)
+
+    def mutate(
+            self,
+            info,
+            id,
+            user=None,
+            title=None,
+            description=None,
+            active=None,
+            reward_min=None,
+            reward_range=None,
+            score=None,
+    ):
+        if not (info.context.user.is_superuser or
+                (info.context.user.id == int(from_global_id(user)[1])) and
+                models.Bot.objects.filter(id=info.context.user.id).exists()):
+            raise GraphQLError('You do not have sufficient permission')
+
+        challenge = models.Challenge.objects.get(pk=from_global_id(id)[1])
+        if user:
+            challenge.user = models.Bot.objects.get(pk=from_global_id(user)[1])
+        if description:
+            challenge.description = description
+        if title:
+            challenge.title = title
+        if type(active) == bool:
+            challenge.active = active
+        if type(reward_min) == int:
+            challenge.reward_min = reward_min
+        if type(reward_range) == int:
+            challenge.reward_range = reward_range
+        if type(score) == int:
+            challenge.score = score
+
+        challenge.save()
+        return ChallengeUpdate(challenge=challenge)
+
+
 # --- Comment --------------------------------------------------------------- #
 
 
@@ -1680,6 +1815,7 @@ class Query(object):
     news = EntryNodeInterface.Field(NewsNode)
     event = EntryNodeInterface.Field(EventNode)
     post = EntryNodeInterface.Field(PostNode)
+    challenge = EntryNodeInterface.Field(ChallengeNode)
     comment = EntryNodeInterface.Field(CommentNode)
 
     all_organization_categories = DjangoFilterConnectionField(
@@ -1729,6 +1865,10 @@ class Query(object):
         PostNode,
         filterset_class=PostFilter,
     )
+    all_challenges = DjangoFilterConnectionField(
+        ChallengeNode,
+        filterset_class=ChallengeFilter,
+    )
     all_comments = DjangoFilterConnectionField(
         CommentNode,
         filterset_class=CommentFilter,
@@ -1742,6 +1882,7 @@ class Mutation(graphene.ObjectType):
     create_news = NewsCreate.Field()
     create_event = EventCreate.Field()
     create_post = PostCreate.Field()
+    create_challenge = ChallengeCreate.Field()
     create_comment = CommentCreate.Field()
     create_follow = FollowCreate.Field()
     create_like = LikeCreate.Field()
@@ -1753,6 +1894,7 @@ class Mutation(graphene.ObjectType):
     update_bot = BotUpdate.Field()
     update_news = NewsUpdate.Field()
     update_event = EventUpdate.Field()
+    update_challenge = ChallengeUpdate.Field()
 
     delete_follow = FollowDelete.Field()
     delete_like = LikeDelete.Field()

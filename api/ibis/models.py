@@ -362,11 +362,13 @@ class Post(Entry):
 
 class Challenge(Entry):
     user = models.ForeignKey(
-        Person,
+        Bot,
         on_delete=models.CASCADE,
     )
     title = models.TextField(validators=[MinLengthValidator(1)])
     active = models.BooleanField()
+    reward_min = models.PositiveIntegerField(default=0)
+    reward_range = models.PositiveIntegerField(default=0)
 
 
 class Reward(Entry, Valuable, Hideable):
@@ -378,7 +380,7 @@ class Reward(Entry, Valuable, Hideable):
         Person,
         on_delete=models.CASCADE,
     )
-    accomplishment = models.ForeignKey(
+    related_challenge = models.ForeignKey(
         Challenge,
         blank=True,
         null=True,

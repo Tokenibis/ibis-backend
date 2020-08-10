@@ -106,6 +106,7 @@ class Model:
         self.news = []
         self.events = []
         self.posts = []
+        self.challenges = []
         self.comments = []
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
@@ -354,7 +355,7 @@ class Model:
             }
         })
 
-        self.people.append({
+        self.bots.append({
             'model': 'ibis.Bot',
             'pk': pk,
             'fields': {},
@@ -390,7 +391,7 @@ class Model:
                 'target': target,
                 'amount': amount,
                 'score': score,
-                'accomplishment': challenge,
+                'related_challenge': challenge,
             }
         })
 
@@ -492,7 +493,16 @@ class Model:
 
         return pk
 
-    def add_challenge(self, user, title, description, active, score):
+    def add_challenge(
+            self,
+            user,
+            title,
+            description,
+            active,
+            reward_min,
+            reward_range,
+            score,
+    ):
         pk = len(self.entries) + 1
 
         self.entries.append({
@@ -505,13 +515,15 @@ class Model:
             }
         })
 
-        self.posts.append({
+        self.challenges.append({
             'model': 'ibis.Challenge',
             'pk': pk,
             'fields': {
                 'user': user,
                 'title': title,
                 'active': active,
+                'reward_min': reward_min,
+                'reward_range': reward_range,
                 'score': score,
                 'bookmark': [],
             }
@@ -636,6 +648,7 @@ class Model:
             self.donation_messages,
             self.organizations,
             self.people,
+            self.bots,
             self.users,
             serializable_deposits,
             partial_entries,
@@ -644,6 +657,7 @@ class Model:
             self.news,
             self.events,
             self.posts,
+            self.challenges,
             self.comments,
             serializable_entries,
             self.sites,
@@ -863,7 +877,8 @@ class Command(BaseCommand):
             )
 
         # make random deposits
-        for i in range(num_deposit - (num_person + num_organization + num_bot)):
+        for i in range(num_deposit -
+                       (num_person + num_organization + num_bot)):
             model.add_deposit(
                 random.choice(people),
                 random.randint(1, 10000),
@@ -959,10 +974,12 @@ class Command(BaseCommand):
             description = markov.generate_markov_text(size=200)
             challenge.append(
                 model.add_challenge(
-                    random.choice(people),
+                    random.choice(bots),
                     title,
                     description,
                     random.choice([True, False]),
+                    random.randint(0, 100),
+                    random.randint(0, 100),
                     random.randint(0, 100),
                 ))
 

@@ -149,6 +149,27 @@ def handlePostCreate(sender, instance, created, **kwargs):
         )
 
 
+@receiver(post_save, sender=ibis.models.Challenge)
+def handleChallengeCreate(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    reference = '{}:{}'.format(
+        ibis.models.Challenge.__name__,
+        to_global_id('EntryNode', instance.pk),
+    )
+
+    for target in instance.user.follower.all():
+        notifier = target.user.notifier
+        models.ChallengeNotification.objects.create(
+            notifier=notifier,
+            reference=reference,
+            description='{} issued a new challenge'.format(str(instance.user)),
+            subject=instance,
+            created=instance.created,
+        )
+
+
 @receiver(post_save, sender=ibis.models.Comment)
 def handleCommentCreate(sender, instance, created, **kwargs):
     if not created:
@@ -160,10 +181,12 @@ def handleCommentCreate(sender, instance, created, **kwargs):
 
     while hasattr(current, 'comment'):
         parent = current.comment.parent
-        notifiers = [models.get_submodel(
-            parent,
-            ibis.models.Entry,
-        ).objects.get(pk=parent.pk).user.notifier]
+        notifiers = [
+            models.get_submodel(
+                parent,
+                ibis.models.Entry,
+            ).objects.get(pk=parent.pk).user.notifier
+        ]
         if models.get_submodel(
                 parent,
                 ibis.models.Entry,
