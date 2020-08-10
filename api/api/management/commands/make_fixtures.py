@@ -216,7 +216,7 @@ class Model:
         unique_name = re.sub(r'\W+', '_', name).lower()[:15]
         i = 0
         while unique_name in [
-                x['fields']['last_name'] for x in self.general_users
+                x['fields']['first_name'] for x in self.general_users
         ]:
             i += 1
             suffix = '_{}'.format(i)
@@ -227,8 +227,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'username': unique_name,
-                'first_name': '',
-                'last_name': unique_name,
+                'first_name': unique_name,
                 'email': '{}@example.com'.format(unique_name),
                 'date_joined':
                 date_joined if date_joined else self._random_time(),
@@ -337,7 +336,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'username': username,
-                'last_name': name,
+                'first_name': name,
                 'email': '{}@example.com'.format(username),
                 'date_joined':
                 date_joined if date_joined else self._random_time(),

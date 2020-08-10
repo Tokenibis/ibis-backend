@@ -486,8 +486,7 @@ class EmailTemplate(models.Model):
         return (
             subject,
             top_body_template.format(
-                user=notifier.user.first_name
-                if notifier.user.first_name else notifier.user.last_name,
+                user=notifier.user.first_name,
                 content=body,
                 settings_link=settings.API_ROOT_PATH +
                 notifier.create_settings_link(),
@@ -495,8 +494,7 @@ class EmailTemplate(models.Model):
                 notifier.create_unsubscribe_link(),
             ),
             top_html_template.format(
-                user=notifier.user.first_name
-                if notifier.user.first_name else notifier.user.last_name,
+                user=notifier.user.first_name,
                 subject=subject,
                 content=html,
                 settings_link=settings.API_ROOT_PATH +

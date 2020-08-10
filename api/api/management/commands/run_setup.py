@@ -112,6 +112,5 @@ class Command(BaseCommand):
         # the first organization is special; the name/info can be changed later
         models.Organization.objects.create(
             username='tokenibis',
-            first_name='',
-            last_name='Token Ibis',
+            first_name='Token Ibis',
         )

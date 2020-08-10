@@ -980,7 +980,6 @@ class EventUpdate(Mutation):
 
 class UserNode(GeneralUserNode):
     name = graphene.String()
-    short_name = graphene.String()
     balance = graphene.Int()
     following = DjangoFilterConnectionField(
         lambda: UserNode,
@@ -1006,9 +1005,6 @@ class UserNode(GeneralUserNode):
 
     def resolve_name(self, *args, **kwargs):
         return str(self)
-
-    def resolve_short_name(self, *args, **kwargs):
-        return self.first_name if self.first_name else self.last_name
 
     def resolve_balance(self, *args, **kwargs):
         return self.balance()
@@ -1082,6 +1078,7 @@ class OrganizationUpdate(Mutation):
         email = graphene.String()
         category = graphene.ID()
         description = graphene.String()
+        first_name = graphene.String()
         last_name = graphene.String()
         link = graphene.String()
         privacy_donation = graphene.Boolean()
@@ -1101,7 +1098,8 @@ class OrganizationUpdate(Mutation):
             email='',
             category=None,
             description='',
-            last_name='',
+            first_name=None,
+            last_name=None,
             link='',
             privacy_donation=None,
             privacy_reward=None,
@@ -1120,7 +1118,9 @@ class OrganizationUpdate(Mutation):
             organization.username = username
         if email:
             organization.email = email
-        if last_name:
+        if type(first_name) == str:
+            organization.first_name = first_name
+        if type(last_name) == str:
             organization.last_name = last_name
         if category:
             organization.category = models.OrganizationCategory.objects.get(
