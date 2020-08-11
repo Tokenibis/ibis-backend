@@ -804,9 +804,10 @@ class NewsUpdate(Mutation):
             score=None,
     ):
         if not (info.context.user.is_superuser or
-                (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Organization.objects.filter(
-                    id=info.context.user.id).exists()):
+                (info.context.user.id == models.News.objects.get(
+                    id=from_global_id(id)[1]).user.id and
+                 (not user
+                  or int(from_global_id(user)[1]) == info.context.user.id))):
             raise GraphQLError('You do not have sufficient permission')
 
         news = models.News.objects.get(pk=from_global_id(id)[1])
@@ -945,9 +946,10 @@ class EventUpdate(Mutation):
             score=None,
     ):
         if not (info.context.user.is_superuser or
-                (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Organization.objects.filter(
-                    id=info.context.user.id).exists()):
+                (info.context.user.id == models.Event.objects.get(
+                    id=from_global_id(id)[1]).user.id and
+                 (not user
+                  or int(from_global_id(user)[1]) == info.context.user.id))):
             raise GraphQLError('You do not have sufficient permission')
 
         event = models.Event.objects.get(pk=from_global_id(id)[1])
@@ -1523,9 +1525,8 @@ class ChallengeCreate(Mutation):
             score=0,
     ):
         if not (info.context.user.is_superuser or
-                (info.context.user.id == int(from_global_id(user)[1]))
-                and models.Bot.objects.filter(
-                    id=info.context.user.id).exists()):
+                (info.context.user.id == int(from_global_id(user)[1])) and
+                models.Bot.objects.filter(id=info.context.user.id).exists()):
             raise GraphQLError('You do not have sufficient permission')
 
         challenge = models.Challenge.objects.create(
@@ -1570,9 +1571,12 @@ class ChallengeUpdate(Mutation):
             reward_range=None,
             score=None,
     ):
+
         if not (info.context.user.is_superuser or
-                (info.context.user.id == int(from_global_id(user)[1])) and
-                models.Bot.objects.filter(id=info.context.user.id).exists()):
+                (info.context.user.id == models.Challenge.objects.get(
+                    id=from_global_id(id)[1]).user.id and
+                 (not user
+                  or int(from_global_id(user)[1]) == info.context.user.id))):
             raise GraphQLError('You do not have sufficient permission')
 
         challenge = models.Challenge.objects.get(pk=from_global_id(id)[1])

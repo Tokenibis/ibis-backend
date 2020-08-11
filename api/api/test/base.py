@@ -232,10 +232,31 @@ class BaseTestCase(GraphQLTestCase):
             self.organization = models.Organization.objects.all().first()
             self.person = models.Person.objects.all().first()
             self.donation = models.Donation.objects.all().first()
-            self.news = models.News.objects.all().first()
-            self.event = models.Event.objects.all().first()
-            self.post = models.Post.objects.all().first()
-            self.challenge = models.Challenge.objects.all().first()
+            self.news = models.News.objects.create(
+                user=self.me_organization,
+                title='news',
+                image='link',
+                description='description',
+            )
+            self.event = models.Event.objects.create(
+                user=self.me_organization,
+                title='event',
+                image='link',
+                description='description',
+                date=localtime(),
+                duration=60,
+            )
+            self.post = models.Post.objects.create(
+                user=self.me_person,
+                title='post',
+                description='description',
+            )
+            self.challenge = models.Challenge.objects.create(
+                user=self.me_bot,
+                title='challenge',
+                description='description',
+                active=True,
+            )
 
             self.me_person.gid = to_global_id('UserNode', self.me_person.id)
             self.me_organization.gid = to_global_id('UserNode',
