@@ -2,6 +2,7 @@ import os
 import string
 import random
 import logging
+import ibis.models
 
 from django.conf import settings
 from django.utils.timezone import now, timedelta
@@ -14,8 +15,7 @@ from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 from api.management.commands.loaddata import STATE
-
-import ibis.models
+from api.utils import get_submodel
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -26,12 +26,6 @@ with open(os.path.join(DIR, 'top_email_templates/body.txt')) as fd:
 
 with open(os.path.join(DIR, 'top_email_templates/html.html')) as fd:
     top_html_template = fd.read()
-
-
-def get_submodel(instance, supermodel):
-    for submodel in supermodel.__subclasses__():
-        if submodel.objects.filter(pk=instance.pk).exists():
-            return submodel
 
 
 class Notifier(models.Model):
@@ -286,9 +280,9 @@ class PostNotification(Notification):
     )
 
 
-class ChallengeNotification(Notification):
+class ActivityNotification(Notification):
     subject = models.ForeignKey(
-        ibis.models.Challenge,
+        ibis.models.Activity,
         on_delete=models.CASCADE,
     )
 
@@ -618,17 +612,11 @@ class EmailTemplateComment(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                entry_type=get_submodel(
-                    parent,
-                    ibis.models.Entry,
-                ).__name__.lower(),
+                entry_type=get_submodel(parent).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                entry_type=get_submodel(
-                    parent,
-                    ibis.models.Entry,
-                ).__name__.lower(),
+                entry_type=get_submodel(parent).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )
@@ -643,17 +631,11 @@ class EmailTemplateMention(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                entry_type=get_submodel(
-                    entry,
-                    ibis.models.Entry,
-                ).__name__.lower(),
+                entry_type=get_submodel(entry).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
             self.html.format(
-                entry_type=get_submodel(
-                    entry,
-                    ibis.models.Entry,
-                ).__name__.lower(),
+                entry_type=get_submodel(entry).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )

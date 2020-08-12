@@ -557,7 +557,7 @@ class PermissionTestCase(BaseTestCase):
                 },
             ).content)
         success['DonationForm'] = 'errors' not in result and result['data'][
-            'person'] and bool(result['data']['person']['id'])
+            'user'] and bool(result['data']['user']['id'])
 
         result = json.loads(
             self.query(
@@ -638,7 +638,7 @@ class PermissionTestCase(BaseTestCase):
                 },
             ).content)
         success['RewardForm'] = 'errors' not in result and result['data'][
-            'bot'] and bool(result['data']['bot']['id'])
+            'user'] and bool(result['data']['user']['id'])
 
         result = json.loads(
             self.query(
@@ -656,19 +656,19 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Challenge'],
-                op_name='Challenge',
+                self.gql['Activity'],
+                op_name='Activity',
                 variables={
-                    'id': self.challenge.gid,
+                    'id': self.activity.gid,
                 },
             ).content)
-        success['Challenge'] = 'errors' not in result and bool(
-            result['data']['challenge']['id'])
+        success['Activity'] = 'errors' not in result and bool(
+            result['data']['activity']['id'])
 
         result = json.loads(
             self.query(
-                self.gql['ChallengeList'],
-                op_name='ChallengeList',
+                self.gql['ActivityList'],
+                op_name='ActivityList',
                 variables={
                     'self': user.gid,
                     'orderBy': '-created',
@@ -676,13 +676,13 @@ class PermissionTestCase(BaseTestCase):
                     'after': 1,
                 },
             ).content)
-        success['ChallengeList'] = 'errors' not in result and len(
-            result['data']['allChallenges']['edges']) > 0
+        success['ActivityList'] = 'errors' not in result and len(
+            result['data']['allActivities']['edges']) > 0
 
         result = json.loads(
             self.query(
-                self.gql['ChallengeCreate'],
-                op_name='ChallengeCreate',
+                self.gql['ActivityCreate'],
+                op_name='ActivityCreate',
                 variables={
                     'user': user.gid,
                     'title': 'This is a title',
@@ -692,18 +692,18 @@ class PermissionTestCase(BaseTestCase):
                     'rewardRange': 5,
                 },
             ).content)
-        success['ChallengeCreate'] = 'errors' not in result and result['data'][
-            'createChallenge']['challenge']['id']
+        success['ActivityCreate'] = 'errors' not in result and result['data'][
+            'createActivity']['activity']['id']
 
         result = json.loads(
             self.query(
-                self.gql['ChallengeUpdate'],
-                op_name='ChallengeUpdate',
+                self.gql['ActivityUpdate'],
+                op_name='ActivityUpdate',
                 variables={
                     'id':
                     to_global_id(
                         'EntryNode',
-                        models.Challenge.objects.last().id,
+                        models.Activity.objects.last().id,
                     ),
                     'user':
                     user.gid,
@@ -719,8 +719,8 @@ class PermissionTestCase(BaseTestCase):
                     6,
                 },
             ).content)
-        success['ChallengeUpdate'] = 'errors' not in result and result['data'][
-            'updateChallenge']['challenge']['id']
+        success['ActivityUpdate'] = 'errors' not in result and result['data'][
+            'updateActivity']['activity']['id']
 
         return success
 
@@ -769,8 +769,8 @@ class PermissionTestCase(BaseTestCase):
             'NewsUpdate',
             'EventCreate',
             'EventUpdate',
-            'ChallengeCreate',
-            'ChallengeUpdate',
+            'ActivityCreate',
+            'ActivityUpdate',
             'RewardForm',
             'RewardCreate',
         ]
@@ -791,8 +791,8 @@ class PermissionTestCase(BaseTestCase):
             'PersonUpdate',
             'PostCreate',
             'DonationForm',
-            'ChallengeCreate',
-            'ChallengeUpdate',
+            'ActivityCreate',
+            'ActivityUpdate',
             'RewardForm',
             'RewardCreate',
         ]

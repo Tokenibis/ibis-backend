@@ -142,6 +142,9 @@ class Bot(User):
     gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
     tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
 
+    def rewarded(self):
+        return sum([x.amount for x in Reward.objects.filter(user=self)])
+
 
 class Person(User):
     class Meta:
@@ -360,7 +363,7 @@ class Post(Entry):
     title = models.TextField(validators=[MinLengthValidator(1)])
 
 
-class Challenge(Entry):
+class Activity(Entry):
     user = models.ForeignKey(
         Bot,
         on_delete=models.CASCADE,
@@ -380,8 +383,8 @@ class Reward(Entry, Valuable, Hideable):
         Person,
         on_delete=models.CASCADE,
     )
-    related_challenge = models.ForeignKey(
-        Challenge,
+    related_activity = models.ForeignKey(
+        Activity,
         blank=True,
         null=True,
         on_delete=models.SET_NULL,

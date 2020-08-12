@@ -22,6 +22,9 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 BIRDS = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 BIRDS_LEN = 233
 
+BOTS = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/bots/{}.png'
+BOTS_LEN = 512
+
 WINDOW = 365 * 24 * 60 * 60 - 3
 
 
@@ -106,7 +109,7 @@ class Model:
         self.news = []
         self.events = []
         self.posts = []
-        self.challenges = []
+        self.activities = []
         self.comments = []
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
@@ -329,7 +332,7 @@ class Model:
 
     def add_bot(self, name, description, score, date_joined=None):
         pk = len(self.general_users) + 1
-        username = '{}_{}'.format(pk, name)[:15].lower()
+        username = '{}_{}'.format(pk, name)[:15].lower().replace(' ', '_')
 
         self.general_users.append({
             'model': 'users.GeneralUser',
@@ -348,7 +351,7 @@ class Model:
             'pk': pk,
             'fields': {
                 'following': [],
-                'avatar': BIRDS.format(hash(name) % BIRDS_LEN),
+                'avatar': BOTS.format(hash(name) % BOTS_LEN),
                 'description': description,
                 'score': score,
             }
@@ -368,7 +371,7 @@ class Model:
                    amount,
                    description,
                    score,
-                   challenge=None):
+                   activity=None):
         assert target not in [x['pk'] for x in self.organizations]
         pk = len(self.entries) + 1
 
@@ -390,7 +393,7 @@ class Model:
                 'target': target,
                 'amount': amount,
                 'score': score,
-                'related_challenge': challenge,
+                'related_activity': activity,
             }
         })
 
@@ -492,7 +495,7 @@ class Model:
 
         return pk
 
-    def add_challenge(
+    def add_activity(
             self,
             user,
             title,
@@ -514,8 +517,8 @@ class Model:
             }
         })
 
-        self.challenges.append({
-            'model': 'ibis.Challenge',
+        self.activities.append({
+            'model': 'ibis.Activity',
             'pk': pk,
             'fields': {
                 'user': user,
@@ -652,11 +655,11 @@ class Model:
             serializable_deposits,
             partial_entries,
             self.donations,
+            self.activities,
             self.rewards,
             self.news,
             self.events,
             self.posts,
-            self.challenges,
             self.comments,
             serializable_entries,
             self.sites,
@@ -678,7 +681,7 @@ class Command(BaseCommand):
         parser.add_argument('--num_news', type=int, required=True)
         parser.add_argument('--num_event', type=int, required=True)
         parser.add_argument('--num_post', type=int, required=True)
-        parser.add_argument('--num_challenge', type=int, required=True)
+        parser.add_argument('--num_activity', type=int, required=True)
         parser.add_argument('--num_comment', type=int, required=True)
         parser.add_argument('--num_follow', type=int, required=True)
         parser.add_argument('--num_rsvp', type=int, required=True)
@@ -697,7 +700,7 @@ class Command(BaseCommand):
             num_news=options['num_news'],
             num_event=options['num_event'],
             num_post=options['num_post'],
-            num_challenge=options['num_challenge'],
+            num_activity=options['num_activity'],
             num_comment=options['num_comment'],
             num_follow=options['num_follow'],
             num_rsvp=options['num_rsvp'],
@@ -717,7 +720,7 @@ class Command(BaseCommand):
             num_news,
             num_event,
             num_post,
-            num_challenge,
+            num_activity,
             num_comment,
             num_follow,
             num_rsvp,
@@ -833,7 +836,7 @@ class Command(BaseCommand):
         # make bots
         bots = [
             model.add_bot(
-                x,
+                '{} Bot'.format(x),
                 markov.generate_markov_text(size=200),
                 random.randint(0, 100),
             ) for x in random.sample(nouns, num_bot)
@@ -852,7 +855,7 @@ class Command(BaseCommand):
         for bot in bots:
             model.add_deposit(
                 bot,
-                100000,
+                1000000,
                 random.choice(exchange_categories),
                 created=model.now - timedelta(seconds=WINDOW + 2),
             )
@@ -963,22 +966,22 @@ class Command(BaseCommand):
                     random.randint(0, 100),
                 ))
 
-        # make fake challenges
-        challenge = []
-        for i in range(num_challenge):
-            title = 'I challenge you to {} a {}?'.format(
+        # make fake activities
+        activity = []
+        for i in range(num_activity):
+            title = 'Offering reward to {} a {}'.format(
                 random.choice(verbs).lower(),
                 random.choice(nouns).lower(),
             )
             description = markov.generate_markov_text(size=200)
-            challenge.append(
-                model.add_challenge(
+            activity.append(
+                model.add_activity(
                     random.choice(bots),
                     title,
                     description,
                     random.choice([True, False]),
-                    random.randint(0, 100),
-                    random.randint(0, 100),
+                    random.randint(0, 1000),
+                    random.randint(0, 1000),
                     random.randint(0, 100),
                 ))
 
@@ -992,7 +995,7 @@ class Command(BaseCommand):
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
-                    random.choice(challenge),
+                    random.choice(activity),
                 ))
 
         # make fake comments

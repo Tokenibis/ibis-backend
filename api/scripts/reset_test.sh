@@ -20,13 +20,15 @@ cd $DIR/.. && \
     python3 manage.py make_fixtures \
 	    --num_person 100 \
 	    --num_organization 50 \
-	    --num_deposit 200 \
+	    --num_bot 10 \
+	    --num_deposit 100 \
 	    --num_withdrawal 100 \
-	    --num_donation 400 \
-	    --num_reward 400 \
-	    --num_news 400 \
-	    --num_event 400 \
-	    --num_post 400 \
+	    --num_donation 200 \
+	    --num_reward 200 \
+	    --num_news 200 \
+	    --num_event 200 \
+	    --num_post 200 \
+	    --num_activity 200 \
 	    --num_comment 10000 \
 	    --num_follow 1000 \
 	    --num_rsvp 10000 \

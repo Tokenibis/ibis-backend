@@ -5,6 +5,7 @@ import json
 import requests
 import ftfy
 import logging
+import ibis.models as models
 
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
@@ -17,10 +18,10 @@ from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import localtime, now
 
-import ibis.models as models
 from .serializers import PasswordLoginSerializer, PasswordChangeSerializer
 from .serializers import PaymentSerializer
 from .payments import PayPalClient
+from api.utils import get_submodel
 
 logger = logging.getLogger(__name__)
 
@@ -227,8 +228,8 @@ class IdentifyView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         if models.User.objects.filter(id=request.user.id).exists():
             user_id = to_global_id('UserNode', str(request.user.id))
-            user_type = 'person' if models.Person.objects.filter(
-                id=request.user.id).exists() else 'organization'
+            user_type = get_submodel(
+                models.User.objects.get(id=request.user.id)).__name__
         else:
             user_id = ''
             user_type = ''

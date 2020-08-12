@@ -12,6 +12,10 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 
 class BotTestCase(BaseTestCase):
     operations_bot = [
+        'Activity',
+        'ActivityCreate',
+        'ActivityList',
+        'ActivityUpdate',
         'Balance',
         'Bot',
         'BotList',
@@ -19,10 +23,6 @@ class BotTestCase(BaseTestCase):
         'Comment',
         'CommentCreate',
         'CommentList',
-        'Challenge',
-        'ChallengeCreate',
-        'ChallengeList',
-        'ChallengeUpdate',
         'Donation',
         'DonationList',
         'Event',
@@ -408,19 +408,19 @@ class BotTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Challenge'],
-                op_name='Challenge',
+                self.gql['Activity'],
+                op_name='Activity',
                 variables={
-                    'id': self.challenge.gid,
+                    'id': self.activity.gid,
                 },
             ).content)
-        success['Challenge'] = 'errors' not in result and bool(
-            result['data']['challenge']['id'])
+        success['Activity'] = 'errors' not in result and bool(
+            result['data']['activity']['id'])
 
         result = json.loads(
             self.query(
-                self.gql['ChallengeList'],
-                op_name='ChallengeList',
+                self.gql['ActivityList'],
+                op_name='ActivityList',
                 variables={
                     'self': user.gid,
                     'orderBy': '-created',
@@ -428,13 +428,13 @@ class BotTestCase(BaseTestCase):
                     'after': 1,
                 },
             ).content)
-        success['ChallengeList'] = 'errors' not in result and len(
-            result['data']['allChallenges']['edges']) > 0
+        success['ActivityList'] = 'errors' not in result and len(
+            result['data']['allActivities']['edges']) > 0
 
         result = json.loads(
             self.query(
-                self.gql['ChallengeCreate'],
-                op_name='ChallengeCreate',
+                self.gql['ActivityCreate'],
+                op_name='ActivityCreate',
                 variables={
                     'user': user.gid,
                     'title': 'This is a title',
@@ -444,18 +444,18 @@ class BotTestCase(BaseTestCase):
                     'rangeRange': 5,
                 },
             ).content)
-        success['ChallengeCreate'] = 'errors' not in result and result['data'][
-            'createChallenge']['challenge']['id']
+        success['ActivityCreate'] = 'errors' not in result and result['data'][
+            'createActivity']['activity']['id']
 
         result = json.loads(
             self.query(
-                self.gql['ChallengeUpdate'],
-                op_name='ChallengeUpdate',
+                self.gql['ActivityUpdate'],
+                op_name='ActivityUpdate',
                 variables={
                     'id':
                     to_global_id(
                         'EntryNode',
-                        models.Challenge.objects.last().id,
+                        models.Activity.objects.last().id,
                     ),
                     'user':
                     user.gid,
@@ -471,8 +471,8 @@ class BotTestCase(BaseTestCase):
                     6,
                 },
             ).content)
-        success['ChallengeUpdate'] = 'errors' not in result and result['data'][
-            'updateChallenge']['challenge']['id']
+        success['ActivityUpdate'] = 'errors' not in result and result['data'][
+            'updateActivity']['activity']['id']
 
         return success
 

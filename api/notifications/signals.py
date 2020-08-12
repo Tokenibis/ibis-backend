@@ -4,6 +4,7 @@ import notifications.models as models
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from graphql_relay.node.node import to_global_id
+from api.utils import get_submodel
 
 
 @receiver(post_save, sender=ibis.models.Deposit)
@@ -149,22 +150,22 @@ def handlePostCreate(sender, instance, created, **kwargs):
         )
 
 
-@receiver(post_save, sender=ibis.models.Challenge)
-def handleChallengeCreate(sender, instance, created, **kwargs):
+@receiver(post_save, sender=ibis.models.Activity)
+def handleActivityCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
     reference = '{}:{}'.format(
-        ibis.models.Challenge.__name__,
+        ibis.models.Activity.__name__,
         to_global_id('EntryNode', instance.pk),
     )
 
     for target in instance.user.follower.all():
         notifier = target.user.notifier
-        models.ChallengeNotification.objects.create(
+        models.ActivityNotification.objects.create(
             notifier=notifier,
             reference=reference,
-            description='{} issued a new challenge'.format(str(instance.user)),
+            description='{} issued a new activity'.format(str(instance.user)),
             subject=instance,
             created=instance.created,
         )
@@ -182,20 +183,11 @@ def handleCommentCreate(sender, instance, created, **kwargs):
     while hasattr(current, 'comment'):
         parent = current.comment.parent
         notifiers = [
-            models.get_submodel(
-                parent,
-                ibis.models.Entry,
-            ).objects.get(pk=parent.pk).user.notifier
+            get_submodel(parent).objects.get(pk=parent.pk).user.notifier
         ]
-        if models.get_submodel(
-                parent,
-                ibis.models.Entry,
-        ) == ibis.models.Donation:
+        if get_submodel(parent) == ibis.models.Donation:
             notifiers.append(parent.donation.target.user.notifier)
-        if models.get_submodel(
-                parent,
-                ibis.models.Entry,
-        ) == ibis.models.Reward:
+        if get_submodel(parent) == ibis.models.Reward:
             notifiers.append(parent.reward.target.user.notifier)
 
         for notifier in notifiers:
@@ -203,10 +195,7 @@ def handleCommentCreate(sender, instance, created, **kwargs):
                                 ] and notifier != instance.user.notifier:
                 description = '{} replied to your {}'.format(
                     str(instance.user),
-                    models.get_submodel(
-                        parent,
-                        ibis.models.Entry,
-                    ).__name__.lower(),
+                    get_submodel(parent).__name__.lower(),
                 )
                 notification_info.append({
                     'notifier': notifier,
@@ -216,7 +205,7 @@ def handleCommentCreate(sender, instance, created, **kwargs):
 
         current = parent
 
-    ref_type = models.get_submodel(current, ibis.models.Entry).__name__
+    ref_type = get_submodel(current).__name__
     ref_id = to_global_id('{}Node'.format(ref_type), current.pk)
     reference = '{}:{}'.format(ref_type, ref_id)
 
@@ -242,10 +231,7 @@ def handleFollowUpdate(sender, instance, action, pk_set, **kwargs):
             target = ibis.models.User.objects.get(pk=pk)
             notifier = target.notifier
 
-            ref_type = models.get_submodel(
-                user,
-                ibis.models.User,
-            ).__name__
+            ref_type = get_submodel(user).__name__
 
             description = '{} started following you'.format(str(user))
 
@@ -273,29 +259,18 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
     if action == 'post_add':
         for pk in pk_set:
             user = ibis.models.User.objects.get(pk=pk)
-            notifier = models.get_submodel(
-                entry,
-                ibis.models.Entry,
-            ).objects.get(pk=instance.pk).user.notifier
+            notifier = get_submodel(entry).objects.get(
+                pk=instance.pk).user.notifier
             description = '{} liked your {}'.format(
                 str(user),
-                models.get_submodel(
-                    entry,
-                    ibis.models.Entry,
-                ).__name__.lower(),
+                get_submodel(entry).__name__.lower(),
             )
 
             root = entry
-            while models.get_submodel(
-                    root,
-                    ibis.models.Entry,
-            ) == ibis.models.Comment:
+            while get_submodel(root) == ibis.models.Comment:
                 root = root.comment.parent
 
-            ref_type = models.get_submodel(
-                root,
-                ibis.models.Entry,
-            ).__name__
+            ref_type = get_submodel(root).__name__
 
             models.LikeNotification.objects.create(
                 notifier=notifier,
@@ -310,10 +285,8 @@ def handleLikeUpdate(sender, instance, action, pk_set, **kwargs):
 
     elif action == 'post_remove':
         for pk in pk_set:
-            notifier = models.get_submodel(
-                entry,
-                ibis.models.Entry,
-            ).objects.get(pk=instance.pk).user.notifier
+            notifier = get_submodel(entry).objects.get(
+                pk=instance.pk).user.notifier
             models.LikeNotification.objects.filter(
                 notifier=notifier,
                 subject=entry,
@@ -329,24 +302,15 @@ def handleMentionUpdate(sender, instance, action, pk_set, **kwargs):
             if not ibis.models.User.objects.get(pk=pk).can_see(entry):
                 continue
             description = '{} mentioned you in a {}'.format(
-                models.get_submodel(
-                    entry,
-                    ibis.models.Entry,
-                ).objects.get(pk=instance.pk).user,
-                models.get_submodel(entry, ibis.models.Entry).__name__.lower(),
+                get_submodel(entry).objects.get(pk=instance.pk).user,
+                get_submodel(entry).__name__.lower(),
             )
 
             root = entry
-            while models.get_submodel(
-                    root,
-                    ibis.models.Entry,
-            ) == ibis.models.Comment:
+            while get_submodel(root) == ibis.models.Comment:
                 root = root.comment.parent
 
-            ref_type = models.get_submodel(
-                root,
-                ibis.models.Entry,
-            ).__name__
+            ref_type = get_submodel(root).__name__
 
             models.MentionNotification.objects.create(
                 notifier=ibis.models.User.objects.get(pk=pk).notifier,

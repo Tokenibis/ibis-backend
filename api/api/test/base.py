@@ -20,7 +20,7 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 
 NUM_BOOKMARK = 100
 NUM_BOT = 3
-NUM_CHALLENGE = 100
+NUM_ACTIVITY = 100
 NUM_COMMENT = 100
 NUM_DEPOSIT = 30
 NUM_DONATION = 100
@@ -50,7 +50,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         'make_fixtures',
         num_bookmark=NUM_BOOKMARK,
         num_bot=NUM_BOT,
-        num_challenge=NUM_CHALLENGE,
+        num_activity=NUM_ACTIVITY,
         num_comment=NUM_COMMENT,
         num_deposit=NUM_DEPOSIT,
         num_donation=NUM_DONATION,
@@ -72,12 +72,15 @@ class BaseTestCase(GraphQLTestCase):
         x.split('/')[-1] for x in os.listdir(os.path.join(DIR, '../fixtures'))
     ])
     operations = [
+        'Activity',
+        'ActivityCreate',
+        'ActivityList',
+        'ActivityUpdate',
         'BookmarkCreate',
         'BookmarkDelete',
-        'Challenge',
-        'ChallengeCreate',
-        'ChallengeList',
-        'ChallengeUpdate',
+        'Bot',
+        'BotList',
+        'BotUpdate',
         'CommentCreate',
         'CommentList',
         'DepositList',
@@ -139,7 +142,8 @@ class BaseTestCase(GraphQLTestCase):
 
     def setUp(self):
         settings.EMAIL_HOST = ''
-        assert 'api.middleware.AuthenticateAllMiddleware' not in settings.MIDDLEWARE
+        if 'api.middleware.AuthenticateAllMiddleware' in settings.MIDDLEWARE:
+            settings.MIDDLEWARE.remove('api.middleware.AuthenticateAllMiddleware')
 
         random.seed(0)
 
@@ -251,9 +255,9 @@ class BaseTestCase(GraphQLTestCase):
                 title='post',
                 description='description',
             )
-            self.challenge = models.Challenge.objects.create(
+            self.activity = models.Activity.objects.create(
                 user=self.me_bot,
-                title='challenge',
+                title='activity',
                 description='description',
                 active=True,
             )
@@ -269,7 +273,7 @@ class BaseTestCase(GraphQLTestCase):
             self.news.gid = to_global_id('EntryNode', self.news.id)
             self.event.gid = to_global_id('EntryNode', self.event.id)
             self.post.gid = to_global_id('EntryNode', self.post.id)
-            self.challenge.gid = to_global_id('EntryNode', self.challenge.id)
+            self.activity.gid = to_global_id('EntryNode', self.activity.id)
 
             # make sure that me_person, me_organization, and person have notifications
             donation_me_person = models.Donation.objects.create(

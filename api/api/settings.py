@@ -232,13 +232,14 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 def APP_LINK_RESOLVER(reference):
     lookup = {
         'Organization': '/Organization/Organization?id={}',
-        'Person': '/Person/Person?id={}',
-        'Bot': '/Bot/Bot?id={}',
-        'Donation': '/Donation/Donation?id={}',
-        'Reward': '/Reward/Reward?id={}',
         'News': '/News/News?id={}',
         'Event': '/Event/Event?id={}',
+        'Person': '/Person/Person?id={}',
+        'Donation': '/Donation/Donation?id={}',
         'Post': '/Post/Post?id={}',
+        'Bot': '/Bot/Bot?id={}',
+        'Reward': '/Reward/Reward?id={}',
+        'Activity': '/Activity/Activity?id={}',
         'Deposit': '/_/Deposit?id={}',
     }
 
@@ -257,14 +258,14 @@ BOT_GAS_INITIAL = 10000000
 BOT_GAS_MUTATION = {
     'createDeposit': 100,
     'createReward': 100,
-    'createChallenge': 100,
+    'createActivity': 100,
     'createComment': 100,
     'createFollow': 100,
     'createLike': 100,
     'createBookmark': 100,
     'createRSVP': 100,
     'updateBot': 100,
-    'updateChallenge': 100,
+    'updateActivity': 100,
     'deleteFollow': 100,
     'deleteLike': 100,
     'deleteBookmark': 100,

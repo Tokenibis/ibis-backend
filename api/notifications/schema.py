@@ -1,5 +1,7 @@
 import django_filters
 import graphene
+import notifications.models as models
+import ibis.models
 
 from django.db.models import Value, PositiveIntegerField
 from graphql import GraphQLError
@@ -7,9 +9,7 @@ from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphql_relay.node.node import from_global_id
 from graphene_django.filter import DjangoFilterConnectionField, GlobalIDFilter
-
-import notifications.models as models
-import ibis.models
+from api.utils import get_submodel
 
 # --- Notifier -------------------------------------------------------------- #
 
@@ -209,10 +209,7 @@ class NotificationNode(DjangoObjectType):
         return queryset.filter(notifier__user=info.context.user)
 
     def resolve_category(self, *args, **kwargs):
-        return models.get_submodel(
-            self,
-            models.Notification,
-        ).__name__.replace('Notification', '').lower()
+        return get_submodel(self).__name__.replace('Notification', '').lower()
 
 
 class NotificationUpdate(Mutation):
