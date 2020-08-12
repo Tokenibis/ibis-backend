@@ -151,12 +151,6 @@ class Person(User):
         verbose_name = "Person"
         verbose_name_plural = "People"
 
-    reward_from = models.ManyToManyField(
-        Bot,
-        related_name='reward_to',
-        through='Reward',
-        symmetrical=False,
-    )
     privacy_donation = models.BooleanField(default=False)
 
     def donated(self):
@@ -171,13 +165,6 @@ class Organization(User):
     )
     link = models.TextField(validators=[MinLengthValidator(1)])
     banner = models.TextField(validators=[MinLengthValidator(1)])
-
-    donation_from = models.ManyToManyField(
-        Person,
-        related_name='donation_to',
-        through='Donation',
-        symmetrical=False,
-    )
 
     def fundraised(self):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
