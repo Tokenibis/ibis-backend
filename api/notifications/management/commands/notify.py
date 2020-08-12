@@ -14,19 +14,26 @@ class Command(BaseCommand):
     help = 'Send pending notifications'
 
     def handle(self, *args, **options):
-        # need to be very careful about not accidently spamming users
-        # with double sends due exceptions
-        for email in Email.objects.filter(status=Email.SCHEDULED):
-            # assumes that the cron job runs every 1 minutes
+        emails = list(Email.objects.filter(status=Email.SCHEDULED))
+
+        # assumes this for loop completes within one cron job time step
+        for email in emails:
             if email.schedule < now() - timedelta(minutes=1 * 2):
                 email.status = Email.STALE
                 logger.warning('Stale scheduled emails detected')
+            elif email.notification.clicked and not email.force:
+                email.status = Email.UNNEEDED
             elif email.schedule < now():
                 email.status = Email.ATTEMPTING
+            email.save()
+
+        # need to be very careful about not accidently spamming users
+        # with double sends due exceptions
+        for email in emails:
+            if email.status == Email.ATTEMPTING:
+                # assumes that the cron job runs every 1 minutes
                 destination = email.notification.notifier.user.email
-                if email.notification.clicked and not email.force:
-                    email.status = Email.UNNEEDED
-                elif destination.split('@')[-1] == 'example.com':
+                if destination.split('@')[-1] == 'example.com':
                     logger.info(
                         'Processed fake email to {}'.format(destination))
                     email.status = Email.SUCCEEDED
@@ -58,4 +65,4 @@ class Command(BaseCommand):
                                 e,
                             ))
                         email.status = Email.FAILED
-            email.save()
+                email.save()
