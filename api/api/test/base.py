@@ -14,7 +14,7 @@ import users.models
 import ibis.models as models
 import api.schema
 
-logging.disable(logging.CRITICAL)
+# logging.disable(logging.CRITICAL)
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -303,16 +303,17 @@ class BaseTestCase(GraphQLTestCase):
                 op_name='LikeCreate',
                 variables={
                     'user': self.person.gid,
-                    'target': to_global_id('DonationNode',
+                    'target': to_global_id('EntryNode',
                                            donation_me_person.id),
                 },
             )
+            self._client.force_login(self.me_person)
             self.query(
                 self.gql['LikeCreate'],
                 op_name='LikeCreate',
                 variables={
                     'user': self.me_person.gid,
-                    'target': to_global_id('DonationNode', donation_person.id),
+                    'target': to_global_id('EntryNode', donation_person.id),
                 },
             )
             self._client.logout()

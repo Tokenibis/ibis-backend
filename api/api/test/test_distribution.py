@@ -217,7 +217,9 @@ class DistributionTestCase(BaseTestCase):
                     amounts = [
                         random.random() for _ in range(random.randint(1, 3))
                     ]
-                    amounts = [a / sum(amounts) * x.balance() for a in amounts]
+                    amounts = [
+                        int(a / sum(amounts) * x.balance()) for a in amounts
+                    ]
                     for y in amounts:
                         if y > 0 and type(x) == ibis.models.Person:
                             self._donate(
@@ -371,7 +373,8 @@ class DistributionTestCase(BaseTestCase):
                     ibis.models.Deposit.objects.create(
                         user=x,
                         amount=10000,
-                        category=ibis.models.ExchangeCategory.objects.get(title='admin'),
+                        category=ibis.models.ExchangeCategory.objects.get(
+                            title='admin'),
                     )
 
                 _tick_transient(
