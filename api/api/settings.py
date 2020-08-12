@@ -117,7 +117,6 @@ MIDDLEWARE += [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'tracker.middleware.TrackerMiddleware',
-    'ibis.middleware.BotGasMiddleware',
 ]
 
 REST_FRAMEWORK = {

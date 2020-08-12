@@ -15,8 +15,8 @@ def BotGasMiddleware(get_response):
         bot = models.Bot.objects.get(id=request.user.id)
 
         if bot.gas < 0:
-            if bot.balance() >= bot.tank / settings.BOT_GAS_PRICE:
-                models.Donation.create(
+            if bot.balance() >= bot.tank / settings.BOT_GAS_EXCHANGE:
+                models.Donation.objects.create(
                     user=bot,
                     target=models.Organization.objects.get(
                         username=settings.ROOT_ORGANIZATION_USERNAME),

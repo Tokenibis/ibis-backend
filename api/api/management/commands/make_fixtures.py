@@ -288,6 +288,7 @@ class Model:
                 'user': source,
                 'target': target,
                 'amount': amount,
+                'bookmark': [],
                 'score': score,
             }
         })
@@ -393,6 +394,7 @@ class Model:
                 'target': target,
                 'amount': amount,
                 'score': score,
+                'bookmark': [],
                 'related_activity': activity,
             }
         })
@@ -459,6 +461,7 @@ class Model:
                 'title': title,
                 'link': 'https://{}.org'.format(title.replace(' ', '_')),
                 'image': BIRDS.format(hash(title) % BIRDS_LEN),
+                'bookmark': [],
                 'rsvp': [],
                 'date': date,
                 'duration': duration,
@@ -612,7 +615,8 @@ class Model:
         event_obj['fields']['rsvp'].append(person)
 
     def add_bookmark(self, person, entry):
-        bookmarkable = self.news + self.posts
+        bookmarkable = self.news + self.posts + self.events + self.rewards \
+            + self.activities + self.donations
         entry_obj = next((x for x in bookmarkable if x['pk'] == entry), None)
         entry_obj['fields']['bookmark'].append(person)
 
@@ -967,14 +971,14 @@ class Command(BaseCommand):
                 ))
 
         # make fake activities
-        activity = []
+        activities = []
         for i in range(num_activity):
             title = 'Offering reward to {} a {}'.format(
                 random.choice(verbs).lower(),
                 random.choice(nouns).lower(),
             )
             description = markov.generate_markov_text(size=200)
-            activity.append(
+            activities.append(
                 model.add_activity(
                     random.choice(bots),
                     title,
@@ -995,14 +999,14 @@ class Command(BaseCommand):
                     random.randint(1, 10000),
                     markov.generate_markov_text(),
                     random.randint(0, 100),
-                    random.choice(activity),
+                    random.choice(activities),
                 ))
 
         # make fake comments
         comments = []
         for i in range(num_comment):
             commentable = rewards + donations + news + events + posts\
-                + comments
+                + comments + activities
             parent = random.choice(commentable)
             description = markov.generate_markov_text(
                 size=random.randint(25, 100))
@@ -1014,30 +1018,33 @@ class Command(BaseCommand):
                     random.randint(0, 100),
                 ))
 
+        bookmarkable = rewards + donations + news + events + posts + activities
+        entries = bookmarkable + comments
+        users = people + organizations + bots
+
         # add followers
         for i in range(num_follow):
-            source, target = random.sample(people + organizations, 2)
+            source, target = random.sample(users, 2)
             model.add_follow(source, target)
 
         # add rsvps
         for i in range(num_rsvp):
             model.add_rsvp(
-                random.choice(people + organizations),
+                random.choice(users),
                 random.choice(events),
             )
 
         # add bookmarks
         for i in range(num_bookmark):
             model.add_bookmark(
-                random.choice(people + organizations),
-                random.choice(news + posts))
+                random.choice(users),
+                random.choice(bookmarkable))
 
         # add likes
-        likeable = rewards + donations + news + events + posts + comments
         for i in range(num_like):
             model.add_like(
-                random.choice(people + organizations),
-                random.choice(likeable),
+                random.choice(users),
+                random.choice(entries),
             )
 
         # save fixtures
