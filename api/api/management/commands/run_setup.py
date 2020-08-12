@@ -108,15 +108,3 @@ class Command(BaseCommand):
         )
         app.sites.add(site)
         app.save()
-
-        # the first organization is special; the name/info can be changed later
-        models.Organization.objects.create(
-            username='tokenibis',
-            first_name='Token Ibis',
-        )
-
-        # the first bot is special; the name/info can be changed later
-        models.Bot.objects.create(
-            username='executive_bot',
-            first_name='Chief Executive Bot',
-        )

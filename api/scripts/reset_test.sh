@@ -29,11 +29,11 @@ cd $DIR/.. && \
 	    --num_event 200 \
 	    --num_post 200 \
 	    --num_activity 200 \
-	    --num_comment 10000 \
-	    --num_follow 1000 \
-	    --num_rsvp 10000 \
-	    --num_bookmark 10000 \
-	    --num_like  10000 && \
+	    --num_comment 4000 \
+	    --num_follow 500 \
+	    --num_rsvp 500 \
+	    --num_bookmark 4000 \
+	    --num_like  4000 && \
     cd $DIR/.. && \
     rm ibis/migrations/ -rf && \
     rm distribution/migrations/ -rf && \
