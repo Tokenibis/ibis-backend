@@ -2,23 +2,30 @@ import csv
 import logging
 import ibis.models as models
 
-from django.db.models.fields.related import ManyToManyField, ForeignKey, OneToOneField
+from django.db.models.fields import related
 from django.core.management.base import BaseCommand
 from api.utils import get_submodel
 
 logger = logging.getLogger(__name__)
 
-OMIT_LIST = [
-    'id',
-    'privacy_donation',
-    'privacy_reward',
-    'private',
-    'avatar',
-    'banner',
-    'category',
-    'image',
-    'address',
-    'score',
+MODELS = [
+    models.User,
+    models.Entry,
+    models.Deposit,
+]
+
+FIELDS = [
+    'active',
+    'amount',
+    'created',
+    'date',
+    'date_joined',
+    'description',
+    'duration',
+    'modified',
+    'reward_min',
+    'reward_range',
+    'title',
 ]
 
 
@@ -30,7 +37,7 @@ class Command(BaseCommand):
         # loop through user foreign keys tables to create links
 
         def _id(x):
-            return '{}.{}'.format(x.__class__.__name__, x.id)
+            return '{}.{}'.format(x.__class__.__name__.lower(), x.id)
 
         def _edge(x):
             return '{}.{}'.format(get_submodel(x), x.id)
@@ -39,33 +46,32 @@ class Command(BaseCommand):
         edges = set()
         columns = set()
 
-        for x in (list(models.User.objects.all()) + list(
-                models.Entry.objects.all()) + list(
-                    models.Deposit.objects.all())):
+        for x in [z for y in MODELS for z in y.objects.all()]:
             x = get_submodel(x).objects.get(id=x.id)
             nodes[_id(x)] = {}
             for k, v in x._meta._forward_fields_map.items():
-                if v.model.__module__ == 'ibis.models' and \
-                   not isinstance(v, OneToOneField) and \
-                   k[-3:] != '_id' and \
-                   k not in OMIT_LIST:
-                    if isinstance(v, ForeignKey):
-                        edges.add((k, _id(x), _id(getattr(x, k))))
-                    elif isinstance(v, ManyToManyField):
+                if k in FIELDS or (isinstance(v, related.RelatedField)
+                                   and k[-3:] != '_id'):
+                    if type(v) == related.ForeignKey:
+                        if any(isinstance(getattr(x, k), z) for z in MODELS):
+                            edges.add((k, _id(x), _id(getattr(x, k))))
+                    elif type(v) == related.ManyToManyField:
                         edges.update((
                             k,
                             _id(x),
                             _id(y),
-                        ) for y in getattr(x, k).all())
-                    else:
+                        ) for y in getattr(x, k).all() if any(
+                            isinstance(y, z) for z in MODELS))
+                    elif not type(v) == related.OneToOneField:
                         nodes[_id(x)][k] = str(getattr(x, k))
                         columns.add(k)
 
         # convert nodes obj into table
         header = sorted(columns)
-        node_rows = [header] + [[
-            nodes[x][y] if y in nodes[x] else None for y in header
-        ] for x in sorted(nodes)]
+        node_rows = [['id'] + header] + [
+            [x] + [nodes[x][y] if y in nodes[x] else None for y in header]
+            for x in sorted(nodes)
+        ]
 
         with open('nodes.csv', 'w', newline='') as fd:
             writer = csv.writer(fd)
@@ -74,5 +80,5 @@ class Command(BaseCommand):
 
         with open('edges.csv', 'w', newline='') as fd:
             writer = csv.writer(fd)
-            for row in sorted(edges):
+            for row in [['type', 'source', 'target']] + sorted(edges):
                 writer.writerow(row)

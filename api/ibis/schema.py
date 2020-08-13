@@ -1068,7 +1068,7 @@ class OrganizationNode(UserNode):
         ).count()
 
     def resolve_donation_received_count(self, info, *args, **kwargs):
-        return self.donation_from.count()
+        return models.Donation.objects.filter(target=self).count()
 
 
 class OrganizationUpdate(Mutation):
@@ -1220,7 +1220,7 @@ class PersonNode(UserNode):
         return models.Post.objects.filter(user__id=self.id).count()
 
     def resolve_reward_received_count(self, info, *args, **kwargs):
-        return self.reward_from.count()
+        return models.Reward.objects.filter(target=self).count()
 
 
 class PersonUpdate(Mutation):
