@@ -74,6 +74,7 @@ class User(GeneralUser, Scoreable):
 
     avatar = models.TextField(validators=[MinLengthValidator(1)])
     description = models.TextField(blank=True, null=True)
+    scratch = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -194,6 +195,8 @@ class Entry(TimeStampedModel, Scoreable):
         related_name='mentioned_by',
         blank=True,
     )
+
+    scratch = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if (hasattr(self, 'donation')
