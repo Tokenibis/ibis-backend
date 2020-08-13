@@ -1,4 +1,4 @@
-import re
+import regex as re
 
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -208,6 +208,7 @@ class Entry(TimeStampedModel, Scoreable):
                     MAX_USERNAME_LEN,
                 ),
                 ' ' + self.description + ' ',
+                overlapped=True,
             ) if User.objects.filter(username=x[2:-1]).exists())
 
         for x in mention:
@@ -227,6 +228,7 @@ class Entry(TimeStampedModel, Scoreable):
                             str(x.id),
                         ))),
                     ' ' + self.description + ' ',
+                    overlapped=True,
             ):
                 self.mention.remove(x)
 

@@ -610,19 +610,26 @@ class Model:
         if target not in following:
             following.append(target)
 
-    def add_rsvp(self, person, event):
+    def add_rsvp(self, user, event):
         event_obj = next((x for x in self.events if x['pk'] == event), None)
-        event_obj['fields']['rsvp'].append(person)
+        event_obj['fields']['rsvp'].append(user)
 
-    def add_bookmark(self, person, entry):
+    def add_bookmark(self, user, entry):
         bookmarkable = self.news + self.posts + self.events + self.rewards \
             + self.activities + self.donations
         entry_obj = next((x for x in bookmarkable if x['pk'] == entry), None)
-        entry_obj['fields']['bookmark'].append(person)
+        entry_obj['fields']['bookmark'].append(user)
 
-    def add_like(self, person, entry):
+    def add_like(self, user, entry):
         entry_obj = next((x for x in self.entries if x['pk'] == entry), None)
-        entry_obj['fields']['like'].append(person)
+        entry_obj['fields']['like'].append(user)
+
+    def add_mention(self, user, entry):
+        general_user_obj = next(
+            (x for x in self.general_users if x['pk'] == user), None)
+        entry_obj = next((x for x in self.entries if x['pk'] == entry), None)
+        entry_obj['fields']['description'] += ' @{}'.format(
+            general_user_obj['fields']['username'])
 
     def get_model(self):
         serializable_entries = copy.deepcopy(self.entries)
@@ -691,6 +698,7 @@ class Command(BaseCommand):
         parser.add_argument('--num_rsvp', type=int, required=True)
         parser.add_argument('--num_bookmark', type=int, required=True)
         parser.add_argument('--num_like', type=int, required=True)
+        parser.add_argument('--num_mention', type=int, required=True)
 
     def handle(self, *args, **options):
         self.run(
@@ -710,6 +718,7 @@ class Command(BaseCommand):
             num_rsvp=options['num_rsvp'],
             num_bookmark=options['num_bookmark'],
             num_like=options['num_like'],
+            num_mention=options['num_mention'],
         )
 
     def run(
@@ -730,6 +739,7 @@ class Command(BaseCommand):
             num_rsvp,
             num_bookmark,
             num_like,
+            num_mention,
     ):
         assert num_deposit >= num_person
 
@@ -1037,12 +1047,18 @@ class Command(BaseCommand):
         # add bookmarks
         for i in range(num_bookmark):
             model.add_bookmark(
-                random.choice(users),
-                random.choice(bookmarkable))
+                random.choice(users), random.choice(bookmarkable))
 
         # add likes
         for i in range(num_like):
             model.add_like(
+                random.choice(users),
+                random.choice(entries),
+            )
+
+        # add mentions
+        for i in range(num_mention):
+            model.add_mention(
                 random.choice(users),
                 random.choice(entries),
             )

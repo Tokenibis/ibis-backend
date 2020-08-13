@@ -27,6 +27,7 @@ NUM_DONATION = 100
 NUM_EVENT = 100
 NUM_FOLLOW = 100
 NUM_LIKE = 100
+NUM_MENTION = 100
 NUM_NEWS = 100
 NUM_ORGANIZATION = 10
 NUM_PERSON = 10
@@ -57,6 +58,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         num_event=NUM_EVENT,
         num_follow=NUM_FOLLOW,
         num_like=NUM_LIKE,
+        num_like=NUM_MENTION,
         num_news=NUM_NEWS,
         num_organization=NUM_ORGANIZATION,
         num_person=NUM_PERSON,

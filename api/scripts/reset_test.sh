@@ -33,7 +33,8 @@ cd $DIR/.. && \
 	    --num_follow 500 \
 	    --num_rsvp 500 \
 	    --num_bookmark 4000 \
-	    --num_like  4000 && \
+	    --num_like 4000 \
+	    --num_mention 500 && \
     cd $DIR/.. && \
     rm ibis/migrations/ -rf && \
     rm distribution/migrations/ -rf && \
@@ -47,4 +48,8 @@ cd $DIR/.. && \
     python3 manage.py migrate notifications && \
     python3 manage.py migrate tracker && \
     python3 manage.py migrate && \
-    load_fixtures
+    load_fixtures && \
+    echo "
+import ibis.models
+for x in ibis.models.Entry.objects.all(): x.save()
+" | python3 manage.py shell
