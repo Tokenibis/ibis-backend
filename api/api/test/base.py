@@ -58,7 +58,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         num_event=NUM_EVENT,
         num_follow=NUM_FOLLOW,
         num_like=NUM_LIKE,
-        num_like=NUM_MENTION,
+        num_mention=NUM_MENTION,
         num_news=NUM_NEWS,
         num_organization=NUM_ORGANIZATION,
         num_person=NUM_PERSON,

@@ -32,4 +32,9 @@ urlpatterns = [
         views.DonationMessageView.as_view(),
         name='donation_message',
     ),
+    path(
+        'app_link/<str:gid>/',
+        views.AppLinkView.as_view(),
+        name='app_link',
+    ),
 ]

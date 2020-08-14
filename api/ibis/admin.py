@@ -1,10 +1,11 @@
 from django.contrib import admin
 
 import ibis.models as models
+from django.contrib.auth.admin import UserAdmin
 
 
 @admin.register(models.Organization)
-class OrganizationAdmin(admin.ModelAdmin):
+class OrganizationAdmin(UserAdmin):
     readonly_fields = ('balance_str', 'fundraised_str')
 
     def balance_str(self, obj):
@@ -15,7 +16,7 @@ class OrganizationAdmin(admin.ModelAdmin):
 
 
 @admin.register(models.Person)
-class PersonAdmin(admin.ModelAdmin):
+class PersonAdmin(UserAdmin):
     readonly_fields = ('balance_str', 'donated_str')
 
     def balance_str(self, obj):
@@ -23,6 +24,17 @@ class PersonAdmin(admin.ModelAdmin):
 
     def donated_str(self, obj):
         return '${:.2f}'.format(obj.donated() / 100)
+
+
+@admin.register(models.Bot)
+class BotAdmin(UserAdmin):
+    readonly_fields = ('balance_str', 'rewarded_str')
+
+    def balance_str(self, obj):
+        return '${:.2f}'.format(obj.balance() / 100)
+
+    def rewarded_str(self, obj):
+        return '${:.2f}'.format(obj.rewarded() / 100)
 
 
 class EntryOrganizationAdmin(admin.ModelAdmin):

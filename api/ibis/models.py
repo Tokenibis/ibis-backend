@@ -139,6 +139,10 @@ class OrganizationCategory(models.Model):
 
 
 class Bot(User):
+    class Meta:
+        verbose_name = "Bot"
+        verbose_name_plural = "Bots"
+
     privacy_reward = models.BooleanField(default=False)
     gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
     tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
@@ -356,6 +360,10 @@ class Post(Entry):
 
 
 class Activity(Entry):
+
+    class Meta:
+        verbose_name_plural = 'Activities'
+
     user = models.ForeignKey(
         Bot,
         on_delete=models.CASCADE,

@@ -466,7 +466,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['CommentList'],
                 op_name='CommentList',
                 variables={
-                    'hasParent': self.donation.gid,
+                    'parent': self.donation.gid,
                     'self': user.gid,
                 },
             ).content)

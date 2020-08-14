@@ -127,18 +127,18 @@ class UserFilter(django_filters.FilterSet):
 
 
 class DepositFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
+    user = django_filters.CharFilter(method='filter_user')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
 
-    def filter_by_user(self, qs, name, value):
+    def filter_user(self, qs, name, value):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
 class WithdrawalFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
+    user = django_filters.CharFilter(method='filter_user')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
 
-    def filter_by_user(self, qs, name, value):
+    def filter_user(self, qs, name, value):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
@@ -157,7 +157,8 @@ class EntryOrderingFilter(django_filters.OrderingFilter):
 
 
 class EntryFilter(django_filters.FilterSet):
-    by_user = django_filters.CharFilter(method='filter_by_user')
+    user = django_filters.CharFilter(method='filter_user')
+    scratch = django_filters.CharFilter(method='filter_scratch')
     by_following = django_filters.CharFilter(method='filter_by_following')
     bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
     search = django_filters.CharFilter(method='filter_search')
@@ -173,8 +174,11 @@ class EntryFilter(django_filters.FilterSet):
         model = models.Entry
         fields = []
 
-    def filter_by_user(self, qs, name, value):
+    def filter_user(self, qs, name, value):
         return qs.filter(user_id=from_global_id(value)[1])
+
+    def filter_scratch(self, qs, name, value):
+        return qs.filter(scratch=value)
 
     def filter_by_following(self, qs, name, value):
         return qs.filter(
@@ -242,9 +246,15 @@ class DonationFilter(TransferFilter):
 
 
 class RewardFilter(TransferFilter):
+    related_activity = django_filters.CharFilter(
+        method='filter_related_activity')
+
     class Meta:
         model = models.Reward
         fields = []
+
+    def filter_related_activity(self, qs, name, value):
+        return qs.filter(related_activity=value)
 
 
 class NewsFilter(EntryFilter):
@@ -313,9 +323,14 @@ class PostFilter(EntryFilter):
 
 
 class ActivityFilter(EntryFilter):
+    active = django_filters.BooleanFilter(method='filter_active')
+
     class Meta:
         model = models.Activity
         fields = []
+
+    def filter_active(self, qs, name, value):
+        return qs.filter(active=value)
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -327,10 +342,11 @@ class ActivityFilter(EntryFilter):
 
 
 class CommentFilter(django_filters.FilterSet):
-    has_parent = django_filters.CharFilter(
-        method='filter_has_parent',
+    parent = django_filters.CharFilter(
+        method='filter_parent',
         required=True,
     )
+    scratch = django_filters.CharFilter(method='filter_scratch')
 
     order_by = EntryOrderingFilter(
         fields=(
@@ -343,12 +359,15 @@ class CommentFilter(django_filters.FilterSet):
         model = models.Comment
         fields = []
 
-    def filter_has_parent(self, qs, name, value):
+    def filter_parent(self, qs, name, value):
         if not (self.request.user.is_superuser
                 or models.User.objects.get(id=self.request.user.id).can_see(
                     models.Entry.objects.get(id=from_global_id(value)[1]))):
             raise GraphQLError('You do not have sufficient permission')
         return qs.filter(parent_id=from_global_id(value)[1])
+
+    def filter_scratch(self, qs, name, value):
+        return qs.filter(scratch=value)
 
 
 # --- Organization Category ---------------------------------------------------- #
@@ -662,7 +681,9 @@ class RewardCreate(Mutation):
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
         private = graphene.Boolean()
+        related_activity = graphene.ID()
         score = graphene.Int()
+        scratch = graphene.String()
 
     reward = graphene.Field(RewardNode)
 
@@ -674,6 +695,8 @@ class RewardCreate(Mutation):
             target,
             amount,
             private=False,
+            scratch=None,
+            related_activity=None,
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -695,12 +718,18 @@ class RewardCreate(Mutation):
         except AssertionError:
             raise GraphQLError('Balance would be below zero')
 
+        if related_activity:
+            related_activity = models.Activity.objects.get(
+                id=from_global_id(related_activity)[1])
+
         reward = models.Reward.objects.create(
             user=user_obj,
             description=description,
             target=target_obj,
             amount=amount,
             private=private,
+            related_activity=related_activity,
+            scratch=scratch,
             score=score,
         )
 
@@ -1511,6 +1540,7 @@ class ActivityCreate(Mutation):
         active = graphene.Boolean()
         reward_min = graphene.Int()
         reward_range = graphene.Int()
+        scratch = graphene.String()
         score = graphene.Int()
 
     activity = graphene.Field(ActivityNode)
@@ -1524,6 +1554,7 @@ class ActivityCreate(Mutation):
             active,
             reward_min=None,
             reward_range=None,
+            scratch=None,
             score=0,
     ):
         if not (info.context.user.is_superuser or
@@ -1543,6 +1574,8 @@ class ActivityCreate(Mutation):
             activity.reward_min = reward_min
         if type(reward_range) == int:
             activity.reward_range = reward_range
+        if type(scratch) == str:
+            activity.scratch = scratch
         activity.save()
 
         return ActivityCreate(activity=activity)
@@ -1557,6 +1590,7 @@ class ActivityUpdate(Mutation):
         active = graphene.Boolean()
         reward_min = graphene.Int()
         reward_range = graphene.Int()
+        scratch = graphene.String()
         score = graphene.Int()
 
     activity = graphene.Field(ActivityNode)
@@ -1571,6 +1605,7 @@ class ActivityUpdate(Mutation):
             active=None,
             reward_min=None,
             reward_range=None,
+            scratch=None,
             score=None,
     ):
 
@@ -1594,6 +1629,8 @@ class ActivityUpdate(Mutation):
             activity.reward_min = reward_min
         if type(reward_range) == int:
             activity.reward_range = reward_range
+        if type(scratch) == str:
+            activity.scratch = scratch
         if type(score) == int:
             activity.score = score
 
@@ -1634,6 +1671,7 @@ class CommentCreate(Mutation):
         user = graphene.ID(required=True)
         description = graphene.String(required=True)
         parent = graphene.ID(required=True)
+        scratch = graphene.String()
 
     comment = graphene.Field(CommentNode)
 
@@ -1643,6 +1681,7 @@ class CommentCreate(Mutation):
             user,
             description,
             parent,
+            scratch=None,
     ):
         parent_obj = models.Entry.objects.get(pk=from_global_id(parent)[1])
 
@@ -1656,6 +1695,7 @@ class CommentCreate(Mutation):
             user=models.User.objects.get(pk=from_global_id(user)[1]),
             description=description,
             parent=parent_obj,
+            scratch=scratch,
         )
 
         return CommentCreate(comment=comment)

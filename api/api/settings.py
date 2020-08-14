@@ -264,6 +264,8 @@ BOT_GAS_MUTATION = {
     'createBookmark': 100,
     'createRSVP': 100,
     'updateBot': 100,
+    'updateNotifier': 100,
+    'updateNotification': 100,
     'updateActivity': 100,
     'deleteFollow': 100,
     'deleteLike': 100,

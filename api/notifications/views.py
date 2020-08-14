@@ -1,10 +1,13 @@
 import ibis.models as models
+import ibis.schema
 
+from graphql_relay.node.node import from_global_id
 from django.urls import reverse
 from django.views import View
 from django.views.generic import UpdateView, TemplateView
 from django.http import HttpResponse, HttpResponseRedirect
 from django.conf import settings
+from api.utils import get_submodel
 from .models import Notifier, DonationMessage
 
 
@@ -98,3 +101,17 @@ class DonationMessageView(View):
         return HttpResponse(
             DonationMessage.objects.order_by("?").first().description.format(
                 organization=kwargs['name']))
+
+
+class AppLinkView(View):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse(
+            settings.APP_LINK_RESOLVER('{}:{}'.format(
+                get_submodel(
+                    getattr(
+                        ibis.schema,
+                        from_global_id(kwargs['gid'])[0],
+                    )._meta.model.objects.get(
+                        id=from_global_id(kwargs['gid'])[1])).__name__,
+                kwargs['gid'],
+            )))

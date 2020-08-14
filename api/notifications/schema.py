@@ -9,6 +9,7 @@ from graphene import relay, Mutation
 from graphene_django import DjangoObjectType
 from graphql_relay.node.node import from_global_id
 from graphene_django.filter import DjangoFilterConnectionField, GlobalIDFilter
+from ibis.schema import UserNodeInterface
 from api.utils import get_submodel
 
 # --- Notifier -------------------------------------------------------------- #
@@ -31,7 +32,7 @@ class NotifierNode(DjangoObjectType):
     class Meta:
         model = models.Notifier
         filter_fields = []
-        interfaces = (relay.Node, )
+        interfaces = (UserNodeInterface, )
 
     def resolve_email_following(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
@@ -178,7 +179,7 @@ class NotifierUpdate(Mutation):
 class NotificationFilter(django_filters.FilterSet):
     for_user = django_filters.CharFilter(method='filter_for_user')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
-    search = django_filters.CharFilter(method='filter_search')
+    clicked = django_filters.CharFilter(method='filter_clicked')
 
     class Meta:
         model = models.Notification
@@ -188,6 +189,9 @@ class NotificationFilter(django_filters.FilterSet):
         notifier = ibis.models.User.objects.get(
             pk=from_global_id(value)[1]).notifier
         return qs.filter(notifier=notifier)
+
+    def filter_clicked(self, qs, name, value):
+        return qs.filter(clicked=value)
 
 
 class NotificationNode(DjangoObjectType):
@@ -315,10 +319,9 @@ class DonationMessageNode(DjangoObjectType):
 
 
 class Query(object):
-    notifier = relay.Node.Field(NotifierNode)
+    notifier = UserNodeInterface.Field(NotifierNode)
     notification = relay.Node.Field(NotificationNode)
 
-    all_notifiers = DjangoFilterConnectionField(NotifierNode)
     all_notifications = DjangoFilterConnectionField(
         NotificationNode,
         filterset_class=NotificationFilter,

@@ -12,38 +12,40 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 
 class BotTestCase(BaseTestCase):
     operations_bot = [
-        'Activity',
         'ActivityCreate',
         'ActivityList',
+        'ActivityNode',
         'ActivityUpdate',
-        'Balance',
-        'Bot',
         'BotList',
+        'BotNode',
         'BotUpdate',
-        'Comment',
         'CommentCreate',
         'CommentList',
-        'Donation',
+        'CommentNode',
         'DonationList',
-        'Event',
+        'DonationNode',
         'EventList',
+        'EventNode',
         'FollowCreate',
         'FollowDelete',
         'LikeCreate',
         'LikeDelete',
-        'News',
         'NewsList',
-        'Organization',
+        'NewsNode',
+        'NotificationList',
+        'NotificationNode',
+        'NotificationUpdate',
         'OrganizationList',
-        'Person',
+        'OrganizationNode',
         'PersonList',
-        'Post',
+        'PersonNode',
         'PostList',
-        'Reward',
+        'PostNode',
         'RewardCreate',
         'RewardList',
-        'User',
+        'RewardNode',
         'UserList',
+        'UserNode',
     ]
 
     @classmethod
@@ -67,32 +69,34 @@ class BotTestCase(BaseTestCase):
                 assert definition.selection_set.selections[
                     0].name.value in settings.BOT_GAS_MUTATION
 
+    def query_bot(self, query, op_name, variables):
+        body = {"query": query}
+        if op_name:
+            body["operationName"] = op_name
+        if variables:
+            body["variables"] = variables
+        resp = self._client.post(
+            self.GRAPHQL_URL,
+            json.dumps(body),
+            content_type="application/json")
+        return resp
+
     def run_all(self, user):
         success = {}
-        result = json.loads(
-            self.query(
-                self.gql_bot['Balance'],
-                op_name='Balance',
-                variables={
-                    'id': to_global_id('UserNode', user.id),
-                },
-            ).content)
-        success['Balance'] = 'errors' not in result and bool(
-            result['data']['user']['id'])
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Bot'],
-                op_name='Bot',
+            self.query_bot(
+                self.gql_bot['BotNode'],
+                op_name='BotNode',
                 variables={
                     'id': self.me_bot.gid,
                 },
             ).content)
-        success['Bot'] = 'errors' not in result and bool(
+        success['BotNode'] = 'errors' not in result and bool(
             result['data']['bot']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['BotList'],
                 op_name='BotList',
                 variables={
@@ -105,7 +109,7 @@ class BotTestCase(BaseTestCase):
             result['data']['allBots']['edges']) > 0
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['BotUpdate'],
                 op_name='BotUpdate',
                 variables={
@@ -117,7 +121,7 @@ class BotTestCase(BaseTestCase):
             'updateBot']['bot']['id']
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['CommentCreate'],
                 op_name='CommentCreate',
                 variables={
@@ -130,39 +134,39 @@ class BotTestCase(BaseTestCase):
             'createComment']['comment']['id']
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Comment'],
-                op_name='Comment',
+            self.query_bot(
+                self.gql_bot['CommentNode'],
+                op_name='CommentNode',
                 variables={
                     'id': result['data']['createComment']['comment']['id'],
                 },
             ).content)
-        success['Comment'] = 'errors' not in result and bool(
+        success['CommentNode'] = 'errors' not in result and bool(
             result['data']['comment']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['CommentList'],
                 op_name='CommentList',
                 variables={
-                    'hasParent': to_global_id('EntryNode', self.donation.id),
+                    'parent': to_global_id('EntryNode', self.donation.id),
                 },
             ).content)
         success['CommentList'] = 'errors' not in result and len(result) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Donation'],
-                op_name='Donation',
+            self.query_bot(
+                self.gql_bot['DonationNode'],
+                op_name='DonationNode',
                 variables={
                     'id': self.donation.gid,
                 },
             ).content)
-        success['Donation'] = 'errors' not in result and bool(
+        success['DonationNode'] = 'errors' not in result and bool(
             result['data']['donation']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['DonationList'],
                 op_name='DonationList',
                 variables={
@@ -175,18 +179,18 @@ class BotTestCase(BaseTestCase):
             result['data']['allDonations']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Event'],
-                op_name='Event',
+            self.query_bot(
+                self.gql_bot['EventNode'],
+                op_name='EventNode',
                 variables={
                     'id': self.event.gid,
                 },
             ).content)
-        success['Event'] = 'errors' not in result and bool(
+        success['EventNode'] = 'errors' not in result and bool(
             result['data']['event']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['EventList'],
                 op_name='EventList',
                 variables={
@@ -199,7 +203,7 @@ class BotTestCase(BaseTestCase):
             result['data']['allEvents']['edges']) > 0
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['FollowCreate'],
                 op_name='FollowCreate',
                 variables={
@@ -210,7 +214,7 @@ class BotTestCase(BaseTestCase):
         success['FollowCreate'] = 'errors' not in result and len(result) > 0
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['FollowDelete'],
                 op_name='FollowDelete',
                 variables={
@@ -222,31 +226,7 @@ class BotTestCase(BaseTestCase):
             'data']['deleteFollow']['state']
 
         result = json.loads(
-            self.query(
-                self.gql_bot['User'],
-                op_name='User',
-                variables={
-                    'id': to_global_id('UserNode', self.person.id),
-                },
-            ).content)
-        success['User'] = 'errors' not in result and bool(
-            result['data']['user']['id'])
-
-        result = json.loads(
-            self.query(
-                self.gql_bot['UserList'],
-                op_name='UserList',
-                variables={
-                    'orderBy': '-created',
-                    'first': 25,
-                    'after': 1,
-                },
-            ).content)
-        success['UserList'] = 'errors' not in result and len(
-            result['data']['allUsers']['edges']) > 0
-
-        result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['LikeCreate'],
                 op_name='LikeCreate',
                 variables={
@@ -258,7 +238,7 @@ class BotTestCase(BaseTestCase):
             'createLike']['state']
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['LikeDelete'],
                 op_name='LikeDelete',
                 variables={
@@ -269,18 +249,18 @@ class BotTestCase(BaseTestCase):
         success['LikeDelete'] = 'errors' not in result and len(result) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['News'],
-                op_name='News',
+            self.query_bot(
+                self.gql_bot['NewsNode'],
+                op_name='NewsNode',
                 variables={
                     'id': self.news.gid,
                 },
             ).content)
-        success['News'] = 'errors' not in result and bool(
+        success['NewsNode'] = 'errors' not in result and bool(
             result['data']['news']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['NewsList'],
                 op_name='NewsList',
                 variables={
@@ -293,18 +273,18 @@ class BotTestCase(BaseTestCase):
             result['data']['allNews']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Organization'],
-                op_name='Organization',
+            self.query_bot(
+                self.gql_bot['OrganizationNode'],
+                op_name='OrganizationNode',
                 variables={
                     'id': self.organization.gid,
                 },
             ).content)
-        success['Organization'] = 'errors' not in result and bool(
+        success['OrganizationNode'] = 'errors' not in result and bool(
             result['data']['organization']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['OrganizationList'],
                 op_name='OrganizationList',
                 variables={
@@ -317,18 +297,18 @@ class BotTestCase(BaseTestCase):
             result['data']['allOrganizations']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Person'],
-                op_name='Person',
+            self.query_bot(
+                self.gql_bot['PersonNode'],
+                op_name='PersonNode',
                 variables={
                     'id': self.person.gid,
                 },
             ).content)
-        success['Person'] = 'errors' not in result and bool(
+        success['PersonNode'] = 'errors' not in result and bool(
             result['data']['person']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['PersonList'],
                 op_name='PersonList',
                 variables={
@@ -341,18 +321,18 @@ class BotTestCase(BaseTestCase):
             result['data']['allPeople']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Post'],
-                op_name='Post',
+            self.query_bot(
+                self.gql_bot['PostNode'],
+                op_name='PostNode',
                 variables={
                     'id': self.post.gid,
                 },
             ).content)
-        success['Post'] = 'errors' not in result and bool(
+        success['PostNode'] = 'errors' not in result and bool(
             result['data']['post']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['PostList'],
                 op_name='PostList',
                 variables={
@@ -365,9 +345,9 @@ class BotTestCase(BaseTestCase):
             result['data']['allPosts']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql_bot['Reward'],
-                op_name='Reward',
+            self.query_bot(
+                self.gql_bot['RewardNode'],
+                op_name='RewardNode',
                 variables={
                     'id':
                     to_global_id(
@@ -376,11 +356,11 @@ class BotTestCase(BaseTestCase):
                     ),
                 },
             ).content)
-        success['Reward'] = 'errors' not in result and bool(
+        success['RewardNode'] = 'errors' not in result and bool(
             result['data']['reward']['id'])
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['RewardCreate'],
                 op_name='RewardCreate',
                 variables={
@@ -394,7 +374,7 @@ class BotTestCase(BaseTestCase):
             'createReward']['reward']['id']
 
         result = json.loads(
-            self.query(
+            self.query_bot(
                 self.gql_bot['RewardList'],
                 op_name='RewardList',
                 variables={
@@ -407,19 +387,19 @@ class BotTestCase(BaseTestCase):
             result['data']['allRewards']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql['Activity'],
-                op_name='Activity',
+            self.query_bot(
+                self.gql_bot['ActivityNode'],
+                op_name='ActivityNode',
                 variables={
                     'id': self.activity.gid,
                 },
             ).content)
-        success['Activity'] = 'errors' not in result and bool(
+        success['ActivityNode'] = 'errors' not in result and bool(
             result['data']['activity']['id'])
 
         result = json.loads(
-            self.query(
-                self.gql['ActivityList'],
+            self.query_bot(
+                self.gql_bot['ActivityList'],
                 op_name='ActivityList',
                 variables={
                     'self': user.gid,
@@ -432,8 +412,8 @@ class BotTestCase(BaseTestCase):
             result['data']['allActivities']['edges']) > 0
 
         result = json.loads(
-            self.query(
-                self.gql['ActivityCreate'],
+            self.query_bot(
+                self.gql_bot['ActivityCreate'],
                 op_name='ActivityCreate',
                 variables={
                     'user': user.gid,
@@ -448,8 +428,8 @@ class BotTestCase(BaseTestCase):
             'createActivity']['activity']['id']
 
         result = json.loads(
-            self.query(
-                self.gql['ActivityUpdate'],
+            self.query_bot(
+                self.gql_bot['ActivityUpdate'],
                 op_name='ActivityUpdate',
                 variables={
                     'id':
