@@ -3,6 +3,7 @@ import json
 import ibis.models as models
 
 from django.conf import settings
+from django.utils.timezone import localtime
 from graphql.language.base import parse
 from graphql_relay.node.node import to_global_id
 from api.test.base import BaseTestCase
@@ -46,6 +47,8 @@ class BotTestCase(BaseTestCase):
         'RewardNode',
         'UserList',
         'UserNode',
+        '_Notifier',
+        '_NotifierUpdate',
     ]
 
     @classmethod
@@ -445,14 +448,38 @@ class BotTestCase(BaseTestCase):
                     'This is a different description',
                     'active':
                     False,
-                    'rangeMin':
+                    'rewardMin':
                     11,
-                    'rangeRange':
+                    'rewardRange':
                     6,
                 },
             ).content)
         success['ActivityUpdate'] = 'errors' not in result and result['data'][
             'updateActivity']['activity']['id']
+
+        result = json.loads(
+            self.query_bot(
+                self.gql_bot['_Notifier'],
+                op_name='_Notifier',
+                variables={
+                    'id': self.me_bot.gid,
+                },
+            ).content)
+        success['ActivityNode'] = 'errors' not in result and bool(
+            result['data']['notifier']['id'])
+
+        result = json.loads(
+            self.query_bot(
+                self.gql_bot['_NotifierUpdate'],
+                op_name='_NotifierUpdate',
+                variables={
+                    'id': self.me_bot.gid,
+                    'lastSeen_seen': str(localtime()),
+                },
+            ).content)
+        success['BotUpdate'] = 'errors' not in result and result['data'][
+            'updateBot']['bot']['id']
+
 
         return success
 
