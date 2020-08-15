@@ -72,6 +72,7 @@ class UserFilter(django_filters.FilterSet):
     follower_of = django_filters.CharFilter(method='filter_follower_of')
     like_for = django_filters.CharFilter(method='filter_like_for')
     rsvp_for = django_filters.CharFilter(method='filter_rsvp_for')
+    mention_in = django_filters.CharFilter(method='filter_mention_in')
     order_by = UserOrderingFilter(
         fields=(
             ('score', 'score'),
@@ -101,13 +102,16 @@ class UserFilter(django_filters.FilterSet):
 
     def filter_like_for(self, qs, name, value):
         entry_obj = models.Entry.objects.get(pk=from_global_id(value)[1])
+        entry_sub_obj = get_submodel(entry_obj).objects.get(
+            pk=from_global_id(value)[1])
         if self.request.user.is_superuser or any(
                 x.objects.filter(pk=from_global_id(value)[1]).exists()
                 for x in [
                     models.News,
                     models.Event,
                     models.Post,
-                ]) or entry_obj.user.id == self.request.user.id:
+                    models.Activity,
+                ]) or entry_sub_obj.user.id == self.request.user.id:
             return qs.filter(id__in=entry_obj.like.all())
         else:
             return qs.filter(id__in=entry_obj.like.all()).filter(
@@ -119,6 +123,10 @@ class UserFilter(django_filters.FilterSet):
                 models.Entry.objects.get(
                     pk=from_global_id(value)[1])).objects.get(
                         id=from_global_id(value)[1]).rsvp.all())
+
+    def filter_mention_in(self, qs, name, value):
+        entry_obj = models.Entry.objects.get(pk=from_global_id(value)[1])
+        return qs.filter(id__in=entry_obj.mention.all())
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -178,6 +186,9 @@ class EntryFilter(django_filters.FilterSet):
         return qs.filter(user_id=from_global_id(value)[1])
 
     def filter_scratch(self, qs, name, value):
+        if not (self.request.user.is_superuser
+                or self.request.user.id == int(from_global_id(value)[1])):
+            raise GraphQLError('You do not have sufficient permission')
         return qs.filter(scratch=value)
 
     def filter_by_following(self, qs, name, value):
@@ -254,7 +265,7 @@ class RewardFilter(TransferFilter):
         fields = []
 
     def filter_related_activity(self, qs, name, value):
-        return qs.filter(related_activity=value)
+        return qs.filter(related_activity=from_global_id(value)[1])
 
 
 class NewsFilter(EntryFilter):
@@ -324,6 +335,13 @@ class PostFilter(EntryFilter):
 
 class ActivityFilter(EntryFilter):
     active = django_filters.BooleanFilter(method='filter_active')
+    order_by = EntryOrderingFilter(
+        fields=(
+            ('score', 'score'),
+            ('created', 'created'),
+            ('date', 'date'),
+            ('active', 'active'),
+        ))
 
     class Meta:
         model = models.Activity
@@ -346,6 +364,7 @@ class CommentFilter(django_filters.FilterSet):
         method='filter_parent',
         required=True,
     )
+    user = django_filters.CharFilter(method='filter_user')
     scratch = django_filters.CharFilter(method='filter_scratch')
 
     order_by = EntryOrderingFilter(
@@ -366,7 +385,13 @@ class CommentFilter(django_filters.FilterSet):
             raise GraphQLError('You do not have sufficient permission')
         return qs.filter(parent_id=from_global_id(value)[1])
 
+    def filter_user(self, qs, name, value):
+        return qs.filter(user_id=from_global_id(value)[1])
+
     def filter_scratch(self, qs, name, value):
+        if not (self.request.user.is_superuser
+                or self.request.user.id == int(from_global_id(value)[1])):
+            raise GraphQLError('You do not have sufficient permission')
         return qs.filter(scratch=value)
 
 
@@ -487,6 +512,7 @@ class EntryNode(DjangoObjectType):
         lambda: UserNode,
         filterset_class=UserFilter,
     )
+    scratch = graphene.String()
     entry_type = graphene.String()
 
     class Meta:
@@ -522,6 +548,12 @@ class EntryNode(DjangoObjectType):
 
     def resolve_mention(self, *args, **kwargs):
         return self.mention
+
+    def resolve_scratch(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or self.user.id == info.context.user.id):
+            return None
+        return self.scratch
 
     def resolve_entry_type(self, *args, **kwargs):
         return get_submodel(self).__name__
@@ -706,7 +738,6 @@ class RewardCreate(Mutation):
         try:
             assert len(description) > 0
             assert amount > 0
-            assert amount <= settings.MAX_TRANSFER
         except AssertionError:
             raise GraphQLError('Arguments do not satisfy constraints')
 
@@ -1021,6 +1052,7 @@ class UserNode(GeneralUserNode):
     follower_count_person = graphene.Int()
     follower_count_organization = graphene.Int()
     event_rsvp_count = graphene.Int()
+    scratch = graphene.String()
     user_type = graphene.String()
 
     class Meta:
@@ -1057,6 +1089,12 @@ class UserNode(GeneralUserNode):
 
     def resolve_event_rsvp_count(self, *args, **kwargs):
         return self.rsvp_for_event.filter(date__gte=localtime()).count()
+
+    def resolve_scratch(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or self.id == info.context.user.id):
+            return None
+        return self.scratch
 
     def resolve_user_type(self, *args, **kwargs):
         return get_submodel(self).__name__
@@ -1345,6 +1383,7 @@ class BotNode(UserNode):
 
     rewarded = graphene.Int()
     reward_count = graphene.Int()
+    activity_count = graphene.Int()
 
     class Meta:
         model = models.Bot
@@ -1355,8 +1394,11 @@ class BotNode(UserNode):
     def resolve_rewarded(self, *args, **kwargs):
         return self.rewarded()
 
-    def resolve_reward_with_count(self, info, *args, **kwargs):
+    def resolve_reward_count(self, info, *args, **kwargs):
         return self.reward_set.count()
+
+    def resolve_activity_count(self, info, *args, **kwargs):
+        return self.activity_set.count()
 
 
 class BotUpdate(Mutation):
@@ -1372,6 +1414,7 @@ class BotUpdate(Mutation):
         privacy_deposit = graphene.Boolean()
         avatar = Upload()
         tank = graphene.Int()
+        scratch = graphene.String()
         score = graphene.Int()
 
     bot = graphene.Field(BotNode)
@@ -1390,6 +1433,7 @@ class BotUpdate(Mutation):
             privacy_deposit=None,
             avatar=None,
             tank=None,
+            scratch=None,
             score=None,
     ):
         if not (info.context.user.is_superuser
@@ -1443,6 +1487,8 @@ class BotUpdate(Mutation):
 
         if type(tank) == int:
             bot.tank = tank
+        if type(scratch) == str:
+            bot.scratch = scratch
         if type(score) == int:
             bot.score = score
         bot.save()

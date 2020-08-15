@@ -6,6 +6,7 @@ from django.core.validators import MinLengthValidator
 from django.conf import settings
 from model_utils.models import TimeStampedModel
 from graphql_relay.node.node import to_global_id
+from api.utils import get_submodel
 
 from users.models import GeneralUser
 
@@ -74,7 +75,7 @@ class User(GeneralUser, Scoreable):
 
     avatar = models.TextField(validators=[MinLengthValidator(1)])
     description = models.TextField(blank=True, null=True)
-    scratch = models.TextField(blank=True, null=True)
+    scratch = models.TextField(default='')
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -414,7 +415,7 @@ class Comment(Entry):
         return '{}:{}->{}'.format(
             self.pk,
             self.user,
-            self.parent.user,
+            get_submodel(self.parent).objects.get(id=self.parent.id).user,
         )
 
     def get_root(self):

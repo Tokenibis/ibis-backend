@@ -177,15 +177,15 @@ class NotifierUpdate(Mutation):
 
 
 class NotificationFilter(django_filters.FilterSet):
-    for_user = django_filters.CharFilter(method='filter_for_user')
+    user = django_filters.CharFilter(method='filter_user')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
-    clicked = django_filters.CharFilter(method='filter_clicked')
+    clicked = django_filters.BooleanFilter(method='filter_clicked')
 
     class Meta:
         model = models.Notification
         fields = []
 
-    def filter_for_user(self, qs, name, value):
+    def filter_user(self, qs, name, value):
         notifier = ibis.models.User.objects.get(
             pk=from_global_id(value)[1]).notifier
         return qs.filter(notifier=notifier)

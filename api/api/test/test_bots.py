@@ -49,6 +49,7 @@ class BotTestCase(BaseTestCase):
         'UserNode',
         '_Notifier',
         '_NotifierUpdate',
+        '_Status',
     ]
 
     @classmethod
@@ -465,7 +466,7 @@ class BotTestCase(BaseTestCase):
                     'id': self.me_bot.gid,
                 },
             ).content)
-        success['ActivityNode'] = 'errors' not in result and bool(
+        success['_Notifier'] = 'errors' not in result and bool(
             result['data']['notifier']['id'])
 
         result = json.loads(
@@ -474,12 +475,11 @@ class BotTestCase(BaseTestCase):
                 op_name='_NotifierUpdate',
                 variables={
                     'id': self.me_bot.gid,
-                    'lastSeen_seen': str(localtime()),
+                    'lastSeen': str(localtime()),
                 },
             ).content)
-        success['BotUpdate'] = 'errors' not in result and result['data'][
-            'updateBot']['bot']['id']
-
+        success['_NotifierUpdate'] = 'errors' not in result and result['data'][
+            'updateNotifier']['notifier']['id']
 
         return success
 
