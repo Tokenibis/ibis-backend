@@ -96,6 +96,10 @@ def get_control_history(time):
                     x.amount for x in ibis.models.Donation.objects.filter(
                         created__gte=to_step_start(x.created),
                         created__lt=to_step_start(x.created, offset=1))),
+                -sum(  # sum of rewards
+                    x.amount for x in ibis.models.Reward.objects.filter(
+                        created__gte=to_step_start(x.created),
+                        created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of non-UBP deposits
                     x.amount for x in ibis.models.Deposit.objects.exclude(
                         category=ibis.models.ExchangeCategory.
