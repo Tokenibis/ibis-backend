@@ -556,11 +556,11 @@ class EmailTemplateUBP(EmailTemplate):
             self.subject,
             self.body.format(
                 amount='${:.2f}'.format(deposit.amount / 100),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
+                link=settings.APP_LINK_RESOLVER(),
             ),
             self.html.format(
                 amount='${:.2f}'.format(deposit.amount / 100),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
+                link=settings.APP_LINK_RESOLVER(),
             ),
         )
 

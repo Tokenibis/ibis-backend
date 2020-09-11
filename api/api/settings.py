@@ -228,7 +228,7 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 # ------------------------------------------------------------ #
 
 
-def APP_LINK_RESOLVER(reference):
+def APP_LINK_RESOLVER(reference=None):
     lookup = {
         'Organization': '/Organization/Organization?id={}',
         'News': '/News/News?id={}',
@@ -241,6 +241,9 @@ def APP_LINK_RESOLVER(reference):
         'Activity': '/Activity/Activity?id={}',
         'Deposit': '/_/Deposit?id={}',
     }
+
+    if not reference:
+        return 'https://{}/#/'.format(CONF['ibis']['endpoints']['app'])
 
     return 'https://{}/#{}'.format(
         CONF['ibis']['endpoints']['app'],
