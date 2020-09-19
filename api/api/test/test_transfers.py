@@ -69,7 +69,6 @@ class TransferTestCase(BaseTestCase):
         assert not reward(self.person, -1)
         assert not reward(self.person, 0.5)
         assert not reward(self.person, 0)
-        assert not reward(self.person, settings.MAX_TRANSFER + 1)
         assert reward(self.person, settings.MAX_TRANSFER)
         assert reward(self.person, self.me_bot.balance())
         assert not reward(self.person, 1)

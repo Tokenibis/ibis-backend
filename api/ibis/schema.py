@@ -1100,10 +1100,24 @@ class UserNode(GeneralUserNode):
         return get_submodel(self).__name__
 
     @classmethod
-    def get_queryset(cls, queryset, info):
+    def get_queryset(cls, queryset, info, hide_inactive=True):
         if not info.context.user.is_authenticated:
             raise GraphQLError('You are not  logged in')
+        if hide_inactive:
+            return queryset.filter(is_active=True)
         return queryset
+
+    @classmethod
+    def get_node(cls, info, id):
+        queryset = cls.get_queryset(
+            cls._meta.model.objects,
+            info,
+            hide_inactive=False,
+        )
+        try:
+            return queryset.get(pk=id)
+        except cls._meta.model.DoesNotExist:
+            return None
 
 
 # --- Organization ------------------------------------------------------------- #

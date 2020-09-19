@@ -80,7 +80,7 @@ class LoginView(generics.GenericAPIView):
 
             # return error message
             if social_account.provider == 'microsoft' and user.email.rsplit(
-                    '@')[-1] != 'unm.edu':
+                    '@')[-1].endswith('unm.edu'):
                 raise exceptions.AuthenticationFailed(
                     detail='Please use a valid unm.edu email address')
 
@@ -105,7 +105,7 @@ class LoginView(generics.GenericAPIView):
             'user_id':
             to_global_id('UserNode', str(request.user.id)),
             'user_type':
-            'person',
+            get_submodel(models.User.objects.get(id=request.user.id)).__name__,
         })
 
 
@@ -128,8 +128,7 @@ class PasswordLoginView(generics.GenericAPIView):
                 'user_id':
                 to_global_id('UserNode', str(user.id)),
                 'user_type':
-                'person' if models.Person.objects.filter(
-                    id=user.id) else 'organization',
+                get_submodel(models.User.objects.get(id=user.id)).__name__,
             })
         else:
             return response.Response({
@@ -206,7 +205,8 @@ class AnonymousLoginView(generics.GenericAPIView):
             'user_id':
             to_global_id('UserNode', str(person.user_ptr.id)),
             'user_type':
-            'person',
+            get_submodel(
+                models.User.objects.get(id=person.user_ptr.id)).__name__,
         })
 
 

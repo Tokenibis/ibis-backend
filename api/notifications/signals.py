@@ -301,7 +301,7 @@ def handleMentionUpdate(sender, instance, action, pk_set, **kwargs):
         for pk in pk_set:
             if not ibis.models.User.objects.get(pk=pk).can_see(entry):
                 continue
-            description = '{} mentioned you in a {}'.format(
+            description = '{} mentioned you in their {}'.format(
                 get_submodel(entry).objects.get(pk=instance.pk).user,
                 get_submodel(entry).__name__.lower(),
             )

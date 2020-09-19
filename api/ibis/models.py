@@ -75,7 +75,7 @@ class User(GeneralUser, Scoreable):
 
     avatar = models.TextField(validators=[MinLengthValidator(1)])
     description = models.TextField(blank=True, null=True)
-    scratch = models.TextField(default='')
+    scratch = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return '{}{}{}'.format(
@@ -164,6 +164,10 @@ class Person(User):
 
 
 class Organization(User):
+    class Meta:
+        verbose_name = "Organization"
+        verbose_name_plural = "Organizations"
+
     category = models.ForeignKey(
         OrganizationCategory,
         on_delete=models.CASCADE,
