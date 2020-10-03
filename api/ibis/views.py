@@ -79,7 +79,7 @@ class LoginView(generics.GenericAPIView):
             user = GeneralUser.objects.get(id=request.user.id)
 
             # return error message
-            if social_account.provider == 'microsoft' and user.email.rsplit(
+            if social_account.provider == 'microsoft' and not user.email.rsplit(
                     '@')[-1].endswith('unm.edu'):
                 raise exceptions.AuthenticationFailed(
                     detail='Please use a valid unm.edu email address')
