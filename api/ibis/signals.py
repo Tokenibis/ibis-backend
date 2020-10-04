@@ -1,28 +1,64 @@
-from django.db.models.signals import post_save
-from django.conf import settings
-
 import ibis.models as models
 
+from django.utils.timezone import localtime, timedelta
+from django.db.models.signals import post_save, m2m_changed
+from django.conf import settings
+from api.management.commands.loaddata import STATE
 
-def scoreFundraisedDescending(sender, instance, created, raw, **kwargs):
-    if raw or not created:
+
+def score_organizations(sender, instance, **kwargs):
+    # don't call when loading fixtures
+    if STATE['LOADING_DATA']:
         return
 
-    organizations = list(
-        models.Organization.objects.exclude(username=settings.IBIS_USERNAME_ROOT))
-    organizations.sort(key=lambda x: x.fundraised(), reverse=True)
-    for i, organization in enumerate(organizations):
-        if organization.score != i + 1:
-            organization.score = i + 1
-            organization.save()
+    # make sure this isn't just an object update
+    if 'created' in kwargs and not kwargs['created']:
+        return
+
+    # if comment, make sure this is an org comment on a donation
+    if isinstance(
+            instance,
+            models.Comment,
+    ) and not (models.Donation.objects.filter(pk=instance.parent.pk).exists()
+               and models.Organization.objects.filter(
+                   pk=instance.user.pk).exists()):
+        return
+
+    # if like, make sure this is an org like on a donation
+    if 'pk_set' in kwargs and not (models.Donation.objects.filter(
+            pk=instance.pk)).exists() and any(
+                models.Organization.objects.filter(pk=x)
+                for x in kwargs['pk_set']):
+        return
+
+    time = localtime()
+
+    def _score(org):
+        return (
+            org.date_joined > time -
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_JOINED),
+            org.has_recent_entry(),
+            org.recent_response_rate(),
+            hash(str(org.fundraised_recently()) + str(org.id)),
+        )
+
+    for i, x in enumerate(
+            sorted(
+                models.Organization.objects.filter(is_active=True).exclude(
+                    username=settings.IBIS_USERNAME_ROOT),
+                key=_score,
+            )):
+        x.score = i
+        x.save()
 
 
-score_organization = {
-    'fundraised_descending': scoreFundraisedDescending,
-}
+for x in [
+        models.Organization,
+        models.Donation,
+        models.News,
+        models.Event,
+        models.Comment,
+]:
+    post_save.connect(score_organizations, sender=x)
 
-if settings.SIGNAL_SCORE_ORGANIZATION:
-    post_save.connect(
-        score_organization[settings.SIGNAL_SCORE_ORGANIZATION],
-        sender=models.Donation,
-    )
+m2m_changed.connect(score_organizations, sender=models.Entry.like.through)

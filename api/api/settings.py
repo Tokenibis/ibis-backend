@@ -345,6 +345,8 @@ API_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
 
 APP_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['app'])
 
-SIGNAL_SCORE_ORGANIZATION = 'fundraised_descending'
+SORT_ORGANIZATION_WINDOW_JOINED = 2
+
+SORT_ORGANIZATION_WINDOW_RECENT = 4
 
 UNSUBSCRIBE_EMAIL = 'unsubscribe@tokenibis.org?subject=unsubscribe'

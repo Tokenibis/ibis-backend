@@ -1,6 +1,7 @@
 import regex as re
 
 from django.db import models
+from django.utils.timezone import localtime, timedelta
 from django.core.exceptions import ValidationError
 from django.core.validators import MinLengthValidator
 from django.conf import settings
@@ -178,6 +179,41 @@ class Organization(User):
 
     def fundraised(self):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
+
+    def fundraised_recently(self):
+        return sum(
+            x.amount for x in Donation.objects.filter(
+                target=self,
+                created__gte=localtime() - timedelta(
+                    days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+            ))
+
+    def has_recent_entry(self):
+        return News.objects.filter(
+            user=self,
+            created__gte=localtime() -
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+        ).exists() or Event.objects.filter(
+            user=self,
+            created__gte=localtime() -
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+        ).exists()
+
+    def recent_response_rate(self):
+        donations = Donation.objects.filter(
+            target=self,
+            created__gte=localtime() -
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+        )
+
+        if not donations.count():
+            return 0.0
+
+        return sum(1 for x in donations if x.like.filter(
+            id=self.id).exists() or Comment.objects.filter(
+                user=self,
+                parent=x,
+            ).exists()) / donations.count()
 
 
 class Entry(TimeStampedModel, Scoreable):

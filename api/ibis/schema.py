@@ -1137,6 +1137,8 @@ class OrganizationNode(UserNode):
     news_count = graphene.Int()
     event_count = graphene.Int()
     donation_received_count = graphene.Int()
+    has_recent_entry = graphene.Boolean()
+    recent_response_rate = graphene.Float()
 
     class Meta:
         model = models.Organization
@@ -1158,6 +1160,12 @@ class OrganizationNode(UserNode):
 
     def resolve_donation_received_count(self, info, *args, **kwargs):
         return models.Donation.objects.filter(target=self).count()
+
+    def resolve_has_recent_entry(self, info, *args, **kwargs):
+        return self.has_recent_entry()
+
+    def resolve_recent_response_rate(self, info, *args, **kwargs):
+        return self.recent_response_rate()
 
 
 class OrganizationUpdate(Mutation):
