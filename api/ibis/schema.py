@@ -169,6 +169,8 @@ class EntryFilter(django_filters.FilterSet):
     scratch = django_filters.CharFilter(method='filter_scratch')
     by_following = django_filters.CharFilter(method='filter_by_following')
     bookmark_by = django_filters.CharFilter(method='filter_bookmark_by')
+    created_after = django_filters.CharFilter(method='filter_created_after')
+    created_before = django_filters.CharFilter(method='filter_created_before')
     search = django_filters.CharFilter(method='filter_search')
 
     order_by = EntryOrderingFilter(
@@ -204,6 +206,12 @@ class EntryFilter(django_filters.FilterSet):
         return qs.filter(
             id__in=models.User.objects.get(
                 id=from_global_id(value)[1]).bookmark_for.all())
+
+    def filter_created_after(self, qs, name, value):
+        return qs.filter(created__gte=value)
+
+    def filter_created_before(self, qs, name, value):
+        return qs.filter(created__lt=value)
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
