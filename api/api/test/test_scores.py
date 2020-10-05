@@ -2,13 +2,14 @@ import random
 import ibis.models as models
 
 from freezegun import freeze_time
+from django.core import management
 from django.conf import settings
 from django.utils.timezone import now, timedelta, utc
 from api.test.base import BaseTestCase, TEST_TIME
 
 
 class ScoreTestCase(BaseTestCase):
-    def test_nonprofit_scores(self):
+    def test_organization_scores(self):
         with freeze_time(
                 TEST_TIME.astimezone(utc) +
                 timedelta(7 * settings.SORT_ORGANIZATION_WINDOW_RECENT)):
@@ -97,7 +98,8 @@ class ScoreTestCase(BaseTestCase):
             orgs[i].save()
             donations[orgs[i]][0].like.add(orgs[i])
 
-            # reload scores
+            # score and reload
+            management.call_command('score')
             orgs = [models.Organization.objects.get(id=x.id) for x in orgs]
 
             for i in range(1, len(orgs)):
