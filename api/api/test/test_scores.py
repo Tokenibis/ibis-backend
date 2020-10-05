@@ -1,5 +1,6 @@
 import random
 import ibis.models as models
+import ibis.signals as signals
 
 from freezegun import freeze_time
 from django.core import management
@@ -104,3 +105,20 @@ class ScoreTestCase(BaseTestCase):
 
             for i in range(1, len(orgs)):
                 assert orgs[i].score > orgs[i - 1].score
+
+    def test_person_scores(self):
+        # have to rerun these "signals" because fixtures get messed up
+        for x in models.Donation.objects.order_by('created'):
+            signals.updatePersonScore(None, x, True)
+
+        people = sorted(
+            [
+                x for x in models.Person.objects.all()
+                if models.Donation.objects.filter(user=x).exists()
+            ],
+            key=lambda x: models.Donation.objects.filter(user=x).order_by(
+                'created').last().created,
+        )
+
+        for i in range(1, len(people)):
+            assert people[i].score >= people[i - 1].score
