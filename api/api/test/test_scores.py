@@ -12,8 +12,12 @@ from api.test.base import BaseTestCase, TEST_TIME
 class ScoreTestCase(BaseTestCase):
     def test_organization_scores(self):
         with freeze_time(
-                TEST_TIME.astimezone(utc) +
-                timedelta(7 * settings.SORT_ORGANIZATION_WINDOW_RECENT)):
+                TEST_TIME.astimezone(utc) + timedelta(7 * max(
+                    settings.SORT_ORGANIZATION_WINDOW_ENTRY,
+                    settings.SORT_ORGANIZATION_WINDOW_FUNDRAISED,
+                    settings.SORT_ORGANIZATION_WINDOW_JOINED,
+                    settings.SORT_ORGANIZATION_WINDOW_RESPONSE,
+                ))):
             orgs = random.sample(
                 list(
                     models.Organization.objects.exclude(

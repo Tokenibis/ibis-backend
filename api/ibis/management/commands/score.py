@@ -17,6 +17,7 @@ class Command(BaseCommand):
                 timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_JOINED),
                 org.has_recent_entry(),
                 org.recent_response_rate(),
+                -org.fundraised_recently(),
                 hash(str(org.fundraised_recently()) + str(org.id)),
             )
 
@@ -26,5 +27,5 @@ class Command(BaseCommand):
                         username=settings.IBIS_USERNAME_ROOT),
                     key=_score,
                 )):
-            x.score = i
+            x.score = i + 1
             x.save()

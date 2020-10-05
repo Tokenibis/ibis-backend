@@ -185,25 +185,25 @@ class Organization(User):
             x.amount for x in Donation.objects.filter(
                 target=self,
                 created__gte=localtime() - timedelta(
-                    days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+                    days=7 * settings.SORT_ORGANIZATION_WINDOW_FUNDRAISED),
             ))
 
     def has_recent_entry(self):
         return News.objects.filter(
             user=self,
             created__gte=localtime() -
-            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_ENTRY),
         ).exists() or Event.objects.filter(
             user=self,
             created__gte=localtime() -
-            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_ENTRY),
         ).exists()
 
     def recent_response_rate(self):
         donations = Donation.objects.filter(
             target=self,
             created__gte=localtime() -
-            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RECENT),
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_RESPONSE),
         )
 
         if not donations.count():
