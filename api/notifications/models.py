@@ -551,7 +551,7 @@ class EmailTemplateUBP(EmailTemplate):
 
         for x in ibis.models.Organization.objects.filter(
                 date_joined__gte=time - timedelta(days=7)):
-            feed.append('Please welcome {} to Token Ibis!'.format(x))
+            feed.append('{} is now on Token Ibis!'.format(x))
         for x in ibis.models.News.objects.filter(
                 created__gte=time - timedelta(days=7)):
             feed.append('{} just posted an article: _{}_'.format(
@@ -560,7 +560,7 @@ class EmailTemplateUBP(EmailTemplate):
             ))
         for x in ibis.models.Event.objects.filter(date__gte=time).filter(
                 date__lt=time + timedelta(days=14)):
-            feed.append('{}\'s event, _{}_, is coming up on {}'.format(
+            feed.append('{}\'s event, _{},_ is coming up on {}'.format(
                 x.user,
                 x.title,
                 x.date.strftime('%B %d'),
