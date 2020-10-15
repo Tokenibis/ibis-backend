@@ -145,7 +145,7 @@ class UbpNotification(Notification):
         if not adding:
             return
 
-        if not STATE['LOADING_DATA'] and self.notifier.email_ubp:
+        if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
             if self.notifier.email_ubp and self.subject.user.user.deposit_set.filter(
                     category=ibis.models.ExchangeCategory.objects.get(
                         title='ubp')).count() == 1:
