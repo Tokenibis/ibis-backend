@@ -180,7 +180,7 @@ class Model:
 
         return pk
 
-    def add_email_template(self, template_type, subject, body, html):
+    def add_email_template(self, template_type, subject, body):
         pk = len(self.email_templates) + 1
 
         self.email_templates.append({
@@ -191,7 +191,6 @@ class Model:
             'fields': {
                 'subject': subject,
                 'body': body,
-                'html': html,
             }
         })
 
@@ -810,7 +809,6 @@ class Command(BaseCommand):
                     template_type,
                     template['subject'],
                     template['body'],
-                    template['html'],
                 )
 
         # add donation messages

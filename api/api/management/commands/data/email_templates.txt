@@ -10,9 +10,9 @@ Glad you asked! As you have seen, Token Ibis functions similarly to cash apps. T
 
 By using this app, you are empowered to be informed about:
 
-    - Where your philanthropy dollars go
-    - What your money supports
-    - Other ventures you can share or support
+* Where your philanthropy dollars go
+* What your money supports
+* Other ventures you can share or support
 
 Additionally, Token Ibis stands as an app through which you can interact and share. You can deposit your own money to or earn more money by interacting with our friendly bots. You can also follow activities and pages of the organizations you support, as well as be notified of any upcoming events or opportunities to get involved. As long as you make any donation during the week (even just 1 cent), then we'll throw more philanthropy dollars your way every Friday morning.
 
@@ -60,42 +60,30 @@ Head over [here](link) to start using it.
 
 ***UBP:New Notification***
 
-Heads up, lucky duck! You’ve received your weekly gift of {amount}!
-
-Check it out [here](link).
+Heads up, lucky duck! You’ve received your weekly gift of {amount}! Check it out [here](link).
 
 ---
-Good golly, would ya look at that! You’ve got another weekly gift of {amount}!
-
-Head over [here](link) to start using it.
+Good golly, would ya look at that! You’ve got another weekly gift of {amount}! Head over [here](link) to start using it.
 
 ---
 
-Bless my stars, it can’t be... but wait, it is! You’ve received your weekly gift of {amount}!
-
-Head over [here](link) to start using it.
+Bless my stars, it can’t be... but wait, it is! You’ve received your weekly gift of {amount}! Head over [here](link) to start using it.
 
 ---
 
-Eureka! You’ve received your weekly gift of {amount}! 
-
-Head over [here](link) to start using it.
-
-Your account was just sitting quietly when, lo and behold, you received {amount} to donate on Token Ibis!
-
-Check it out [here](link).
+Eureka! You’ve received your weekly gift of {amount}!  Head over [here](link) to start using it.
 
 ---
 
-Holy guacamole... you got {amount} this week to donate on Token Ibis!
-
-Check it out [here](link).
+Your account was just sitting quietly when, lo and behold, you received {amount} to donate on Token Ibis! Check it out [here](link).
 
 ---
 
-Well, fancy that! You have another {amount} to donate on Token Ibis!
+Holy guacamole... you got {amount} this week to donate on Token Ibis! Check it out [here](link).
 
-Check it out [here](link).
+---
+
+Well, fancy that! You have another {amount} to donate on Token Ibis! Check it out [here](link).
 
 ***Donation:New Notification***
 

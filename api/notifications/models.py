@@ -2,15 +2,15 @@ import os
 import string
 import random
 import logging
+import markdown
 import ibis.models
 
 from django.conf import settings
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import localtime, now, timedelta
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
 from django.core.validators import MinLengthValidator
-from django.utils.timezone import localtime
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
@@ -446,7 +446,6 @@ class EmailTemplate(models.Model):
 
     subject = models.TextField()
     body = models.TextField()
-    html = models.TextField()
     frequency = models.PositiveIntegerField(default=1)
 
     def make_email(*args, **kwargs):
@@ -465,18 +464,12 @@ class EmailTemplate(models.Model):
         ]) != set(content_keys):
             raise ValidationError('Body template has invalid key set')
 
-        if set([
-                x[1] for x in string.Formatter().parse(self.html)
-                if x[1] is not None
-        ]) != set(content_keys):
-            raise ValidationError('HTML template has invalid key set')
-
     @classmethod
     def choose(cls):
         return random.choice(list(cls.objects.filter(frequency__gte=1)))
 
     @staticmethod
-    def _apply_top_template(notifier, subject, body, html):
+    def _apply_top_template(notifier, subject, body):
         return (
             subject,
             top_body_template.format(
@@ -490,7 +483,10 @@ class EmailTemplate(models.Model):
             top_html_template.format(
                 user=notifier.user.first_name,
                 subject=subject,
-                content=html,
+                content=markdown.markdown(body).replace(
+                    '<a href=',
+                    '<a style="color: #84ab3f" href=',
+                ),
                 settings_link=settings.API_ROOT_PATH +
                 notifier.create_settings_link(),
                 unsubscribe_link=settings.API_ROOT_PATH +
@@ -508,7 +504,6 @@ class EmailTemplateWelcome(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(link=settings.APP_ROOT_PATH, ),
-            self.html.format(link=settings.APP_ROOT_PATH, ),
         )
 
 
@@ -521,8 +516,6 @@ class EmailTemplateFollow(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                link=settings.APP_LINK_RESOLVER(notification.reference), ),
-            self.html.format(
                 link=settings.APP_LINK_RESOLVER(notification.reference), ),
         )
 
@@ -539,10 +532,6 @@ class EmailTemplateDeposit(EmailTemplate):
                 amount='${:.2f}'.format(deposit.amount / 100),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
-            self.html.format(
-                amount='${:.2f}'.format(deposit.amount / 100),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
         )
 
 
@@ -551,17 +540,42 @@ class EmailTemplateUBP(EmailTemplate):
         super()._check_keys([], ['amount', 'link'])
 
     def make_email(self, notification, deposit):
+        body = self.body.format(
+            amount='${:.2f}'.format(deposit.amount / 100),
+            link=settings.APP_LINK_RESOLVER(),
+        )
+
+        time = localtime()
+
+        feed = []
+
+        for x in ibis.models.Organization.objects.filter(
+                date_joined__gte=time - timedelta(days=7)):
+            feed.append('Please welcome {} to Token Ibis!'.format(x))
+        for x in ibis.models.News.objects.filter(
+                created__gte=time - timedelta(days=7)):
+            feed.append('{} just posted an article: _{}_'.format(
+                x.user,
+                x.title,
+            ))
+        for x in ibis.models.Event.objects.filter(date__gte=time).filter(
+                date__lt=time + timedelta(days=14)):
+            feed.append('{}\'s event, _{}_, is coming up on {}'.format(
+                x.user,
+                x.title,
+                x.date.strftime('%B %d'),
+            ))
+
+        if feed:
+            body = '{}\n\n__This week on Token Ibis:__\n\n* {}'.format(
+                body,
+                '\n\n* '.join(feed),
+            )
+
         return EmailTemplate._apply_top_template(
             notification.notifier,
             self.subject,
-            self.body.format(
-                amount='${:.2f}'.format(deposit.amount / 100),
-                link=settings.APP_LINK_RESOLVER(),
-            ),
-            self.html.format(
-                amount='${:.2f}'.format(deposit.amount / 100),
-                link=settings.APP_LINK_RESOLVER(),
-            ),
+            body,
         )
 
 
@@ -574,10 +588,6 @@ class EmailTemplateDonation(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                sender=str(donation.user),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-            self.html.format(
                 sender=str(donation.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
@@ -596,10 +606,6 @@ class EmailTemplateReward(EmailTemplate):
                 sender=str(reward.user),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
-            self.html.format(
-                sender=str(reward.user),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
         )
 
 
@@ -615,10 +621,6 @@ class EmailTemplateComment(EmailTemplate):
                 entry_type=get_submodel(parent).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
-            self.html.format(
-                entry_type=get_submodel(parent).__name__.lower(),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
         )
 
 
@@ -631,10 +633,6 @@ class EmailTemplateMention(EmailTemplate):
             notification.notifier,
             self.subject,
             self.body.format(
-                entry_type=get_submodel(entry).__name__.lower(),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-            self.html.format(
                 entry_type=get_submodel(entry).__name__.lower(),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
