@@ -83,10 +83,6 @@ def get_control_history(time):
     """
 
     goals = list(Goal.objects.order_by('created'))
-    if not all((to_step_start(goals[i + 1].created) -
-                to_step_start(goals[i].created)).days == 7
-               for i in range(len(goals) - 1)):
-        raise ValueError('Non-contiguous or duplicate goal objects')
 
     return [
         [
