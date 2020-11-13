@@ -5,6 +5,7 @@ import logging
 import markdown
 import ibis.models
 
+from graphql_relay.node.node import to_global_id
 from django.conf import settings
 from django.utils.timezone import localtime, now, timedelta
 from django.core.exceptions import ValidationError
@@ -551,18 +552,33 @@ class EmailTemplateUBP(EmailTemplate):
 
         for x in ibis.models.Organization.objects.filter(
                 date_joined__gte=time - timedelta(days=7)):
-            feed.append('{} is now on Token Ibis!'.format(x))
+            feed.append(
+                'Please welcome our newest nonprofit: [{}]({}).'.format(
+                    x,
+                    settings.APP_LINK_RESOLVER('{}:{}'.format(
+                        ibis.models.Organization.__name__,
+                        to_global_id('UserNode', x.pk),
+                    )),
+                ))
         for x in ibis.models.News.objects.filter(
                 created__gte=time - timedelta(days=7)):
-            feed.append('{} just posted an article: _{}_'.format(
+            feed.append('{} just posted an article: [{}]({})'.format(
                 x.user,
                 x.title,
+                settings.APP_LINK_RESOLVER('{}:{}'.format(
+                    ibis.models.News.__name__,
+                    to_global_id('EntryNode', x.pk),
+                )),
             ))
         for x in ibis.models.Event.objects.filter(date__gte=time).filter(
                 date__lt=time + timedelta(days=14)):
-            feed.append('{}\'s event, _{},_ is coming up on {}'.format(
+            feed.append('{}\'s event, [{}]({}), is coming up on {}'.format(
                 x.user,
                 x.title,
+                settings.APP_LINK_RESOLVER('{}:{}'.format(
+                    ibis.models.Event.__name__,
+                    to_global_id('EntryNode', x.pk),
+                )),
                 x.date.strftime('%B %d'),
             ))
 
