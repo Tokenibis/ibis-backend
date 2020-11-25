@@ -582,6 +582,17 @@ class EmailTemplateUBP(EmailTemplate):
                 x.date.strftime('%B %d'),
             ))
 
+        for x in ibis.models.Bot.objects.filter(
+                date_joined__gte=time - timedelta(days=7)):
+            feed.append(
+                'Please welcome our newest bot: [{}]({}).'.format(
+                    x,
+                    settings.APP_LINK_RESOLVER('{}:{}'.format(
+                        ibis.models.Bot.__name__,
+                        to_global_id('UserNode', x.pk),
+                    )),
+                ))
+
         if feed:
             body = '{}\n\n__This week on Token Ibis:__\n\n* {}'.format(
                 body,
