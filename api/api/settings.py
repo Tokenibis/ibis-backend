@@ -324,6 +324,11 @@ PAYPAL_LIVE_CLIENT_ID = CONF['payment']['paypal']['live']['client_id']
 
 PAYPAL_LIVE_SECRET_KEY = CONF['payment']['paypal']['live']['secret_key']
 
+if 'public_read' in CONF['ibis'] and CONF['ibis']['public_read']:
+    PUBLIC_READ = True
+else:
+    PUBLIC_READ = False
+
 REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
     CONF['ibis']['endpoints']['app'])
 

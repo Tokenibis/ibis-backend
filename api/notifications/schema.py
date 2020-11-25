@@ -208,7 +208,7 @@ class NotificationNode(DjangoObjectType):
         if info.context.user.is_superuser:
             return queryset
         if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+            raise GraphQLError('You are not logged in')
 
         return queryset.filter(notifier__user=info.context.user)
 

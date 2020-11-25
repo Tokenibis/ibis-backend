@@ -414,8 +414,8 @@ class OrganizationCategoryNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -430,8 +430,8 @@ class ExchangeCategoryNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -568,8 +568,8 @@ class EntryNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
 
         if info.context.user.is_superuser:
             return queryset
@@ -609,8 +609,8 @@ class DonationNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
 
         if info.context.user.is_superuser:
             return queryset
@@ -700,8 +700,8 @@ class RewardNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
 
         if info.context.user.is_superuser:
             return queryset
@@ -794,8 +794,8 @@ class NewsNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -921,8 +921,8 @@ class EventNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -1109,8 +1109,8 @@ class UserNode(GeneralUserNode):
 
     @classmethod
     def get_queryset(cls, queryset, info, hide_inactive=True):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         if hide_inactive:
             return queryset.filter(is_active=True)
         return queryset
@@ -1545,8 +1545,8 @@ class PostNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -1603,8 +1603,8 @@ class ActivityNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
-            raise GraphQLError('You are not  logged in')
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -1725,7 +1725,7 @@ class CommentNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated:
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
             raise GraphQLError('You are not logged in')
         return queryset
 
