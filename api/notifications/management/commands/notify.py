@@ -21,7 +21,8 @@ class Command(BaseCommand):
             if email.schedule < now() - timedelta(minutes=1 * 2):
                 email.status = Email.STALE
                 logger.warning('Stale scheduled emails detected')
-            elif email.notification.clicked and not email.force:
+            elif not settings.EMAIL_ACTIVE or (email.notification.clicked
+                                               and not email.force):
                 email.status = Email.UNNEEDED
             elif email.schedule < now():
                 email.status = Email.ATTEMPTING
