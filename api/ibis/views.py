@@ -98,7 +98,9 @@ class LoginView(generics.GenericAPIView):
                 person.avatar = settings.AVATAR_BUCKET.format(
                     hash(str(request.user.id)) % settings.AVATAR_BUCKET_LEN)
 
-            person.score = 0
+            if 'referral' in request.data:
+                person.referral = request.data['referral']
+
             person.save()
 
         return response.Response({

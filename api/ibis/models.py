@@ -77,6 +77,7 @@ class User(GeneralUser, Scoreable):
     avatar = models.TextField(validators=[MinLengthValidator(1)])
     description = models.TextField(blank=True, null=True)
     scratch = models.TextField(blank=True, null=True)
+    referral = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return '{}{}{}'.format(
