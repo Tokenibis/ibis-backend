@@ -214,6 +214,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static/")
 
 SITE_ID = 1
 
+SOCIALACCOUNT_ADAPTER = 'users.adapters.CustomSocialAccountAdapter'
+
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
 
 SOCIALACCOUNT_EMAIL_REQUIRED = False

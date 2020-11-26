@@ -6,7 +6,7 @@ these views need to be serialized by objects from .serializers.py
 """
 
 from django.utils.translation import gettext as _
-
+from django.utils.timezone import localtime
 from allauth.socialaccount.models import SocialLogin
 from allauth.socialaccount.providers.base import AuthAction
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
@@ -15,6 +15,7 @@ from rest_auth.registration.views import SocialConnectView, SocialLoginView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import AuthenticationFailed
 
 from .serializers import CallbackSerializer
 from .adapters import GoogleOAuth2AdapterCustom
@@ -38,6 +39,16 @@ class CallbackMixin:
             None,
         )
         return url
+
+    def post(self, request, *args, **kwargs):
+        start = localtime()
+        response = super().post(request, *args, **kwargs)
+        if request.POST.get(
+                'mode') == 'sign_up' and self.user.date_joined < start:
+            raise AuthenticationFailed(
+                'Oops, it looks like you already have an account with Token Ibis. Please try to "sign in" instead.'
+            )
+        return response
 
 
 class Login(APIView):

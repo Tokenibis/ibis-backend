@@ -4,9 +4,20 @@ Implementations Django Allauth adapters for Ibis users
 
 from django.conf import settings
 
+from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
 from allauth.socialaccount.providers.microsoft.views import MicrosoftGraphOAuth2Adapter
+from rest_framework.exceptions import AuthenticationFailed
+
+
+class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
+    def is_open_for_signup(self, request, *args, **kwargs):
+        # only prevent signup if app specifically requested signin
+        if request.POST.get('mode') == 'sign_in':
+            raise AuthenticationFailed(
+                'Hm... there are no Token Ibis users with this account. Please try to "sign up" instead.'
+            )
 
 
 class GoogleOAuth2AdapterCustom(GoogleOAuth2Adapter):
