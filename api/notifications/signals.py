@@ -1,10 +1,35 @@
+import logging
 import ibis.models
 import notifications.models as models
 
+from django.conf import settings
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from graphql_relay.node.node import to_global_id
 from api.utils import get_submodel
+from api.management.commands.loaddata import STATE
+
+logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=ibis.models.Person)
+def handlePersonCreate(sender, instance, created, raw, **kwargs):
+    if STATE['LOADING_DATA'] or raw or not created:
+        return
+
+    try:
+        subject, body, html = models.EmailTemplateWelcome.choose().make_email(
+            instance.notifier)
+        if settings.EMAIL_ACTIVE and instance.user.email:
+            models.send_email(
+                [instance.user.email],
+                subject,
+                body,
+                html,
+                instance.notifier,
+            )
+    except IndexError:
+        logger.error('No email template found')
 
 
 @receiver(post_save, sender=ibis.models.Deposit)

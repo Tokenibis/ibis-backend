@@ -1,10 +1,12 @@
 import os
 import sys
-import random
 import json
-import requests
 import ftfy
+import boto3
+import random
 import logging
+import requests
+import ibis.serializers
 import ibis.models as models
 
 from django.contrib.auth import update_session_auth_hash
@@ -16,23 +18,17 @@ from rest_framework import generics, response, exceptions, serializers
 from users.models import GeneralUser
 from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
-from django.utils.timezone import localtime, now
+from django.utils.timezone import localtime, timedelta
 
-from .serializers import PasswordLoginSerializer, PasswordChangeSerializer
-from .serializers import PaymentSerializer
 from .payments import PayPalClient
 from api.utils import get_submodel
 
 logger = logging.getLogger(__name__)
 
-QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
-FB_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
-ANONYMOUS_AVATAR = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/miscellaneous/confused_robot.jpg'
-
 
 class QuoteView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
-        result = requests.get(QUOTE_URL)
+        result = requests.get(settings.QUOTE_URL)
         obj = json.loads(result.text.replace('\\\'', '\'')[2:-1])
         return response.Response({
             'quote':
@@ -93,7 +89,8 @@ class LoginView(generics.GenericAPIView):
             )
 
             if social_account.provider == 'facebook':
-                person.avatar = FB_AVATAR.format(social_account.uid)
+                person.avatar = settings.FACEBOOK_AVATAR.format(
+                    social_account.uid)
             else:
                 person.avatar = settings.AVATAR_BUCKET.format(
                     hash(str(request.user.id)) % settings.AVATAR_BUCKET_LEN)
@@ -112,7 +109,7 @@ class LoginView(generics.GenericAPIView):
 
 
 class PasswordLoginView(generics.GenericAPIView):
-    serializer_class = PasswordLoginSerializer
+    serializer_class = ibis.serializers.PasswordLoginSerializer
 
     def post(self, request, *args, **kwargs):
         serializerform = self.get_serializer(data=request.data)
@@ -140,7 +137,7 @@ class PasswordLoginView(generics.GenericAPIView):
 
 
 class PasswordChangeView(generics.GenericAPIView):
-    serializer_class = PasswordChangeSerializer
+    serializer_class = ibis.serializers.PasswordChangeSerializer
 
     def post(self, request, *args, **kwargs):
         serializerform = self.get_serializer(data=request.data)
@@ -173,45 +170,6 @@ class PasswordChangeView(generics.GenericAPIView):
         })
 
 
-class AnonymousLoginView(generics.GenericAPIView):
-    serializer_class = serializers.Serializer
-
-    def post(self, request, *args, **kwargs):
-        exists = models.Person.objects.filter(username='anonymous').exists()
-        if not exists:
-            person = models.Person.objects.create(
-                username='anonymous',
-                email='anonymous@example.com',
-                first_name='Anonymous',
-                last_name='Robot',
-                avatar=ANONYMOUS_AVATAR,
-            )
-
-        else:
-            person = models.Person.objects.get(username='anonymous')
-
-        login(request, person.user_ptr)
-
-        person.date_joined = localtime(now()).replace(
-            year=2019,
-            month=4,
-            day=5,
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
-        person.save()
-
-        return response.Response({
-            'user_id':
-            to_global_id('UserNode', str(person.user_ptr.id)),
-            'user_type':
-            get_submodel(
-                models.User.objects.get(id=person.user_ptr.id)).__name__,
-        })
-
-
 class LogoutView(generics.GenericAPIView):
     serializer_class = serializers.Serializer
 
@@ -240,7 +198,7 @@ class IdentifyView(generics.GenericAPIView):
 
 
 class PaymentView(generics.GenericAPIView):
-    serializer_class = PaymentSerializer
+    serializer_class = ibis.serializers.PaymentSerializer
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -270,4 +228,110 @@ class PaymentView(generics.GenericAPIView):
         return response.Response({
             'depositID':
             to_global_id('DepositNode', deposit.id),
+        })
+
+
+class PhoneNumberView(generics.GenericAPIView):
+    serializer_class = ibis.serializers.PhoneNumberSerializer
+
+    client = boto3.client(
+        'sns',
+        region_name=settings.AWS_REGION_NAME,
+        aws_access_key_id=settings.AWS_ACCESS_KEY,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    )
+
+    message = 'Token Ibis Verification Code: {}'
+
+    def post(self, request, *args, **kwargs):
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail="No valid values")
+
+        code = str(random.randint(100000, 999999))
+
+        request.session['ibis_phone_number'] = request.data['number']
+        request.session['ibis_phone_code'] = code
+        request.session['ibis_phone_timestamp'] = localtime().timestamp()
+
+        self.client.publish(
+            PhoneNumber=request.data['number'],
+            Message=self.message.format(code),
+        )
+
+        return response.Response({
+            'success': True,
+        })
+
+
+class PhoneCodeView(generics.GenericAPIView):
+    serializer_class = ibis.serializers.PhoneCodeSerializer
+
+    def post(self, request, *args, **kwargs):
+        assert request.session.get('ibis_phone_number')
+        assert request.session.get('ibis_phone_code')
+        assert request.session.get('ibis_phone_timestamp')
+
+        user = models.Person.objects.get(id=request.user.id)
+
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail='No valid values')
+
+        matches = request.session['ibis_phone_code'] == request.data[
+            'code'] and localtime().timestamp(
+            ) < request.session['ibis_phone_timestamp'] + timedelta(
+                hours=1).total_seconds()
+
+        other_users = list(
+            models.Person.objects.exclude(id=request.user.id).filter(
+                phone_number=request.session['ibis_phone_number'],
+                verified=True,
+            ))
+
+        user.phone_number = request.session['ibis_phone_number']
+
+        if matches and not other_users:
+            user.verified = True
+
+        user.save()
+
+        request.session['ibis_phone_matches'] = matches
+
+        return response.Response({
+            'matches':
+            matches,
+            'verified':
+            user.verified,
+            'other_users': [[
+                to_global_id('UserNode', x.id),
+                x.username,
+            ] for x in other_users],
+        })
+
+
+class PhoneConfirmView(generics.GenericAPIView):
+    serializer_class = serializers.Serializer
+
+    def post(self, request, *args, **kwargs):
+        assert request.session.get('ibis_phone_number')
+        assert request.session.get('ibis_phone_matches')
+
+        user = models.Person.objects.get(id=request.user.id)
+
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail="No valid values")
+
+        for other_user in list(
+                models.Person.objects.filter(
+                    phone_number=request.session['ibis_phone_number'])):
+            other_user.verified = False
+            other_user.save()
+
+        user.verified = True
+        user.save()
+
+        return response.Response({
+            'success': True,
         })

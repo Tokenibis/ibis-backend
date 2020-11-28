@@ -23,4 +23,12 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 
 class PaymentSerializer(serializers.Serializer):
-    orderID = serializers.CharField(read_only=True)
+    orderID = serializers.CharField(required=True)
+
+
+class PhoneNumberSerializer(serializers.Serializer):
+    number = serializers.CharField(required=True)
+
+
+class PhoneCodeSerializer(serializers.Serializer):
+    code = serializers.CharField(required=True)

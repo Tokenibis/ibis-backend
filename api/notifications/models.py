@@ -5,9 +5,10 @@ import logging
 import markdown
 import ibis.models
 
+from django.core.mail import EmailMultiAlternatives
 from graphql_relay.node.node import to_global_id
 from django.conf import settings
-from django.utils.timezone import localtime, now, timedelta
+from django.utils.timezone import localtime, timedelta
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
@@ -27,6 +28,25 @@ with open(os.path.join(DIR, 'top_email_templates/body.txt')) as fd:
 
 with open(os.path.join(DIR, 'top_email_templates/html.html')) as fd:
     top_html_template = fd.read()
+
+
+def send_email(destinations, subject, body, html, notifier):
+    msg = EmailMultiAlternatives(
+        subject,
+        body,
+        'Token Ibis<{}>'.format(settings.EMAIL_HOST_USER),
+        destinations,
+        headers={
+            'List-Unsubscribe':
+            '<mailto: {}>, <{}{}>'.format(
+                settings.UNSUBSCRIBE_EMAIL,
+                settings.API_ROOT_PATH,
+                notifier.create_unsubscribe_link(),
+            ),
+        },
+    )
+    msg.attach_alternative(html, 'text/html')
+    msg.send()
 
 
 class Notifier(models.Model):
@@ -69,16 +89,15 @@ class Notifier(models.Model):
         default=False,
     )
 
-    last_seen = models.DateTimeField(
-        default=localtime(now()).replace(
-            year=2019,
-            month=4,
-            day=5,
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        ))
+    last_seen = models.DateTimeField(default=localtime().replace(
+        year=2019,
+        month=4,
+        day=5,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    ))
 
     def __str__(self):
         return str(self.user)
@@ -146,37 +165,20 @@ class UbpNotification(Notification):
         if not adding:
             return
 
-        if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
-            if self.notifier.email_ubp and self.subject.user.user.deposit_set.filter(
-                    category=ibis.models.ExchangeCategory.objects.get(
-                        title='ubp')).count() == 1:
-                try:
-                    subject, body, html = EmailTemplateWelcome.choose(
-                    ).make_email(self, self.subject)
-                    Email.objects.create(
-                        notification=self,
-                        subject=subject,
-                        body=body,
-                        html=html,
-                        schedule=now(),
-                        force=True,
-                    )
-                except IndexError:
-                    logger.error('No email template found')
-            else:
-                try:
-                    subject, body, html = EmailTemplateUBP.choose().make_email(
-                        self, self.subject)
-                    Email.objects.create(
-                        notification=self,
-                        subject=subject,
-                        body=body,
-                        html=html,
-                        schedule=now() +
-                        timedelta(minutes=settings.EMAIL_DELAY),
-                    )
-                except IndexError:
-                    logger.error('No email template found')
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
+                subject, body, html = EmailTemplateUBP.choose().make_email(
+                    self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
 
 
 class DepositNotification(Notification):
@@ -200,7 +202,8 @@ class DepositNotification(Notification):
                     subject=subject,
                     body=body,
                     html=html,
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
                 )
         except IndexError:
             logger.error('No email template found')
@@ -227,7 +230,8 @@ class DonationNotification(Notification):
                     subject=subject,
                     body=body,
                     html=html,
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
                 )
         except IndexError:
             logger.error('No email template found')
@@ -254,7 +258,8 @@ class RewardNotification(Notification):
                     subject=subject,
                     body=body,
                     html=html,
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
                 )
         except IndexError:
             logger.error('No email template found')
@@ -309,7 +314,8 @@ class CommentNotification(Notification):
                     subject=subject,
                     body=body,
                     html=html,
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
                 )
         except IndexError:
             logger.error('No email template found')
@@ -345,7 +351,8 @@ class FollowNotification(Notification):
                     subject=subject,
                     body=body,
                     html=html,
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
                 )
         except IndexError:
             logger.error('No email template found')
@@ -395,7 +402,8 @@ class MentionNotification(Notification):
                     subject=subject,
                     body=body,
                     html=html,
-                    schedule=now() + timedelta(minutes=settings.EMAIL_DELAY),
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
                 )
         except IndexError:
             logger.error('No email template found')
@@ -421,6 +429,7 @@ class Email(models.Model):
     notification = models.ForeignKey(
         Notification,
         on_delete=models.CASCADE,
+        null=True,
     )
 
     subject = models.TextField()
@@ -500,9 +509,9 @@ class EmailTemplateWelcome(EmailTemplate):
     def clean(self):
         super()._check_keys([], ['link'])
 
-    def make_email(self, notification, deposit):
+    def make_email(self, notifier):
         return EmailTemplate._apply_top_template(
-            notification.notifier,
+            notifier,
             self.subject,
             self.body.format(link=settings.APP_ROOT_PATH, ),
         )
@@ -584,14 +593,13 @@ class EmailTemplateUBP(EmailTemplate):
 
         for x in ibis.models.Bot.objects.filter(
                 date_joined__gte=time - timedelta(days=7)):
-            feed.append(
-                'Please welcome our newest bot: [{}]({}).'.format(
-                    x,
-                    settings.APP_LINK_RESOLVER('{}:{}'.format(
-                        ibis.models.Bot.__name__,
-                        to_global_id('UserNode', x.pk),
-                    )),
-                ))
+            feed.append('Please welcome our newest bot: [{}]({}).'.format(
+                x,
+                settings.APP_LINK_RESOLVER('{}:{}'.format(
+                    ibis.models.Bot.__name__,
+                    to_global_id('UserNode', x.pk),
+                )),
+            ))
 
         if feed:
             body = '{}\n\n__This week on Token Ibis:__\n\n* {}'.format(

@@ -1300,6 +1300,7 @@ class PersonNode(UserNode):
     donation_count = graphene.Int()
     post_count = graphene.Int()
     reward_received_count = graphene.Int()
+    phone_number = graphene.String()
 
     class Meta:
         model = models.Person
@@ -1318,6 +1319,12 @@ class PersonNode(UserNode):
 
     def resolve_reward_received_count(self, info, *args, **kwargs):
         return models.Reward.objects.filter(target=self).count()
+
+    def resolve_phone_number(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.phone_number
 
 
 class PersonUpdate(Mutation):

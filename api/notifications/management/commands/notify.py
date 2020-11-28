@@ -5,7 +5,7 @@ from django.utils.timezone import now, timedelta
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 
-from notifications.models import Email
+from notifications.models import Email, send_email
 
 logger = logging.getLogger(__name__)
 
@@ -40,23 +40,13 @@ class Command(BaseCommand):
                     email.status = Email.SUCCEEDED
                 else:
                     try:
-                        msg = EmailMultiAlternatives(
+                        send_email(
+                            [email.notification.notifier.user.email],
                             email.subject,
                             email.body,
-                            'Token Ibis<{}>'.format(settings.EMAIL_HOST_USER),
-                            [email.notification.notifier.user.email],
-                            headers={
-                                'List-Unsubscribe':
-                                '<mailto: {}>, <{}{}>'.format(
-                                    settings.UNSUBSCRIBE_EMAIL,
-                                    settings.API_ROOT_PATH,
-                                    email.notification.notifier.
-                                    create_unsubscribe_link(),
-                                ),
-                            },
+                            email.html,
+                            email.notification.notifier,
                         )
-                        msg.attach_alternative(email.html, 'text/html')
-                        msg.send()
                         email.status = Email.SUCCEEDED
                     except Exception as e:
                         logger.error(

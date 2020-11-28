@@ -97,6 +97,35 @@ INSTALLED_APPS = [
 
 LANGUAGE_CODE = 'en-us'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format':
+            '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'propagate': False,
+            'level': 'INFO'
+        }
+    }
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -250,9 +279,19 @@ def APP_LINK_RESOLVER(reference=None):
     )
 
 
+API_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
+
+APP_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['app'])
+
 AVATAR_BUCKET = 'https://s3.us-east-2.amazonaws.com/app.tokenibis.org/birds/{}.jpg'
 
 AVATAR_BUCKET_LEN = 233
+
+AWS_REGION_NAME = CONF['aws']['region_name']
+
+AWS_ACCESS_KEY = CONF['aws']['access_key']
+
+AWS_SECRET_ACCESS_KEY = CONF['aws']['secret_access_key']
 
 BOT_GAS_INITIAL = 10000000
 
@@ -296,7 +335,7 @@ DISTRIBUTION_CONTROLLER_TD = 0.5
 if 'initial' in CONF['ibis']['distribution']:
     DISTRIBUTION_INITIAL = CONF['ibis']['distribution']['initial']
 
-EMAIL_HOST = CONF['email']['active']
+EMAIL_ACTIVE = CONF['email']['active']
 
 EMAIL_HOST = CONF['email']['host']
 
@@ -309,6 +348,8 @@ EMAIL_PORT = CONF['email']['port']
 EMAIL_DELAY = 1  # minutes
 
 EMAIL_USE_TLS = True
+
+FACEBOOK_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
 
 IBIS_USERNAME_ROOT = 'tokenibis'
 
@@ -333,6 +374,8 @@ if 'public_read' in CONF['ibis'] and CONF['ibis']['public_read']:
 else:
     PUBLIC_READ = False
 
+QUOTE_URL = 'https://api.forismatic.com/api/1.0/?method=getQuote&lang=en&format=jsonp&jsonp=?'
+
 REDIRECT_URL_FACEBOOK = 'https://{}/redirect/facebook/'.format(
     CONF['ibis']['endpoints']['app'])
 
@@ -346,10 +389,6 @@ REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
     CONF['ibis']['endpoints']['app'])
 
 RESERVED_USERNAMES = ['admin', 'anonymous', 'dashboard']
-
-API_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['api'])
-
-APP_ROOT_PATH = 'https://{}'.format(CONF['ibis']['endpoints']['app'])
 
 SORT_ORGANIZATION_WINDOW_ENTRY = 4
 
