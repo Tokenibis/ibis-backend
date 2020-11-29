@@ -144,6 +144,8 @@ class BaseTestCase(GraphQLTestCase):
 
     def setUp(self):
         settings.EMAIL_HOST = ''
+        settings.EMAIL_ACTIVE = True
+        settings.PUBLIC_READ = False
         if 'api.middleware.AuthenticateAllMiddleware' in settings.MIDDLEWARE:
             settings.MIDDLEWARE.remove('api.middleware.AuthenticateAllMiddleware')
 
