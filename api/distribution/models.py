@@ -3,9 +3,8 @@ import random
 from hashlib import sha256
 
 from django.db import models
-from django.db.models import Q
 from django.conf import settings
-from django.utils.timezone import datetime, localtime, timedelta
+from django.utils.timezone import datetime, localtime, timedelta, utc
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 
@@ -118,7 +117,7 @@ def get_distribution_shares(time, initial=[]):
     raw = {}
     for x in ibis.models.Person.objects.exclude(distributor__eligible=False):
         activity = x.donation_set.filter(
-                created__lt=step).order_by('created').last()
+            created__lt=step).order_by('created').last()
         last = to_step_start(
             localtime(activity.created) if activity else to_step_start(
                 x.date_joined, offset=-1))
@@ -140,12 +139,22 @@ def to_step_start(time, offset=0):
     increments or decrements the provided number of weeks
     """
 
+    # will be 0, -1, or 1 hours off of the midnight, depending on tz
+    raw = localtime(
+        datetime.combine(
+            time.date() - timedelta(
+                days=(
+                    (time.weekday() - DAYS.index(settings.DISTRIBUTION_DAY)) %
+                    len(DAYS)) - offset * len(DAYS)),
+            datetime.min.time(),
+            tzinfo=time.tzinfo,
+        ).astimezone(utc))
+
+    # just round to the correct time
     return datetime.combine(
-        time.date() - timedelta(
-            days=((time.weekday() - DAYS.index(settings.DISTRIBUTION_DAY)) %
-                  len(DAYS)) - offset * len(DAYS)),
+        (raw + timedelta(hours=12)).date(),
         datetime.min.time(),
-        tzinfo=time.tzinfo,
+        tzinfo=raw.tzinfo,
     )
 
 

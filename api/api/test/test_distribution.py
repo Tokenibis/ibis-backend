@@ -91,9 +91,14 @@ class DistributionTestCase(BaseTestCase):
                 for i in range(-100, 100)
             ]
             for i, x in enumerate(times[:-1]):
-                assert x.weekday() == 4  # Friday
-                assert x < times[i + 1]
-                assert x.date() < times[i + 1].date()
+                local = localtime(x)
+                assert local.weekday() == 4  # Friday
+                assert local.hour == 0
+                assert local.minute == 0
+                assert local.second == 0
+                assert local.microsecond == 0
+                assert local < times[i + 1]
+                assert local.date() < times[i + 1].date()
             assert distribution.models.to_step_start(
                 localtime()) <= localtime()
             assert distribution.models.to_step_start(
@@ -248,8 +253,13 @@ class DistributionTestCase(BaseTestCase):
             goals = [x.amount for x in distribution.models.Goal.objects.all()]
 
             # make sure goal events are properly spaced and contiguous
-            assert all((steps[i + 1] - steps[i]).days == 7
-                       for i in range(len(steps) - 1))
+            for step in steps:
+                local = localtime(step)
+                assert local.weekday() == 4  # Friday
+                assert local.hour == 0
+                assert local.minute == 0
+                assert local.second == 0
+                assert local.microsecond == 0
 
             # list of (control amount, adjusted donation amount) for each step
             def _none_zero(x):
