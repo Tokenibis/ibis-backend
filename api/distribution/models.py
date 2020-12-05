@@ -81,7 +81,9 @@ def get_control_history(time):
 
     """
 
-    goals = list(Goal.objects.order_by('created'))
+    goals = list(
+        Goal.objects.filter(
+            created__lt=to_step_start(time)).order_by('created'))
 
     return [
         [
