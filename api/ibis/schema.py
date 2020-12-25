@@ -24,6 +24,34 @@ from api.utils import get_submodel
 AVATAR_SIZE = (528, 528)
 
 
+def _store_image(upload, directory):
+    tmp = os.path.join(
+        settings.MEDIA_ROOT,
+        default_storage.save(
+            os.path.join(directory, 'tmp'),
+            ContentFile(upload.read()),
+        ),
+    )
+    try:
+        im = Image.open(tmp)
+        path = '{}/{}.png'.format(
+            tmp.rsplit('/', 1)[0],
+            int(time.time()),
+        )
+        im.save(path)
+
+        url = '{}{}{}'.format(
+            settings.API_ROOT_PATH,
+            settings.MEDIA_URL,
+            '/'.join(path.rsplit('/')[-3:]),
+        )
+    except Exception as e:
+        raise e
+    finally:
+        os.remove(tmp)
+        return url
+
+
 class UserNodeInterface(relay.Node):
     @staticmethod
     def to_global_id(type, id):
@@ -804,7 +832,7 @@ class NewsCreate(Mutation):
         user = graphene.ID(required=True)
         description = graphene.String(required=True)
         title = graphene.String(required=True)
-        image = graphene.String(required=True)
+        image = Upload()
         score = graphene.Int()
         link = graphene.String()
 
@@ -816,7 +844,7 @@ class NewsCreate(Mutation):
             user,
             description,
             title,
-            image,
+            image='',
             link='',
             score=0,
     ):
@@ -831,12 +859,18 @@ class NewsCreate(Mutation):
             description=description,
             title=title,
             link=link,
-            image=image,
+            image='',
             score=score,
         )
 
         if link:
             news.link = link
+
+        if image:
+            news.image = _store_image(
+                image,
+                os.path.join('news', to_global_id('EntryNode', news.id)),
+            )
 
         news.save()
         return NewsCreate(news=news)
@@ -849,7 +883,7 @@ class NewsUpdate(Mutation):
         description = graphene.String()
         title = graphene.String()
         link = graphene.String()
-        image = graphene.String()
+        image = Upload()
         score = graphene.Int()
 
     news = graphene.Field(NewsNode)
@@ -883,7 +917,10 @@ class NewsUpdate(Mutation):
         if link:
             news.link = link
         if image:
-            news.image = image
+            news.image = _store_image(
+                image,
+                os.path.join('news', to_global_id('EntryNode', id)),
+            )
         if type(score) == int:
             news.score = score
 
@@ -931,11 +968,12 @@ class EventCreate(Mutation):
         user = graphene.ID(required=True)
         description = graphene.String(required=True)
         title = graphene.String(required=True)
-        image = graphene.String(required=True)
         date = graphene.String(required=True)
         duration = graphene.Int(required=True)
+        image = Upload()
         address = graphene.String()
         link = graphene.String()
+        virtual = graphene.Boolean()
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -946,11 +984,12 @@ class EventCreate(Mutation):
             user,
             description,
             title,
-            image,
             date,
             duration,
+            image='',
             address='',
             link='',
+            virtual=False,
             score=0,
     ):
         if not (info.context.user.is_superuser or
@@ -963,9 +1002,10 @@ class EventCreate(Mutation):
             user=models.Organization.objects.get(pk=from_global_id(user)[1]),
             description=description,
             title=title,
-            image=image,
+            image='',
             date=dateutil.parser.parse(date),
             duration=duration,
+            virtual=virtual,
             score=score,
         )
 
@@ -973,6 +1013,12 @@ class EventCreate(Mutation):
             event.address = address
         if link:
             event.link = link
+
+        if image:
+            event.image = _store_image(
+                image,
+                os.path.join('event', to_global_id('EntryNode', event.id)),
+            )
 
         event.save()
         return EventCreate(event=event)
@@ -985,10 +1031,11 @@ class EventUpdate(Mutation):
         description = graphene.String()
         title = graphene.String()
         link = graphene.String()
-        image = graphene.String()
+        image = Upload()
         date = graphene.String()
         duration = graphene.Int()
         address = graphene.String()
+        virtual = graphene.Boolean()
         score = graphene.Int()
 
     event = graphene.Field(EventNode)
@@ -1005,6 +1052,7 @@ class EventUpdate(Mutation):
             date='',
             duration=None,
             address='',
+            virtual=None,
             score=None,
     ):
         if not (info.context.user.is_superuser or
@@ -1025,13 +1073,18 @@ class EventUpdate(Mutation):
         if link:
             event.link = link
         if image:
-            event.image = image
+            event.image = _store_image(
+                image,
+                os.path.join('event', to_global_id('EntryNode', id)),
+            )
         if date:
             event.date = date
         if type(duration) == int:
             event.duration = duration
         if address:
             event.address = address
+        if type(virtual) == bool:
+            event.virtual = virtual
         if type(score) == int:
             event.score = score
 
@@ -1261,31 +1314,10 @@ class OrganizationUpdate(Mutation):
                 os.remove(tmp)
 
         if banner:
-            tmp = os.path.join(
-                settings.MEDIA_ROOT,
-                default_storage.save(
-                    'banner/{}/tmp'.format(to_global_id('UserNode', id)),
-                    ContentFile(banner.read()),
-                ),
+            organization.banner = _store_image(
+                avatar,
+                os.path.join('banner', to_global_id('UserNode', id)),
             )
-            try:
-                im = Image.open(tmp)
-                path = '{}/{}.png'.format(
-                    tmp.rsplit('/', 1)[0],
-                    int(time.time()),
-                )
-                im.save(path)
-
-                organization.banner = '{}{}{}'.format(
-                    settings.API_ROOT_PATH,
-                    settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-3:]),
-                )
-                organization.save()
-            except Exception as e:
-                raise e
-            finally:
-                os.remove(tmp)
 
         organization.save()
         return OrganizationUpdate(organization=organization)

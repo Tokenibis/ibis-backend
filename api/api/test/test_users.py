@@ -48,7 +48,6 @@ class PermissionTestCase(BaseTestCase):
                 variables={
                     'user': user.gid,
                     'title': 'This is a title',
-                    'image': 'This is an image',
                     'link': 'This is a link',
                     'description': 'This is a description',
                 },
@@ -67,7 +66,6 @@ class PermissionTestCase(BaseTestCase):
                     ),
                     'user': user.gid,
                     'title': 'This is a different title',
-                    'image': 'This is a different image',
                     'link': 'This is a different link',
                     'description': 'This is a different description',
                 },
@@ -82,10 +80,10 @@ class PermissionTestCase(BaseTestCase):
                 variables={
                     'user': user.gid,
                     'title': 'This is a title',
-                    'image': 'This is an image',
                     'link': 'This is a link',
                     'description': 'This is a description',
                     'address': 'This is an address',
+                    'virtual': True,
                     'date': str(now()),
                     'duration': 1,
                 },
@@ -107,14 +105,14 @@ class PermissionTestCase(BaseTestCase):
                     user.gid,
                     'title':
                     'This is a different title',
-                    'image':
-                    'This is a different image',
                     'link':
                     'This is a different link',
                     'description':
                     'This is a different description',
                     'address':
                     'This is a different address',
+                    'virtual':
+                    False,
                     'date':
                     str(now()),
                     'duration':

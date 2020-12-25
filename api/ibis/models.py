@@ -371,6 +371,7 @@ class Event(Entry, Rsvpable):
     date = models.DateTimeField()
     duration = models.PositiveIntegerField()
     link = models.TextField(blank=True)
+    virtual = models.BooleanField(default=False)
 
     def __str__(self):
         return '{} ({})'.format(self.title, self.id)

@@ -45,13 +45,11 @@ class NotificationTestCase(BaseTestCase):
                 variables['user'] = self.me_organization.gid
                 variables['title'] = 'title'
                 variables['link'] = 'link'
-                variables['image'] = 'image'
             elif op_name == 'EventCreate':
                 variables['description'] = 'description'
                 variables['user'] = self.me_organization.gid
                 variables['title'] = 'title'
                 variables['link'] = 'link'
-                variables['image'] = 'image'
                 variables['date'] = str(now())
                 variables['duration'] = 60
                 variables['address'] = 'address'
