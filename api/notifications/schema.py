@@ -28,6 +28,7 @@ class NotifierNode(DjangoObjectType):
 
     last_seen = graphene.String()
     unseen_count = graphene.Int()
+    tutorial = graphene.Boolean()
 
     class Meta:
         model = models.Notifier
@@ -100,6 +101,12 @@ class NotifierNode(DjangoObjectType):
             raise GraphQLError('You do not have sufficient permission')
         return self.unseen_count()
 
+    def resolve_tutorial(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.tutorial
+
     @classmethod
     def get_queryset(cls, queryset, info):
         if info.context.user.is_superuser:
@@ -123,6 +130,7 @@ class NotifierUpdate(Mutation):
         email_like = graphene.Boolean()
         email_feed = graphene.String()
         last_seen = graphene.String()
+        tutorial = graphene.Boolean()
 
     notifier = graphene.Field(NotifierNode)
 
@@ -140,6 +148,7 @@ class NotifierUpdate(Mutation):
             email_like=None,
             email_feed=None,
             last_seen='',
+            tutorial=None,
     ):
 
         notifier = models.Notifier.objects.get(pk=from_global_id(id)[1])
@@ -168,6 +177,8 @@ class NotifierUpdate(Mutation):
             notifier.email_feed = email_feed
         if last_seen:
             notifier.last_seen = last_seen
+        if type(tutorial) == bool:
+            organization.tutorial = tutorial
 
         notifier.save()
         return NotifierUpdate(notifier=notifier)
