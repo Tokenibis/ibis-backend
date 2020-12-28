@@ -162,6 +162,22 @@ class UserFilter(django_filters.FilterSet):
                 Q(name__icontains=value) | Q(username__icontains=value))
 
 
+class PersonFilter(UserFilter):
+    verified = django_filters.BooleanFilter(method='filter_verified')
+    verified_original = django_filters.BooleanFilter(
+        method='filter_verified_original')
+
+    class Meta:
+        model = models.Person
+        fields = []
+
+    def filter_verified(self, qs, name, value):
+        return qs.filter(verified=value)
+
+    def filter_verified_original(self, qs, name, value):
+        return qs.filter(verified_original=value)
+
+
 class DepositFilter(django_filters.FilterSet):
     user = django_filters.CharFilter(method='filter_user')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
@@ -1988,7 +2004,7 @@ class Query(object):
     )
     all_people = DjangoFilterConnectionField(
         PersonNode,
-        filterset_class=UserFilter,
+        filterset_class=PersonFilter,
     )
     all_bots = DjangoFilterConnectionField(
         BotNode,

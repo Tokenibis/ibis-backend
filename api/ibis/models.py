@@ -161,6 +161,7 @@ class Person(User):
 
     privacy_donation = models.BooleanField(default=False)
     verified = models.BooleanField(default=False)
+    verified_original = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=15, blank=True)
 
     def donated(self):

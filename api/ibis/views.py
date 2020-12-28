@@ -293,6 +293,7 @@ class PhoneCodeView(generics.GenericAPIView):
 
         if matches and not other_users:
             user.verified = True
+            user.verified_original = True
 
         user.save()
 
@@ -327,6 +328,7 @@ class PhoneConfirmView(generics.GenericAPIView):
                 models.Person.objects.filter(
                     phone_number=request.session['ibis_phone_number'])):
             other_user.verified = False
+            other_user.verified_original = False
             other_user.save()
 
         user.verified = True
