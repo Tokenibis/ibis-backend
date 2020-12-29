@@ -1,3 +1,4 @@
+import unicodedata
 import regex as re
 
 from django.db import models
@@ -15,6 +16,13 @@ MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 15
 
 
+def _normalize_username(value):
+    return unicodedata.normalize('NFD', value).encode(
+        'ascii',
+        'ignore',
+    ).decode()
+
+
 def username_validator(value):
     if type(value) != str:
         raise ValidationError('{} is not a string'.format(value))
@@ -22,7 +30,8 @@ def username_validator(value):
     if len(value) < MIN_USERNAME_LEN or len(value) > MAX_USERNAME_LEN:
         raise ValidationError('{} is not 3-15 characters long'.format(value))
 
-    if not (value.islower() and value.replace('_', '').isalnum()):
+    if not (value.islower() and value.replace('_', '').isalnum()
+            and value == _normalize_username(value)):
         raise ValidationError(
             '{} has non lower alphanumeric or \'_\' characters'.format(value))
 
@@ -31,9 +40,10 @@ def username_validator(value):
 
 
 def generate_valid_username(first_name, last_name):
-    base = re.sub(
-        r'\W+', '', '{} {}'.format(first_name, last_name).strip().replace(
-            ' ', '_')).lower()[:MAX_USERNAME_LEN]
+    base = _normalize_username(
+        re.sub(r'\W+',
+               '', '{} {}'.format(first_name, last_name).strip().replace(
+                   ' ', '_')).lower()[:MAX_USERNAME_LEN])
 
     if len(base) < MIN_USERNAME_LEN:
         base = '___'
