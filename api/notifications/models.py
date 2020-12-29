@@ -99,7 +99,7 @@ class Notifier(models.Model):
         microsecond=0,
     ))
 
-    tutorial = models.BooleanField(default=True)
+    tutorial = models.BooleanField(default=False)
 
     def __str__(self):
         return str(self.user)
