@@ -178,7 +178,7 @@ class NotifierUpdate(Mutation):
         if last_seen:
             notifier.last_seen = last_seen
         if type(tutorial) == bool:
-            organization.tutorial = tutorial
+            notifier.tutorial = tutorial
 
         notifier.save()
         return NotifierUpdate(notifier=notifier)
