@@ -84,6 +84,10 @@ class Notifier(models.Model):
         verbose_name='deposit',
         default=True,
     )
+    email_withdrawal = models.BooleanField(
+        verbose_name='withdrawal',
+        default=True,
+    )
     email_like = models.BooleanField(
         verbose_name='like',
         default=False,
@@ -199,6 +203,34 @@ class DepositNotification(Notification):
             if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
                 subject, body, html = EmailTemplateDeposit.choose().make_email(
                     self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class WithdrawalNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Withdrawal,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_withdrawal:
+                subject, body, html = EmailTemplateWithdrawal.choose(
+                ).make_email(self, self.subject)
                 Email.objects.create(
                     notification=self,
                     subject=subject,
@@ -542,6 +574,21 @@ class EmailTemplateDeposit(EmailTemplate):
             self.subject,
             self.body.format(
                 amount='${:.2f}'.format(deposit.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateWithdrawal(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['amount', 'link'])
+
+    def make_email(self, notification, withdrawal):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                amount='${:.2f}'.format(withdrawal.amount / 100),
                 link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )

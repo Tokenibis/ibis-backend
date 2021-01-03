@@ -23,6 +23,7 @@ class NotifierNode(DjangoObjectType):
     email_mention = graphene.Boolean()
     email_ubp = graphene.Boolean()
     email_deposit = graphene.Boolean()
+    email_withdrawal = graphene.Boolean()
     email_like = graphene.Boolean()
     email_feed = graphene.String()
 
@@ -77,6 +78,12 @@ class NotifierNode(DjangoObjectType):
             raise GraphQLError('You do not have sufficient permission')
         return self.email_deposit
 
+    def resolve_email_withdrawal(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_withdrawal
+
     def resolve_email_like(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
                 or info.context.user.id == self.user.id):
@@ -124,6 +131,7 @@ class NotifierUpdate(Mutation):
         email_reward = graphene.Boolean()
         email_donation = graphene.Boolean()
         email_deposit = graphene.Boolean()
+        email_withdrawal = graphene.Boolean()
         email_ubp = graphene.Boolean()
         email_comment = graphene.Boolean()
         email_mention = graphene.Boolean()
@@ -142,6 +150,7 @@ class NotifierUpdate(Mutation):
             email_reward=None,
             email_donation=None,
             email_deposit=None,
+            email_withdrawal=None,
             email_ubp=None,
             email_comment=None,
             email_mention=None,
@@ -165,6 +174,8 @@ class NotifierUpdate(Mutation):
             notifier.email_donation = email_donation
         if type(email_deposit) == bool:
             notifier.email_deposit = email_deposit
+        if type(email_withdrawal) == bool:
+            notifier.email_withdrawal = email_withdrawal
         if type(email_ubp) == bool:
             notifier.email_ubp = email_ubp
         if type(email_comment) == bool:

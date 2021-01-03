@@ -70,6 +70,25 @@ def handleDepositCreate(sender, instance, created, **kwargs):
         )
 
 
+@receiver(post_save, sender=ibis.models.Withdrawal)
+def handleWithdrawalCreate(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    description = 'Token Ibis has processed a withdrawal of ${:.2f}'.format(
+        instance.amount / 100)
+
+    models.WithdrawalNotification.objects.create(
+        notifier=instance.user.notifier,
+        reference='{}:{}'.format(
+            ibis.models.Withdrawal.__name__,
+            to_global_id('WithdrawalNode', instance.pk),
+        ),
+        description=description,
+        subject=instance,
+        created=instance.created,
+    )
+
 @receiver(post_save, sender=ibis.models.Donation)
 def handleDonationCreate(sender, instance, created, **kwargs):
     if not created:

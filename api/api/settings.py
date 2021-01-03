@@ -268,6 +268,7 @@ def APP_LINK_RESOLVER(reference=None):
         'Reward': '/Reward/Reward?id={}',
         'Activity': '/Activity/Activity?id={}',
         'Deposit': '/_/Deposit?id={}',
+        'Withdrawal': '/_/Withdrawal?id={}',
     }
 
     if not reference:

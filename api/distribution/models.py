@@ -193,6 +193,9 @@ class Distributor(models.Model):
                 created=time,
             )
 
+    def __str__(self):
+        return str(self.person)
+
     def distribute_initial_safe(self):
         """Distribute the initial UBP payment to a the new person. The amount
         is calculated as the maximum possible payout from the previous

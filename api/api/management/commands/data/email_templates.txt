@@ -2,7 +2,7 @@
 
 You wonderfully thoughtful and warm-hearted human!
 
-Just by creating a profile on our app, which you can always reach [here](link), you have taken your first big step in democratizing social impact.
+Just by creating a profile on our app, which you can always reach [here]({link}), you have taken your first big step in democratizing social impact.
 
 ... What exactly does that mean?
 
@@ -26,91 +26,97 @@ If you have made it to this part of the Welcome! email, congratulations! You are
 
 Oooh, looks like you’re turning heads! Someone has followed you on Token Ibis!
 
-See what they've been up to [here](link).
+See what they've been up to [here]({link}).
 
 ---
 
 Hearken! Someone just followed you on Token Ibis!
 
-See what they've been up to [here](link).
+See what they've been up to [here]({link}).
 
 ***Deposit:New Notification***
 
 My, what a responsible fellow you are. Thank you for depositing {amount} for future philanthropic purposes.
 
-Head over [here](link) to start using it.
+Head over [here]({link}) to start using it.
 
 ---
 
 You’re a treasure! Thank you for depositing {amount} for future philanthropic purposes.
 
-Head over [here](link) to start using it.
+Head over [here]({link}) to start using it.
 
 ---
 
 You are basically a perfect human specimen (not that we’re experimenting on you...) for depositing {amount} for future philanthropic purposes! You go!
 
-Head over [here](link) to start using it.
+Head over [here]({link}) to start using it.
 
 ---
 
 I think I’m in love with you... for depositing {amount} for future philanthropic purposes!
 
-Head over [here](link) to start using it.
+Head over [here]({link}) to start using it.
+
+***Deposit:New Notification***
+
+Congratulations on accumulating more donations! We've processed a withdrawal of {amount}. You can see this and all previous withdrawals [here]({link}).
+
+Please allow about 5-7 business days for the check to arrive. If you run into any issues, then please let us know at __info@tokenibis.org__. Thanks!
 
 ***UBP:New Notification***
 
-Heads up, lucky duck! You’ve received your weekly gift of {amount}! Check it out [here](link).
+Heads up, lucky duck! You’ve received your weekly gift of {amount}! Check it out [here]({link}).
 
 ---
-Good golly, would ya look at that! You’ve got another weekly gift of {amount}! Head over [here](link) to start using it.
-
----
-
-Bless my stars, it can’t be... but wait, it is! You’ve received your weekly gift of {amount}! Head over [here](link) to start using it.
+Good golly, would ya look at that! You’ve got another weekly gift of {amount}! Head over [here]({link}) to start using it.
 
 ---
 
-Eureka! You’ve received your weekly gift of {amount}!  Head over [here](link) to start using it.
+Bless my stars, it can’t be... but wait, it is! You’ve received your weekly gift of {amount}! Head over [here]({link}) to start using it.
 
 ---
 
-Your account was just sitting quietly when, lo and behold, you received {amount} to donate on Token Ibis! Check it out [here](link).
+Eureka! You’ve received your weekly gift of {amount}!  Head over [here]({link}) to start using it.
 
 ---
 
-Holy guacamole... you got {amount} this week to donate on Token Ibis! Check it out [here](link).
+Your account was just sitting quietly when, lo and behold, you received {amount} to donate on Token Ibis! Check it out [here]({link}).
 
 ---
 
-Well, fancy that! You have another {amount} to donate on Token Ibis! Check it out [here](link).
+Holy guacamole... you got {amount} this week to donate on Token Ibis! Check it out [here]({link}).
+
+---
+
+Well, fancy that! You have another {amount} to donate on Token Ibis! Check it out [here]({link}).
 
 ***Donation:New Notification***
 
-You have a new donation from {sender}! Take a look [here](link).
+You have a new donation from {sender}! Take a look [here]({link}).
 
 ***Reward:New Notification***
 
-You've earned a reward from {sender}! Take a look [here](link).
+You've earned a reward from {sender}! Take a look [here]({link}).
 
 ***Comment:New Notification***
 
 Looks like your words have inspired some deliberation and conversation... Someone has commented on your {entry_type} on Token Ibis!
 
-Check it out [here](link).
+Check it out [here]({link}).
 
 ---
 
 I do declare, you’ve sparked a lively conversation!
 
-Click [here](link) to see who has commented on your {entry_type}.
+Click [here]({link}) to see who has commented on your {entry_type}.
 
 ---
 
-Talking to you is a treat! Check out what someone commented on your {entry_type} by heading [here](link).
+Talking to you is a treat! Check out what someone commented on your {entry_type} by heading [here]({link}).
 
 ***Mention:New Notification***
 
 Someone mentioned you in their {entry_type}!
 
-Check it out [here](link).
+Check it out [here]({link}).

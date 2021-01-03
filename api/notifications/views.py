@@ -52,7 +52,7 @@ class OrganizationSettingsView(SettingsView):
         'email_donation',
         'email_comment',
         'email_mention',
-        'email_deposit',
+        'email_withdrawal',
     )
 
 
