@@ -62,7 +62,6 @@ class Command(BaseCommand):
                     'EmailTemplate{}'.format(template_type)).objects.create(
                         subject=template['subject'],
                         body=template['body'],
-                        html=template['html'],
                     )
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
