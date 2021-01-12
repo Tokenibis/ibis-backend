@@ -127,6 +127,8 @@ class BaseTestCase(GraphQLTestCase):
         'RsvpDelete',
         'Settings',
         'SideMenu',
+        'Tutorial',
+        'TutorialUpdate',
         'UserList',
         'WithdrawalList',
     ]

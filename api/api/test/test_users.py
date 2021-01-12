@@ -720,6 +720,31 @@ class PermissionTestCase(BaseTestCase):
         success['ActivityUpdate'] = 'errors' not in result and result['data'][
             'updateActivity']['activity']['id']
 
+        result = json.loads(
+            self.query(
+                self.gql['Tutorial'],
+                op_name='Tutorial',
+                variables={
+                    'id': user.gid,
+                },
+            ).content)
+        success['Tutorial'] = 'errors' not in result and bool(
+            result['data']['notifier']) and bool(
+                result['data']['notifier']['id']) and len(
+                    result['data']['allOrganizations']['edges']) == 1
+
+        result = json.loads(
+            self.query(
+                self.gql['TutorialUpdate'],
+                op_name='TutorialUpdate',
+                variables={
+                    'id': user.gid,
+                    'tutorial': True,
+                },
+            ).content)
+        success['TutorialUpdate'] = 'errors' not in result and result['data'][
+            'updateNotifier']['notifier']['id']
+
         return success
 
     def run_privacy(self, person):
@@ -868,6 +893,8 @@ class PermissionTestCase(BaseTestCase):
             'RsvpDelete': False,
             'Settings': False,
             'SideMenu': True,
+            'Tutorial': False,
+            'TutorialUpdate': False,
             'Reward': True,
             'RewardList': True,
         }
