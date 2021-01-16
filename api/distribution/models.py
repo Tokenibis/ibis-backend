@@ -99,10 +99,12 @@ def get_control_history(time):
                         created__lt=to_step_start(x.created, offset=1))),
                 -sum(  # sum of non-UBP deposits
                     x.amount for x in ibis.models.Deposit.objects.exclude(
-                        category=ibis.models.ExchangeCategory.
-                        objects.get(title=settings.IBIS_CATEGORY_UBP)).filter(
-                            created__gte=to_step_start(x.created),
-                            created__lt=to_step_start(x.created, offset=1))),
+                        category=ibis.models.ExchangeCategory.objects.get(
+                            title=settings.IBIS_CATEGORY_UBP)).filter(
+                                created__gte=to_step_start(x.created),
+                                created__lt=to_step_start(x.created, offset=1))
+                    if ibis.models.Person.objects.filter(
+                        id=x.user.id).exists()),
             ]),
         ] for x in goals
     ]
