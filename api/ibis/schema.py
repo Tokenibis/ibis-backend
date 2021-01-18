@@ -1331,7 +1331,7 @@ class OrganizationUpdate(Mutation):
 
         if banner:
             organization.banner = _store_image(
-                avatar,
+                banner,
                 os.path.join('banner', to_global_id('UserNode', id)),
             )
 
