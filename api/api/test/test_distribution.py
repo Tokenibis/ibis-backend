@@ -283,15 +283,16 @@ class DistributionTestCase(BaseTestCase):
                         ).aggregate(Sum('amount'))['amount__sum']),
                     -_none_zero(
                         ibis.models.Reward.objects.filter(
-                                created__gte=x,
-                                created__lt=x + timedelta(days=7),
-                            ).aggregate(Sum('amount'))['amount__sum']),
+                            created__gte=x,
+                            created__lt=x + timedelta(days=7),
+                        ).aggregate(Sum('amount'))['amount__sum']),
                     -_none_zero(
-                        ibis.models.Deposit.objects.exclude(
+                        d.amount for d in ibis.models.Deposit.objects.exclude(
                             category=UBP_CATEGORY).filter(
                                 created__gte=x,
                                 created__lt=x + timedelta(days=7),
-                            ).aggregate(Sum('amount'))['amount__sum']),
+                            ) if ibis.models.Person.objects.filter(
+                                id=d.user.id).exists()),
                 ]) for x in steps
             ]
 
