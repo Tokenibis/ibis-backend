@@ -80,10 +80,6 @@ class Notifier(models.Model):
         verbose_name='mention',
         default=True,
     )
-    email_ubp = models.BooleanField(
-        verbose_name='ubp',
-        default=True,
-    )
     email_deposit = models.BooleanField(
         verbose_name='deposit',
         default=True,
