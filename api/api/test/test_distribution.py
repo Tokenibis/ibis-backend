@@ -286,7 +286,7 @@ class DistributionTestCase(BaseTestCase):
                             created__gte=x,
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
-                    -_none_zero(
+                    -sum(
                         d.amount for d in ibis.models.Deposit.objects.exclude(
                             category=UBP_CATEGORY).filter(
                                 created__gte=x,

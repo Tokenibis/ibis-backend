@@ -6,7 +6,7 @@ import dateutil.parser
 import ibis.models as models
 
 from PIL import Image
-from django.db.models import Q, Count, Value
+from django.db.models import Q, Count, Value, Subquery, OuterRef
 from django.db.models.functions import Concat
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -90,6 +90,13 @@ class UserOrderingFilter(django_filters.OrderingFilter):
                     qs = qs.annotate(
                         follower_count=Count('follower')).order_by(v)
                     value.remove(v)
+            for v in ['messaged_last', '-messaged_last']:
+                if v in value:
+                    try:
+                        qs = qs.order_by(v)
+                    except FieldError:
+                        raise GraphQLError('You do not have sufficient permission')
+                        value.remove(v)
 
         return super(UserOrderingFilter, self).filter(qs, value)
 
@@ -101,6 +108,7 @@ class UserFilter(django_filters.FilterSet):
     like_for = django_filters.CharFilter(method='filter_like_for')
     rsvp_for = django_filters.CharFilter(method='filter_rsvp_for')
     mention_in = django_filters.CharFilter(method='filter_mention_in')
+    messaged_with = django_filters.CharFilter(method='filter_messaged_with')
     order_by = UserOrderingFilter(
         fields=(
             ('score', 'score'),
@@ -108,6 +116,7 @@ class UserFilter(django_filters.FilterSet):
             ('follower_count', 'follower_count'),
             ('first_name', 'first_name'),
             ('last_name', 'last_name'),
+            ('messaged_last', 'messaged_last'),
         ))
     search = django_filters.CharFilter(method='filter_search')
 
@@ -155,6 +164,18 @@ class UserFilter(django_filters.FilterSet):
     def filter_mention_in(self, qs, name, value):
         entry_obj = models.Entry.objects.get(pk=from_global_id(value)[1])
         return qs.filter(id__in=entry_obj.mention.all())
+
+    def filter_messaged_with(self, qs, name, value):
+        user_obj = models.User.objects.get(pk=from_global_id(value)[1])
+        return qs.filter(
+            Q(id__in=user_obj.message_sent.values('target'))
+            | Q(id__in=user_obj.message_received.values('user'))).annotate(
+                messaged_last=Subquery(
+                    models.Message.objects.filter(
+                        Q(user=OuterRef('id'), target=user_obj)
+                        | Q(user=user_obj, target=OuterRef('id'))).order_by(
+                            '-created').values('created')[:1])).order_by(
+                                '-messaged_last')
 
     def filter_search(self, qs, name, value):
         return qs.annotate(
@@ -445,6 +466,16 @@ class CommentFilter(django_filters.FilterSet):
                 or self.request.user.id == int(from_global_id(value)[1])):
             raise GraphQLError('You do not have sufficient permission')
         return qs.filter(scratch=value)
+
+
+class MessageFilter(django_filters.FilterSet):
+    with_user = django_filters.CharFilter(method='filter_with_user')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+
+    def filter_with_user(self, qs, name, value):
+        return qs.filter(
+            Q(user_id=from_global_id(value)[1])
+            | Q(target_id=from_global_id(value)[1]))
 
 
 # --- Organization Category ---------------------------------------------------- #
@@ -1131,6 +1162,10 @@ class UserNode(GeneralUserNode):
     event_rsvp_count = graphene.Int()
     scratch = graphene.String()
     user_type = graphene.String()
+    messages = DjangoFilterConnectionField(
+        lambda: MessageNode,
+        filterset_class=MessageFilter,
+    )
 
     class Meta:
         model = models.User
@@ -1175,6 +1210,10 @@ class UserNode(GeneralUserNode):
 
     def resolve_user_type(self, *args, **kwargs):
         return get_submodel(self).__name__
+
+    def resolve_messages(self, *args, **kwargs):
+        return models.Message.objects.filter(
+            Q(user=self.id) | Q(target=self.id))
 
     @classmethod
     def get_queryset(cls, queryset, info, hide_inactive=True):
@@ -1832,6 +1871,49 @@ class CommentCreate(Mutation):
         return CommentCreate(comment=comment)
 
 
+# --- Message --------------------------------------------------------------- #
+
+
+class MessageNode(DjangoObjectType):
+    class Meta:
+        model = models.Message
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            Q(user=info.context.user) | Q(target=info.context.user))
+
+
+class MessageCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+        description = graphene.String(required=True)
+
+    message = graphene.Field(MessageNode)
+
+    def mutate(self, info, user, target, description):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == int(from_global_id(user)[1])):
+            raise GraphQLError('You do not have sufficient permission')
+
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.User.objects.get(pk=from_global_id(target)[1])
+
+        message = models.Message.objects.create(
+            user=user_obj,
+            target=target_obj,
+            description=description,
+        )
+
+        return MessageCreate(message=message)
+
+
 # --- Follow ---------------------------------------------------------------- #
 
 
@@ -1994,6 +2076,7 @@ class Query(object):
     post = EntryNodeInterface.Field(PostNode)
     activity = EntryNodeInterface.Field(ActivityNode)
     comment = EntryNodeInterface.Field(CommentNode)
+    message = EntryNodeInterface.Field(MessageNode)
 
     all_organization_categories = DjangoFilterConnectionField(
         OrganizationCategoryNode)
@@ -2050,6 +2133,10 @@ class Query(object):
         CommentNode,
         filterset_class=CommentFilter,
     )
+    all_messages = DjangoFilterConnectionField(
+        MessageNode,
+        filterset_class=MessageFilter,
+    )
 
 
 class Mutation(graphene.ObjectType):
@@ -2061,6 +2148,7 @@ class Mutation(graphene.ObjectType):
     create_post = PostCreate.Field()
     create_activity = ActivityCreate.Field()
     create_comment = CommentCreate.Field()
+    create_message = MessageCreate.Field()
     create_follow = FollowCreate.Field()
     create_like = LikeCreate.Field()
     create_bookmark = BookmarkCreate.Field()

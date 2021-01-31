@@ -56,6 +56,10 @@ class Notifier(models.Model):
         primary_key=True,
     )
 
+    email_message = models.BooleanField(
+        verbose_name='message',
+        default=True,
+    )
     email_follow = models.BooleanField(
         verbose_name='follow',
         default=True,
@@ -157,6 +161,34 @@ class Notification(TimeStampedModel):
         if STATE['LOADING_DATA']:
             self.clicked = True
         super().save(*args, **kwargs)
+
+
+class MessageNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Message,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_message:
+                subject, body, html = EmailTemplateMessage.choose(
+                ).make_email(self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
 
 
 class UbpNotification(Notification):
@@ -548,6 +580,21 @@ class EmailTemplateWelcome(EmailTemplate):
             notifier,
             self.subject,
             self.body.format(link=settings.APP_ROOT_PATH, ),
+        )
+
+
+class EmailTemplateMessage(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['sender', 'link'])
+
+    def make_email(self, notification, message):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                sender=str(message.user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
         )
 
 

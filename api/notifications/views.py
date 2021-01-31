@@ -15,6 +15,7 @@ class SettingsView(UpdateView):
     model = Notifier
     template_name = 'settings.html'
     fields = (
+        'email_message',
         'email_follow',
         'email_reward',
         'email_comment',
@@ -48,6 +49,7 @@ class SettingsView(UpdateView):
 
 class OrganizationSettingsView(SettingsView):
     fields = (
+        'email_message',
         'email_follow',
         'email_donation',
         'email_comment',

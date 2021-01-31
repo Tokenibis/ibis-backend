@@ -111,6 +111,7 @@ class Model:
         self.posts = []
         self.activities = []
         self.comments = []
+        self.messages = []
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
             app = json.load(fd)['social']
@@ -565,6 +566,22 @@ class Model:
 
         return pk
 
+    def add_message(self, user, target, description):
+        pk = len(self.messages) + 1
+
+        self.messages.append({
+            'model': 'ibis.Message',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'target': target,
+                'description': description,
+                'created': self._random_time(),
+            }
+        })
+
+        return pk
+
     def add_deposit(self, user, amount, category, created=None):
         pk = len(self.deposits) + 1
 
@@ -639,6 +656,10 @@ class Model:
         for x in serializable_deposits:
             x['fields']['created'] = str(x['fields']['created'])
 
+        serializable_messages = copy.deepcopy(self.messages)
+        for x in serializable_messages:
+            x['fields']['created'] = str(x['fields']['created'])
+
         serializable_users = copy.deepcopy(self.general_users)
         for x in serializable_users:
             x['fields']['date_joined'] = str(x['fields']['date_joined'])
@@ -672,6 +693,7 @@ class Model:
             self.posts,
             self.comments,
             serializable_entries,
+            serializable_messages,
             self.sites,
             self.socialApplications,
         ]
@@ -693,6 +715,7 @@ class Command(BaseCommand):
         parser.add_argument('--num_post', type=int, required=True)
         parser.add_argument('--num_activity', type=int, required=True)
         parser.add_argument('--num_comment', type=int, required=True)
+        parser.add_argument('--num_message', type=int, required=True)
         parser.add_argument('--num_follow', type=int, required=True)
         parser.add_argument('--num_rsvp', type=int, required=True)
         parser.add_argument('--num_bookmark', type=int, required=True)
@@ -713,6 +736,7 @@ class Command(BaseCommand):
             num_post=options['num_post'],
             num_activity=options['num_activity'],
             num_comment=options['num_comment'],
+            num_message=options['num_message'],
             num_follow=options['num_follow'],
             num_rsvp=options['num_rsvp'],
             num_bookmark=options['num_bookmark'],
@@ -734,6 +758,7 @@ class Command(BaseCommand):
             num_post,
             num_activity,
             num_comment,
+            num_message,
             num_follow,
             num_rsvp,
             num_bookmark,
@@ -1025,6 +1050,15 @@ class Command(BaseCommand):
                     description,
                     random.randint(0, 100),
                 ))
+
+        # make fake messages
+        for i in range(num_message):
+            user, target = random.sample(people + organizations + bots, 2)
+            model.add_message(
+                user,
+                target,
+                markov.generate_markov_text(size=random.randint(25, 100)),
+            )
 
         bookmarkable = rewards + donations + news + events + posts + activities
         entries = bookmarkable + comments

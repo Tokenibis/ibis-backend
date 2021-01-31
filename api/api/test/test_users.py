@@ -14,7 +14,6 @@ class PermissionTestCase(BaseTestCase):
     @freeze_time(TEST_TIME.astimezone(utc).date())
     def run_all(self, user):
         success = {}
-        init_tracker_len = len(tracker.models.Log.objects.all())
 
         result = json.loads(
             self.query(
@@ -744,6 +743,55 @@ class PermissionTestCase(BaseTestCase):
             ).content)
         success['TutorialUpdate'] = 'errors' not in result and result['data'][
             'updateNotifier']['notifier']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageCreate'],
+                op_name='MessageCreate',
+                variables={
+                    'user': to_global_id('UserNode', user.id),
+                    'target': self.person.gid,
+                    'description': 'This is a direct message',
+                },
+            ).content)
+        success['MessageCreate'] = 'errors' not in result and result['data'][
+            'createMessage']['message']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageList'],
+                op_name='MessageList',
+                variables={
+                    'withUser': self.person.gid,
+                    'orderBy': '-last_message',
+                    'first': 25,
+                    'after': 0,
+                },
+            ).content)
+        success['MessageList'] = 'errors' not in result and len(
+            result['data']['allMessages']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageInbox'],
+                op_name='MessageInbox',
+                variables={
+                    'user': to_global_id('UserNode', user.id),
+                },
+            ).content)
+        success['MessageInbox'] = 'errors' not in result and len(
+            result['data']['allUsers']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageUser'],
+                op_name='MessageUser',
+                variables={
+                    'id': to_global_id('UserNode', self.person.id),
+                },
+            ).content)
+        success['MessageUser'] = 'errors' not in result and bool(
+            result['data']['user']['id'])
 
         return success
 

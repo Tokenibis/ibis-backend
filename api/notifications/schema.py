@@ -16,6 +16,7 @@ from api.utils import get_submodel
 
 
 class NotifierNode(DjangoObjectType):
+    email_message = graphene.Boolean()
     email_follow = graphene.Boolean()
     email_donation = graphene.Boolean()
     email_reward = graphene.Boolean()
@@ -35,6 +36,12 @@ class NotifierNode(DjangoObjectType):
         model = models.Notifier
         filter_fields = []
         interfaces = (UserNodeInterface, )
+
+    def resolve_email_message(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == self.user.id):
+            raise GraphQLError('You do not have sufficient permission')
+        return self.email_message
 
     def resolve_email_following(self, info, *args, **kwargs):
         if not (info.context.user.is_superuser
@@ -127,6 +134,7 @@ class NotifierUpdate(Mutation):
 
     class Arguments:
         id = graphene.ID(required=True)
+        email_message = graphene.Boolean()
         email_follow = graphene.Boolean()
         email_reward = graphene.Boolean()
         email_donation = graphene.Boolean()
@@ -146,6 +154,7 @@ class NotifierUpdate(Mutation):
             self,
             info,
             id,
+            email_message=None,
             email_follow=None,
             email_reward=None,
             email_donation=None,
@@ -166,6 +175,8 @@ class NotifierUpdate(Mutation):
                 or info.context.user.id == notifier.user.id):
             raise GraphQLError('You do not have sufficient permission')
 
+        if type(email_message) == bool:
+            notifier.email_message = email_message
         if type(email_follow) == bool:
             notifier.email_follow = email_follow
         if type(email_reward) == bool:

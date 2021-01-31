@@ -89,6 +89,7 @@ def handleWithdrawalCreate(sender, instance, created, **kwargs):
         created=instance.created,
     )
 
+
 @receiver(post_save, sender=ibis.models.Donation)
 def handleDonationCreate(sender, instance, created, **kwargs):
     if not created:
@@ -265,6 +266,33 @@ def handleCommentCreate(sender, instance, created, **kwargs):
             subject=info['subject'],
             created=instance.created,
         )
+
+
+@receiver(post_save, sender=ibis.models.Message)
+def handleMessageCreate(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    description = 'You have a new message from {}'.format(str(instance.user))
+
+    models.MessageNotification.objects.create(
+        notifier=instance.target.notifier,
+        reference='{}:{}'.format(
+            ibis.models.Message.__name__,
+            to_global_id('UserNode', instance.user.id),
+        ),
+        description=description,
+        subject=instance,
+        created=instance.created,
+    )
+
+    # If a user responds, assumed they've "seen" all previous messages
+    for prev_message in ibis.models.Message.objects.filter(
+            user=instance.target, target=instance.user):
+        for prev_notification in models.MessageNotification.objects.filter(
+                subject=prev_message, clicked=False):
+            prev_notification.clicked = True
+            prev_notification.save()
 
 
 @receiver(m2m_changed, sender=ibis.models.User.following.through)

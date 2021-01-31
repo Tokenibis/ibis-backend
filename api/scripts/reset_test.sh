@@ -30,6 +30,7 @@ cd $DIR/.. && \
 	    --num_post 200 \
 	    --num_activity 200 \
 	    --num_comment 4000 \
+	    --num_message 1000 \
 	    --num_follow 500 \
 	    --num_rsvp 500 \
 	    --num_bookmark 4000 \

@@ -478,3 +478,17 @@ class Comment(Entry):
         while hasattr(current, 'comment'):
             current = current.comment.parent
         return current
+
+
+class Message(TimeStampedModel):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='message_sent',
+    )
+    target = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='message_received',
+    )
+    description = models.TextField(validators=[MinLengthValidator(1)])
