@@ -74,12 +74,6 @@ class LoginView(generics.GenericAPIView):
             social_account = social_accounts[0]
             user = GeneralUser.objects.get(id=request.user.id)
 
-            # return error message
-            if social_account.provider == 'microsoft' and not user.email.rsplit(
-                    '@')[-1].endswith('unm.edu'):
-                raise exceptions.AuthenticationFailed(
-                    detail='Please use a valid unm.edu email address')
-
             person = models.Person(user_ptr_id=request.user.id)
             person.__dict__.update(user.__dict__)
 
