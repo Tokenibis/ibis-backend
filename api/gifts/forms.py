@@ -14,13 +14,12 @@ class GiftForm(forms.Form):
     address = forms.CharField(
         label=mark_safe('<strong>Address</strong>'),
         required=True,
-        widget=forms.Textarea(
-            attrs={
-                'rows': 3,
-            }),
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+        }),
     )
     choice = forms.ChoiceField(
-        label=mark_safe('<strong>Choices</strong>'),
+        label=mark_safe('<strong>Choice</strong>'),
         required=True,
         widget=forms.RadioSelect,
     )
@@ -52,9 +51,10 @@ class GiftForm(forms.Form):
                 user=gift.user).exclude(
                     id=gift.id).order_by('created').last().address
 
-        choices = [(x.id, ' {} (${:.2f})'.format(x.title,
-                                              gift.get_amount() / 100))
-                   for x in gift.choices.all()]
+        choices = [(x.id, ' {}'.format(x.title)) for x in gift.choices.all()]
         random.shuffle(choices)
 
         self.fields['choice'].choices = choices
+        self.fields['choice'].label = mark_safe(
+            '<strong>Choice (${:.2f} Gift Cards)</strong>'.format(
+                gift.get_amount() / 100))
