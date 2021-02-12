@@ -1,0 +1,11 @@
+{% extends 'gift.html' %}
+{% block content %}
+{% load crispy_forms_tags %}
+<form method="post">
+  {% csrf_token %}
+  {{ form|crispy }}
+  <hr class="mt-0 mb-4">
+  <button style="padding-right: 40px; padding-left: 40px; background-color: #84ab3f;"
+  type="submit" class="btn btn-success">Submit</button>
+</form>
+{% endblock %}

@@ -112,6 +112,7 @@ class Model:
         self.activities = []
         self.comments = []
         self.messages = []
+        self.gift_types = []
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
             app = json.load(fd)['social']
@@ -213,6 +214,7 @@ class Model:
             category,
             score,
             date_joined=None,
+            username=None,
     ):
         pk = len(self.general_users) + 1
 
@@ -229,7 +231,7 @@ class Model:
             'model': 'users.GeneralUser',
             'pk': pk,
             'fields': {
-                'username': unique_name,
+                'username': username if username else unique_name,
                 'first_name': unique_name,
                 'email': '{}@example.com'.format(unique_name),
                 'date_joined':
@@ -647,6 +649,20 @@ class Model:
         entry_obj['fields']['description'] += ' @{}'.format(
             general_user_obj['fields']['username'])
 
+    def add_gift_type(self, title):
+        pk = len(self.gift_types) + 1
+
+        self.gift_types.append({
+            'model': 'gifts.GiftType',
+            'pk': pk,
+            'fields': {
+                'title': title,
+                'active': True,
+            }
+        })
+
+        return pk
+
     def get_model(self):
         serializable_entries = copy.deepcopy(self.entries)
         for x in serializable_entries:
@@ -692,6 +708,7 @@ class Model:
             self.events,
             self.posts,
             self.comments,
+            self.gift_types,
             serializable_entries,
             serializable_messages,
             self.sites,
@@ -817,6 +834,9 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/addresses.json')) as fd:
             addresses = json.load(fd)
 
+        with open(os.path.join(DIR, 'data/gift_types.txt')) as fd:
+            gift_types = fd.read().strip().split('\n')
+
         # make organization categories from charity navigator categories
         organization_categories = [
             model.add_organization_category(x, np_cat_raw[x])
@@ -847,6 +867,7 @@ class Command(BaseCommand):
             'First organization',
             random.choice(organization_categories),
             random.randint(0, 100),
+            username='tokenibis',
         )
 
         # make organizations from scraped list of real organizations
@@ -1094,6 +1115,9 @@ class Command(BaseCommand):
                 random.choice(users),
                 random.choice(entries),
             )
+
+        for x in gift_types:
+            model.add_gift_type(x)
 
         # save fixtures
         fixtures_dir = os.path.join(DIR, '../../fixtures')

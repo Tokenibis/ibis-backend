@@ -9,6 +9,7 @@ api/users/migrations
 api/tracker/migrations
 api/notifications/migrations
 api/distribution/migrations
+api/gifts/migrations
 
 api/api/fixtures
 

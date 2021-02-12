@@ -1,0 +1,13 @@
+{% extends 'gift.html' %}
+{% block content %}
+<p>
+  Oops, looks like a bad reward link. Please message us on the app or
+  email at <a style="color: #84ab3f;" href="mailto:info@tokenibis.org"
+  style="#84ab3f">info@tokenibis.org</a> if you think there's been a
+  mistake.
+</p>
+<hr class="mt-0 mb-4">
+<button style="background-color: #84ab3f;" class="btn btn-success" onclick="location.href='{{ return_link }}';">
+  Back to the App
+</button>
+{% endblock %}

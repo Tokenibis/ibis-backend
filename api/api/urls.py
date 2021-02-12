@@ -17,4 +17,5 @@ urlpatterns = [
     path('notifications/', include('notifications.urls')),
     path('tracker/', include('tracker.urls')),
     path('distribution/', include('distribution.urls')),
+    path('gifts/', include('gifts.urls')),
 ]

@@ -50,6 +50,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -93,6 +95,7 @@ INSTALLED_APPS = [
     'distribution',
     'notifications',
     'tracker',
+    'gifts',
 ]
 
 LANGUAGE_CODE = 'en-us'
@@ -352,6 +355,18 @@ EMAIL_DELAY = 1  # minutes
 EMAIL_USE_TLS = True
 
 FACEBOOK_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
+
+GIFT_AMOUNT = 2000
+
+GIFT_CHOICE_NUMBER = 8
+
+GIFT_CHOICE_MIN = 4
+
+GIFT_HORIZON_DAYS = 14
+
+GIFT_PROBABILITY_HOURLY = 1 / 7 / 24  # ~one reward per week on random hours
+
+GIFT_EXCHANGE_CATEGORY = 'gift'
 
 IBIS_USERNAME_ROOT = 'tokenibis'
 

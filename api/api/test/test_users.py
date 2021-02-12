@@ -1,6 +1,5 @@
 import re
 import json
-import tracker.models
 import ibis.models as models
 
 from freezegun import freeze_time

@@ -42,12 +42,14 @@ cd $DIR/.. && \
     rm users/migrations -rf && \
     rm tracker/migrations -rf && \
     rm notifications/migrations -rf && \
-    python3 manage.py makemigrations users ibis distribution notifications tracker && \
+    rm gifts/migrations -rf && \
+    python3 manage.py makemigrations users ibis distribution notifications tracker gifts && \
     python3 manage.py migrate users && \
     python3 manage.py migrate ibis && \
     python3 manage.py migrate distribution && \
     python3 manage.py migrate notifications && \
     python3 manage.py migrate tracker && \
+    python3 manage.py migrate gifts && \
     python3 manage.py migrate && \
     load_fixtures && \
     echo "
