@@ -28,15 +28,20 @@ class ChooseView(FormView):
 
     def form_valid(self, form):
         gift = Gift.objects.get(pk=self.kwargs['pk'])
+        choice_id = int(form.cleaned_data['choice'])
         gift.send_gift(
-            GiftType.objects.get(id=int(form.cleaned_data['choice'])),
+            GiftType.objects.get(id=choice_id) if choice_id else None,
             form.cleaned_data['address'],
             form.cleaned_data['suggestion'],
         )
         return super().form_valid(form)
 
     def get(self, request, *args, **kwargs):
-        gift = Gift.objects.get(pk=self.kwargs['pk'])
+        try:
+            gift = Gift.objects.get(pk=self.kwargs['pk'])
+        except Exception:
+            return HttpResponseRedirect(reverse('gift_error'))
+
         if request.user.id != gift.user.id:
             return HttpResponseRedirect(reverse('gift_error'))
 

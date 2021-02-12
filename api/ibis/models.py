@@ -492,3 +492,6 @@ class Message(TimeStampedModel):
         related_name='message_received',
     )
     description = models.TextField(validators=[MinLengthValidator(1)])
+
+    def __str__(self):
+        return '{} -> {}'.format(self.user, self.target)

@@ -10,17 +10,18 @@ from django.core.validators import MinLengthValidator
 
 MESSAGE_TEMPLATE = '''Hi {name},
 
-Congratulations! You've been randomly selected to our latest community
-appreciation prize. Just fill out this little [form]({link}) and we'll
-do the rest.
+Congratulations! As recently active user, you've been randomly
+selected for our latest community appreciation prize. Just fill out
+this little [form]({link}) and we'll do the rest.
 
 Sincerely,
+
 The Token Ibis Team
 
 ---
 
-_This is an automated message. You're welcome to respond, but it might
-take a little time for a human to get back to you._
+_This is an automated message, but you're welcome to respond and a
+human will get back to you eventually._
 '''
 
 
@@ -118,7 +119,7 @@ class Gift(TimeStampedModel):
         self.address = address
         self.suggestion = suggestion
 
-        if not self.withdrawal:
+        if choice and not self.withdrawal:
             self.withdrawal = ibis.models.Withdrawal.objects.create(
                 user=ibis.models.Organization.objects.get(
                     username=settings.IBIS_USERNAME_ROOT),

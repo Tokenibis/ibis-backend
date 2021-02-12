@@ -358,7 +358,7 @@ FACEBOOK_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
 
 GIFT_AMOUNT = CONF['ibis']['gifts']['amount']
 
-GIFT_CHOICE_NUMBER = 8
+GIFT_CHOICE_NUMBER = 10
 
 GIFT_CHOICE_MIN = 4
 

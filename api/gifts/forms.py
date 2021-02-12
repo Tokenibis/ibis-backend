@@ -53,6 +53,11 @@ class GiftForm(forms.Form):
 
         choices = [(x.id, ' {}'.format(x.title)) for x in gift.choices.all()]
         random.shuffle(choices)
+        choices += [(
+            0,
+            mark_safe(' Defer <i>(If you don\'t like any of these, we\'ll carry over your ${:.2f} gift the next time you get chosen)</i>'
+            .format(gift.get_amount() / 100)),
+        )]
 
         self.fields['choice'].choices = choices
         self.fields['choice'].label = mark_safe(
