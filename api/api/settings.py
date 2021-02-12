@@ -356,7 +356,7 @@ EMAIL_USE_TLS = True
 
 FACEBOOK_AVATAR = 'https://graph.facebook.com/v4.0/{}/picture?type=large'
 
-GIFT_AMOUNT = 2000
+GIFT_AMOUNT = CONF['ibis']['gifts']['amount']
 
 GIFT_CHOICE_NUMBER = 8
 
@@ -364,7 +364,7 @@ GIFT_CHOICE_MIN = 4
 
 GIFT_HORIZON_DAYS = 14
 
-GIFT_PROBABILITY_HOURLY = 1 / 7 / 24  # ~one reward per week on random hours
+GIFT_PROBABILITY_HOURLY = CONF['ibis']['gifts']['weekly'] / 7 / 24
 
 GIFT_EXCHANGE_CATEGORY = 'gift'
 
