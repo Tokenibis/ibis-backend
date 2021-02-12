@@ -30,3 +30,18 @@ class GiftTestCase(BaseTestCase):
 
         assert gift.choice
         assert root_org.balance() == balance - settings.GIFT_AMOUNT
+
+        settings.GIFT_PROBABILITY_HOURLY = 0
+
+    @freeze_time(TEST_TIME.astimezone(utc).date())
+    def test_gifts_none(self):
+        settings.GIFT_PROBABILITY_HOURLY = 0
+
+        num_gifts = gifts.models.Gift.objects.count()
+
+        for x in range(1000):
+            management.call_command('give')
+
+        assert gifts.models.Gift.objects.count() == num_gifts
+
+        settings.GIFT_PROBABILITY_HOURLY = 0

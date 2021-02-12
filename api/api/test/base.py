@@ -154,6 +154,7 @@ class BaseTestCase(GraphQLTestCase):
         settings.EMAIL_HOST = ''
         settings.EMAIL_ACTIVE = True
         settings.PUBLIC_READ = False
+        settings.GIFT_PROBABILITY_HOURLY = 0
         if 'api.middleware.AuthenticateAllMiddleware' in settings.MIDDLEWARE:
             settings.MIDDLEWARE.remove('api.middleware.AuthenticateAllMiddleware')
 
