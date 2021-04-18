@@ -100,6 +100,7 @@ class Gift(TimeStampedModel):
 
     address = models.TextField(default='', blank=True)
     suggestion = models.TextField(default='', blank=True)
+    processed = models.BooleanField(default=False)
 
     def get_amount(self):
         if self.withdrawal:
@@ -131,4 +132,8 @@ class Gift(TimeStampedModel):
         self.save()
 
     def __str__(self):
-        return '{} - {}'.format(self.user, self.choice)
+        return '{} - {}{}'.format(
+            self.user,
+            self.choice,
+            ' (processed)' if self.processed else '',
+        )
