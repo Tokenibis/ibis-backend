@@ -15,22 +15,30 @@ class UserAdminChangeForm(UserChangeForm):
 
 
 class OrganizationAdminChangeForm(UserChangeForm):
-    avatar_upload = forms.FileField(required=True)
-    banner_upload = forms.FileField(required=True)
+    avatar_upload = forms.FileField(required=False)
+    banner_upload = forms.FileField(required=False)
 
     def save(self, commit=True):
         avatar_upload = self.cleaned_data.get('avatar_upload', None)
         banner_upload = self.cleaned_data.get('banner_upload', None)
 
-        self.instance.avatar = models.store_image(
-            avatar_upload,
-            os.path.join('avatar', to_global_id('UserNode', self.instance.id)),
-        )
+        if avatar_upload:
+            self.instance.avatar = models.store_image(
+                avatar_upload,
+                os.path.join(
+                    'avatar',
+                    to_global_id('UserNode', self.instance.id),
+                ),
+            )
 
-        self.instance.banner = models.store_image(
-            banner_upload,
-            os.path.join('banner', to_global_id('UserNode', self.instance.id)),
-        )
+        if banner_upload:
+            self.instance.banner = models.store_image(
+                banner_upload,
+                os.path.join(
+                    'banner',
+                    to_global_id('UserNode', self.instance.id),
+                ),
+            )
 
         return super().save(commit=commit)
 
