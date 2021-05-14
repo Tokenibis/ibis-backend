@@ -1,5 +1,4 @@
 import os
-import time
 import django_filters
 import graphene
 import dateutil.parser
@@ -8,8 +7,6 @@ import ibis.models as models
 from PIL import Image
 from django.db.models import Q, Count, Value, Subquery, OuterRef
 from django.db.models.functions import Concat
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 from django.conf import settings
 from django.utils.timezone import localtime
 from graphql import GraphQLError
@@ -22,34 +19,6 @@ from users.schema import GeneralUserNode
 from api.utils import get_submodel
 
 AVATAR_SIZE = (528, 528)
-
-
-def _store_image(upload, directory):
-    tmp = os.path.join(
-        settings.MEDIA_ROOT,
-        default_storage.save(
-            os.path.join(directory, 'tmp'),
-            ContentFile(upload.read()),
-        ),
-    )
-    try:
-        im = Image.open(tmp)
-        path = '{}/{}.png'.format(
-            tmp.rsplit('/', 1)[0],
-            int(time.time()),
-        )
-        im.save(path)
-
-        url = '{}{}{}'.format(
-            settings.API_ROOT_PATH,
-            settings.MEDIA_URL,
-            '/'.join(path.rsplit('/')[-3:]),
-        )
-    except Exception as e:
-        raise e
-    finally:
-        os.remove(tmp)
-        return url
 
 
 class UserNodeInterface(relay.Node):
@@ -95,7 +64,8 @@ class UserOrderingFilter(django_filters.OrderingFilter):
                     try:
                         qs = qs.order_by(v)
                     except FieldError:
-                        raise GraphQLError('You do not have sufficient permission')
+                        raise GraphQLError(
+                            'You do not have sufficient permission')
                         value.remove(v)
 
         return super(UserOrderingFilter, self).filter(qs, value)
@@ -933,7 +903,7 @@ class NewsCreate(Mutation):
             news.link = link
 
         if image:
-            news.image = _store_image(
+            news.image = models.store_image(
                 image,
                 os.path.join('news', to_global_id('EntryNode', news.id)),
             )
@@ -983,7 +953,7 @@ class NewsUpdate(Mutation):
         if link:
             news.link = link
         if image:
-            news.image = _store_image(
+            news.image = models.store_image(
                 image,
                 os.path.join('news', to_global_id('EntryNode', id)),
             )
@@ -1081,7 +1051,7 @@ class EventCreate(Mutation):
             event.link = link
 
         if image:
-            event.image = _store_image(
+            event.image = models.store_image(
                 image,
                 os.path.join('event', to_global_id('EntryNode', event.id)),
             )
@@ -1139,7 +1109,7 @@ class EventUpdate(Mutation):
         if link:
             event.link = link
         if image:
-            event.image = _store_image(
+            event.image = models.store_image(
                 image,
                 os.path.join('event', to_global_id('EntryNode', id)),
             )
@@ -1388,7 +1358,7 @@ class OrganizationUpdate(Mutation):
                 os.remove(tmp)
 
         if banner:
-            organization.banner = _store_image(
+            organization.banner = models.store_image(
                 banner,
                 os.path.join('banner', to_global_id('UserNode', id)),
             )

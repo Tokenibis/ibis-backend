@@ -1,6 +1,11 @@
+import os
+import time
 import unicodedata
 import regex as re
 
+from PIL import Image
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.timezone import localtime, timedelta
 from django.core.exceptions import ValidationError
@@ -14,6 +19,34 @@ from users.models import GeneralUser
 
 MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 15
+
+
+def store_image(upload, directory):
+    tmp = os.path.join(
+        settings.MEDIA_ROOT,
+        default_storage.save(
+            os.path.join(directory, 'tmp'),
+            ContentFile(upload.read()),
+        ),
+    )
+    try:
+        im = Image.open(tmp)
+        path = '{}/{}.png'.format(
+            tmp.rsplit('/', 1)[0],
+            int(time.time()),
+        )
+        im.save(path)
+
+        url = '{}{}{}'.format(
+            settings.API_ROOT_PATH,
+            settings.MEDIA_URL,
+            '/'.join(path.rsplit('/')[-3:]),
+        )
+    except Exception as e:
+        raise e
+    finally:
+        os.remove(tmp)
+        return url
 
 
 def _normalize_username(value):
@@ -416,7 +449,6 @@ class Post(Entry):
 
 
 class Activity(Entry):
-
     class Meta:
         verbose_name_plural = 'Activities'
 
