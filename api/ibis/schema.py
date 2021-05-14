@@ -586,6 +586,10 @@ class EntryNode(DjangoObjectType):
     )
     comment_count = graphene.Int()
     comment_count_recursive = graphene.Int()
+    commenter_recursive = DjangoFilterConnectionField(
+        lambda: UserNode,
+        filterset_class=UserFilter,
+    )
     like = DjangoFilterConnectionField(
         lambda: UserNode,
         filterset_class=UserFilter,
@@ -620,6 +624,21 @@ class EntryNode(DjangoObjectType):
             stack += list(models.Comment.objects.filter(parent=entry))
 
         return count
+
+    def resolve_commenter_recursive(self, *args, **kwargs):
+        comments = []
+        stack = list(models.Comment.objects.filter(parent=self))
+
+        while len(stack) > 0:
+            comments.append(stack.pop())
+            stack += list(models.Comment.objects.filter(parent=comments[-1]))
+
+        commenters = []
+        for comment in sorted(comments, key=lambda x: x.created, reverse=True):
+            if comment.user not in commenters:
+                commenters.append(comment.user)
+
+        return commenters
 
     def resolve_like(self, info, *args, **kwargs):
         if not info.context.user.is_superuser:
