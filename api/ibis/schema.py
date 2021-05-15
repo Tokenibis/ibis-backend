@@ -249,12 +249,7 @@ class EntryFilter(django_filters.FilterSet):
         return qs.filter(created__lt=value)
 
     def filter_search(self, qs, name, value):
-        return qs.annotate(
-            user_name=Concat('user__first_name', Value(' '),
-                             'user__last_name')).filter(
-                                 Q(user_name__icontains=value)
-                                 | Q(user__username__icontains=value)
-                                 | Q(title__icontains=value))
+        return qs.filter(description__icontains=value)
 
 
 class TransferFilter(EntryFilter):
@@ -549,6 +544,7 @@ class WithdrawalNode(DjangoObjectType):
 
 
 class EntryNode(DjangoObjectType):
+    user = graphene.Field(lambda: UserNode)
     description = graphene.String()
     comments = DjangoFilterConnectionField(
         lambda: CommentNode,
@@ -565,17 +561,25 @@ class EntryNode(DjangoObjectType):
         filterset_class=UserFilter,
     )
     like_count = graphene.Int()
+    bookmark = DjangoFilterConnectionField(
+        lambda: UserNode,
+        filterset_class=UserFilter,
+    )
     mention = DjangoFilterConnectionField(
         lambda: UserNode,
         filterset_class=UserFilter,
     )
     scratch = graphene.String()
     entry_type = graphene.String()
+    root = graphene.Field(lambda: EntryNode)
 
     class Meta:
         model = models.Entry
         filter_fields = []
         interfaces = (EntryNodeInterface, )
+
+    def resolve_user(self, *args, **kwargs):
+        return get_submodel(self).objects.get(id=self.id).user.user
 
     def resolve_description(self, *args, **kwargs):
         return self.resolve_description()
@@ -618,6 +622,9 @@ class EntryNode(DjangoObjectType):
     def resolve_like_count(self, *args, **kwargs):
         return self.like.count()
 
+    def resolve_bookmark(self, *args, **kwargs):
+        return self.bookmark
+
     def resolve_mention(self, *args, **kwargs):
         return self.mention
 
@@ -630,6 +637,11 @@ class EntryNode(DjangoObjectType):
     def resolve_entry_type(self, *args, **kwargs):
         return get_submodel(self).__name__
 
+    def resolve_root(self, *args, **kwargs):
+        if models.Comment.objects.filter(id=self.id).exists():
+            return models.Comment.objects.get(id=self.id).get_root()
+        return self
+
     @classmethod
     def get_queryset(cls, queryset, info):
         if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
@@ -641,12 +653,13 @@ class EntryNode(DjangoObjectType):
         return queryset.filter(
             (Q(donation__isnull=False) &
              (Q(donation__private=False)
-              | Q(user_id=info.context.user.id)
+              | Q(donation__user_id=info.context.user.id)
               | Q(donation__target_id=info.context.user.id)))
             | (Q(reward__isnull=False) &
                (Q(reward__private=False)
-                | Q(user_id=info.context.user.id)
-                | Q(reward__target_id=info.context.user.id))))
+                | Q(reward__user_id=info.context.user.id)
+                | Q(reward__target_id=info.context.user.id)))
+            | (Q(donation__isnull=True) & Q(reward__isnull=True)))
 
 
 # --- Donation -------------------------------------------------------------- #
@@ -655,11 +668,6 @@ class EntryNode(DjangoObjectType):
 class DonationNode(EntryNode):
     amount = graphene.Int()
 
-    bookmark = DjangoFilterConnectionField(
-        lambda: UserNode,
-        filterset_class=UserFilter,
-    )
-
     class Meta:
         model = models.Donation
         filter_fields = []
@@ -667,9 +675,6 @@ class DonationNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
-
-    def resolve_bookmark(self, *args, **kwargs):
-        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -746,11 +751,6 @@ class DonationCreate(Mutation):
 class RewardNode(EntryNode):
     amount = graphene.Int()
 
-    bookmark = DjangoFilterConnectionField(
-        lambda: UserNode,
-        filterset_class=UserFilter,
-    )
-
     class Meta:
         model = models.Reward
         filter_fields = []
@@ -758,9 +758,6 @@ class RewardNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
-
-    def resolve_bookmark(self, *args, **kwargs):
-        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -843,18 +840,10 @@ class RewardCreate(Mutation):
 
 
 class NewsNode(EntryNode):
-    bookmark = DjangoFilterConnectionField(
-        lambda: UserNode,
-        filterset_class=UserFilter,
-    )
-
     class Meta:
         model = models.News
         filter_fields = []
         interfaces = (EntryNodeInterface, )
-
-    def resolve_bookmark(self, *args, **kwargs):
-        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -968,10 +957,6 @@ class NewsUpdate(Mutation):
 
 
 class EventNode(EntryNode):
-    bookmark = DjangoFilterConnectionField(
-        lambda: UserNode,
-        filterset_class=UserFilter,
-    )
     rsvp = DjangoFilterConnectionField(
         lambda: UserNode,
         filterset_class=UserFilter,
@@ -982,9 +967,6 @@ class EventNode(EntryNode):
         model = models.Event
         filter_fields = []
         interfaces = (EntryNodeInterface, )
-
-    def resolve_bookmark(self, *args, **kwargs):
-        return self.bookmark
 
     def resolve_rsvp(self, *args, **kwargs):
         return self.rsvp
@@ -1546,19 +1528,10 @@ class BotUpdate(Mutation):
 
 
 class PostNode(EntryNode):
-
-    bookmark = DjangoFilterConnectionField(
-        lambda: UserNode,
-        filterset_class=UserFilter,
-    )
-
     class Meta:
         model = models.Post
         filter_fields = []
         interfaces = (EntryNodeInterface, )
-
-    def resolve_bookmark(self, *args, **kwargs):
-        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1604,19 +1577,10 @@ class PostCreate(Mutation):
 
 
 class ActivityNode(EntryNode):
-
-    bookmark = DjangoFilterConnectionField(
-        lambda: UserNode,
-        filterset_class=UserFilter,
-    )
-
     class Meta:
         model = models.Activity
         filter_fields = []
         interfaces = (EntryNodeInterface, )
-
-    def resolve_bookmark(self, *args, **kwargs):
-        return self.bookmark
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -1991,6 +1955,7 @@ class Query(object):
     person = UserNodeInterface.Field(PersonNode)
     bot = UserNodeInterface.Field(BotNode)
     withdrawal = relay.Node.Field(WithdrawalNode)
+    entry = EntryNodeInterface.Field(EntryNode)
     deposit = relay.Node.Field(DepositNode)
     donation = EntryNodeInterface.Field(DonationNode)
     reward = EntryNodeInterface.Field(RewardNode)
@@ -2027,6 +1992,10 @@ class Query(object):
     all_withdrawals = DjangoFilterConnectionField(
         WithdrawalNode,
         filterset_class=WithdrawalFilter,
+    )
+    all_entries = DjangoFilterConnectionField(
+        EntryNode,
+        filterset_class=EntryFilter,
     )
     all_donations = DjangoFilterConnectionField(
         DonationNode,

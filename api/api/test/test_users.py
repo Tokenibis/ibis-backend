@@ -363,6 +363,20 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
+                self.gql['EntryList'],
+                op_name='EntryList',
+                variables={
+                    'self': user.gid,
+                    'orderBy': '-created',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+        success['EntryList'] = 'errors' not in result and len(
+            result['data']['allEntries']['edges']) > 0
+
+        result = json.loads(
+            self.query(
                 self.gql['PersonList'],
                 op_name='PersonList',
                 variables={
@@ -911,6 +925,7 @@ class PermissionTestCase(BaseTestCase):
             'DonationForm': True,
             'DonationList': True,
             'Event': True,
+            'EntryList': True,
             'EventList': True,
             'EventListFilter': True,
             'Finance': True,

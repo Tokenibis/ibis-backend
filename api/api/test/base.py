@@ -92,6 +92,7 @@ class BaseTestCase(GraphQLTestCase):
         'DonationCreate',
         'DonationForm',
         'DonationList',
+        'EntryList',
         'Event',
         'EventCreate',
         'EventList',
