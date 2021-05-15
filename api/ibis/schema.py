@@ -4,7 +4,7 @@ import graphene
 import dateutil.parser
 import ibis.models as models
 
-from PIL import Image
+from django.core.exceptions import FieldError
 from django.db.models import Q, Count, Value, Subquery, OuterRef
 from django.db.models.functions import Concat
 from django.conf import settings
@@ -448,7 +448,7 @@ class MessageFilter(django_filters.FilterSet):
             | Q(target_id=from_global_id(value)[1]))
 
 
-# --- Organization Category ---------------------------------------------------- #
+# --- Organization Category ------------------------------------------------- #
 
 
 class OrganizationCategoryNode(DjangoObjectType):
@@ -529,7 +529,7 @@ class DepositCreate(Mutation):
         return DepositCreate(deposit=deposit)
 
 
-# --- Withdrawal --------------------------------------------------------------- #
+# --- Withdrawal ------------------------------------------------------------ #
 
 
 class WithdrawalNode(DjangoObjectType):
@@ -1225,7 +1225,7 @@ class UserNode(GeneralUserNode):
             return None
 
 
-# --- Organization ------------------------------------------------------------- #
+# --- Organization ---------------------------------------------------------- #
 
 
 class OrganizationNode(UserNode):
@@ -1330,33 +1330,11 @@ class OrganizationUpdate(Mutation):
         if type(privacy_deposit) == bool:
             organization.privacy_deposit = privacy_deposit
         if avatar:
-            tmp = os.path.join(
-                settings.MEDIA_ROOT,
-                default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('UserNode', id)),
-                    ContentFile(avatar.read()),
-                ),
+            organization.avatar = models.store_image(
+                avatar,
+                os.path.join('avatar', to_global_id('UserNode', id)),
+                thumbnail_size=AVATAR_SIZE,
             )
-            try:
-                im = Image.open(tmp)
-                im.thumbnail(AVATAR_SIZE)
-                path = '{}/{}.png'.format(
-                    tmp.rsplit('/', 1)[0],
-                    int(time.time()),
-                )
-                im.save(path)
-
-                organization.avatar = '{}{}{}'.format(
-                    settings.API_ROOT_PATH,
-                    settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-3:]),
-                )
-                organization.save()
-            except Exception as e:
-                raise e
-            finally:
-                os.remove(tmp)
-
         if banner:
             organization.banner = models.store_image(
                 banner,
@@ -1456,33 +1434,11 @@ class PersonUpdate(Mutation):
         if type(privacy_deposit) == bool:
             person.privacy_deposit = privacy_deposit
         if avatar:
-            tmp = os.path.join(
-                settings.MEDIA_ROOT,
-                default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('UserNode', id)),
-                    ContentFile(avatar.read()),
-                ),
+            person.avatar = models.store_image(
+                avatar,
+                os.path.join('avatar', to_global_id('UserNode', id)),
+                thumbnail_size=AVATAR_SIZE,
             )
-            try:
-                im = Image.open(tmp)
-                im.thumbnail(AVATAR_SIZE)
-                path = '{}/{}.png'.format(
-                    tmp.rsplit('/', 1)[0],
-                    int(time.time()),
-                )
-                im.save(path)
-
-                person.avatar = '{}{}{}'.format(
-                    settings.API_ROOT_PATH,
-                    settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-3:]),
-                )
-                person.save()
-            except Exception as e:
-                raise e
-            finally:
-                os.remove(tmp)
-
         if type(score) == int:
             person.score = score
         person.save()
@@ -1571,33 +1527,11 @@ class BotUpdate(Mutation):
         if type(privacy_deposit) == bool:
             bot.privacy_deposit = privacy_deposit
         if avatar:
-            tmp = os.path.join(
-                settings.MEDIA_ROOT,
-                default_storage.save(
-                    'avatar/{}/tmp'.format(to_global_id('UserNode', id)),
-                    ContentFile(avatar.read()),
-                ),
+            bot.avatar = models.store_image(
+                avatar,
+                os.path.join('avatar', to_global_id('UserNode', id)),
+                thumbnail_size=AVATAR_SIZE,
             )
-            try:
-                im = Image.open(tmp)
-                im.thumbnail(AVATAR_SIZE)
-                path = '{}/{}.png'.format(
-                    tmp.rsplit('/', 1)[0],
-                    int(time.time()),
-                )
-                im.save(path)
-
-                bot.avatar = '{}{}{}'.format(
-                    settings.API_ROOT_PATH,
-                    settings.MEDIA_URL,
-                    '/'.join(path.rsplit('/')[-3:]),
-                )
-                bot.save()
-            except Exception as e:
-                raise e
-            finally:
-                os.remove(tmp)
-
         if type(tank) == int:
             bot.tank = tank
         if type(scratch) == str:
@@ -1666,7 +1600,7 @@ class PostCreate(Mutation):
         return PostCreate(post=post)
 
 
-# --- Activity ------------------------------------------------------------------ #
+# --- Activity -------------------------------------------------------------- #
 
 
 class ActivityNode(EntryNode):

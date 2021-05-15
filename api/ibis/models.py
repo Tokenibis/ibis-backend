@@ -21,7 +21,7 @@ MIN_USERNAME_LEN = 3
 MAX_USERNAME_LEN = 15
 
 
-def store_image(upload, directory):
+def store_image(upload, directory, thumbnail_size=None):
     tmp = os.path.join(
         settings.MEDIA_ROOT,
         default_storage.save(
@@ -31,6 +31,8 @@ def store_image(upload, directory):
     )
     try:
         im = Image.open(tmp)
+        if thumbnail_size:
+            im.thumbnail(thumbnail_size)
         path = '{}/{}.png'.format(
             tmp.rsplit('/', 1)[0],
             int(time.time()),
