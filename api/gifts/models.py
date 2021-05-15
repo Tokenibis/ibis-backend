@@ -130,10 +130,3 @@ class Gift(TimeStampedModel):
             )
 
         self.save()
-
-    def __str__(self):
-        return '{} - {}{}'.format(
-            self.user,
-            self.choice,
-            ' (processed)' if self.processed else '',
-        )
