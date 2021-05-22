@@ -159,9 +159,9 @@ class Notification(TimeStampedModel):
         super().save(*args, **kwargs)
 
 
-class MessageNotification(Notification):
+class MessageDirectNotification(Notification):
     subject = models.ForeignKey(
-        ibis.models.Message,
+        ibis.models.MessageDirect,
         on_delete=models.CASCADE,
     )
 
@@ -173,7 +173,35 @@ class MessageNotification(Notification):
 
         try:
             if not STATE['LOADING_DATA'] and self.notifier.email_message:
-                subject, body, html = EmailTemplateMessage.choose(
+                subject, body, html = EmailTemplateMessageDirect.choose(
+                ).make_email(self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class MessageChannelNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.MessageChannel,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_message:
+                subject, body, html = EmailTemplateMessageChannel.choose(
                 ).make_email(self, self.subject)
                 Email.objects.create(
                     notification=self,
@@ -579,7 +607,22 @@ class EmailTemplateWelcome(EmailTemplate):
         )
 
 
-class EmailTemplateMessage(EmailTemplate):
+class EmailTemplateMessageDirect(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['sender', 'link'])
+
+    def make_email(self, notification, message):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                sender=str(message.user),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateMessageChannel(EmailTemplate):
     def clean(self):
         super()._check_keys([], ['sender', 'link'])
 

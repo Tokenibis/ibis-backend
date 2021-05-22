@@ -759,21 +759,21 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['MessageCreate'],
-                op_name='MessageCreate',
+                self.gql['MessageDirectCreate'],
+                op_name='MessageDirectCreate',
                 variables={
                     'user': to_global_id('UserNode', user.id),
                     'target': self.person.gid,
                     'description': 'This is a direct message',
                 },
             ).content)
-        success['MessageCreate'] = 'errors' not in result and result['data'][
-            'createMessage']['message']['id']
+        success['MessageDirectCreate'] = 'errors' not in result and result[
+            'data']['createMessageDirect']['messageDirect']['id']
 
         result = json.loads(
             self.query(
-                self.gql['MessageList'],
-                op_name='MessageList',
+                self.gql['MessageDirectList'],
+                op_name='MessageDirectList',
                 variables={
                     'withUser': self.person.gid,
                     'orderBy': '-last_message',
@@ -781,30 +781,96 @@ class PermissionTestCase(BaseTestCase):
                     'after': 0,
                 },
             ).content)
-        success['MessageList'] = 'errors' not in result and len(
-            result['data']['allMessages']['edges']) > 0
+        success['MessageDirectList'] = 'errors' not in result and len(
+            result['data']['allMessagesDirect']['edges']) > 0
 
         result = json.loads(
             self.query(
-                self.gql['MessageInbox'],
-                op_name='MessageInbox',
+                self.gql['MessageDirectInbox'],
+                op_name='MessageDirectInbox',
                 variables={
                     'user': to_global_id('UserNode', user.id),
                 },
             ).content)
-        success['MessageInbox'] = 'errors' not in result and len(
+        success['MessageDirectInbox'] = 'errors' not in result and len(
             result['data']['allUsers']['edges']) > 0
 
         result = json.loads(
             self.query(
-                self.gql['MessageUser'],
-                op_name='MessageUser',
+                self.gql['MessageChannelCreate'],
+                op_name='MessageChannelCreate',
+                variables={
+                    'user':
+                    to_global_id('UserNode', user.id),
+                    'target':
+                    to_global_id(  # pk=1 is a private channel
+                        'ChannelNode',
+                        models.Channel.objects.get(pk=2).pk,
+                    ),
+                    'description':
+                    'This is a channel message',
+                },
+            ).content)
+        success['MessageChannelCreate'] = 'errors' not in result and result[
+            'data']['createMessageChannel']['messageChannel']['id']
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageChannelList'],
+                op_name='MessageChannelList',
+                variables={
+                    'withChannel':
+                    to_global_id(  # pk=1 is a private channel
+                        'ChannelNode',
+                        models.Channel.objects.get(pk=2).pk,
+                    ),
+                    'orderBy':
+                    '-last_message',
+                    'first':
+                    25,
+                    'after':
+                    0,
+                },
+            ).content)
+        success['MessageChannelList'] = 'errors' not in result and len(
+            result['data']['allMessagesChannel']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageChannelInbox'],
+                op_name='MessageChannelInbox',
+                variables={
+                    'user': to_global_id('UserNode', user.id),
+                },
+            ).content)
+        success['MessageChannelInbox'] = 'errors' not in result and len(
+            result['data']['allChannels']['edges']) > 0
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageDirectName'],
+                op_name='MessageDirectName',
                 variables={
                     'id': to_global_id('UserNode', self.person.id),
                 },
             ).content)
-        success['MessageUser'] = 'errors' not in result and bool(
+        success['MessageDirectName'] = 'errors' not in result and bool(
             result['data']['user']['id'])
+
+        result = json.loads(
+            self.query(
+                self.gql['MessageChannelName'],
+                op_name='MessageChannelName',
+                variables={
+                    'id':
+                    to_global_id(
+                        'ChannelNode',
+                        models.Channel.objects.get(pk=2).pk,
+                    ),
+                },
+            ).content)
+        success['MessageChannelName'] = 'errors' not in result and bool(
+            result['data']['channel']['id'])
 
         return success
 

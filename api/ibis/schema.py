@@ -138,10 +138,10 @@ class UserFilter(django_filters.FilterSet):
     def filter_messaged_with(self, qs, name, value):
         user_obj = models.User.objects.get(pk=from_global_id(value)[1])
         return qs.filter(
-            Q(id__in=user_obj.message_sent.values('target'))
+            Q(id__in=user_obj.messagedirect_set.values('target'))
             | Q(id__in=user_obj.message_received.values('user'))).annotate(
                 messaged_last=Subquery(
-                    models.Message.objects.filter(
+                    models.MessageDirect.objects.filter(
                         Q(user=OuterRef('id'), target=user_obj)
                         | Q(user=user_obj, target=OuterRef('id'))).order_by(
                             '-created').values('created')[:1])).order_by(
@@ -433,7 +433,42 @@ class CommentFilter(django_filters.FilterSet):
         return qs.filter(scratch=value)
 
 
-class MessageFilter(django_filters.FilterSet):
+class ChannelOrderingFilter(django_filters.OrderingFilter):
+    class Meta:
+        model = models.Channel
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super(ChannelOrderingFilter, self).__init__(*args, **kwargs)
+
+    def filter(self, qs, value):
+        if value:
+            for v in ['messaged_last', '-messaged_last']:
+                if v in value:
+                    try:
+                        qs = qs.annotate(
+                            messaged_last=Subquery(
+                                models.MessageChannel.objects.filter(
+                                    Q(target=OuterRef('id'))).order_by(
+                                        '-created').values('created')
+                                [:1])).order_by(v)
+                    except FieldError:
+                        raise GraphQLError(
+                            'You do not have sufficient permission')
+                        value.remove(v)
+
+        return super(ChannelOrderingFilter, self).filter(qs, value)
+
+
+class ChannelFilter(django_filters.FilterSet):
+    order_by = ChannelOrderingFilter(
+        fields=(
+            ('created', 'created'),
+            ('messaged_last', 'messaged_last'),
+        ))
+
+
+class MessageDirectFilter(django_filters.FilterSet):
     with_user = django_filters.CharFilter(method='filter_with_user')
     order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
 
@@ -441,6 +476,14 @@ class MessageFilter(django_filters.FilterSet):
         return qs.filter(
             Q(user_id=from_global_id(value)[1])
             | Q(target_id=from_global_id(value)[1]))
+
+
+class MessageChannelFilter(django_filters.FilterSet):
+    with_channel = django_filters.CharFilter(method='filter_with_channel')
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
+
+    def filter_with_channel(self, qs, name, value):
+        return qs.filter(Q(target_id=from_global_id(value)[1]))
 
 
 # --- Organization Category ------------------------------------------------- #
@@ -1134,8 +1177,8 @@ class UserNode(GeneralUserNode):
     scratch = graphene.String()
     user_type = graphene.String()
     messages = DjangoFilterConnectionField(
-        lambda: MessageNode,
-        filterset_class=MessageFilter,
+        lambda: MessageDirectNode,
+        filterset_class=MessageDirectFilter,
     )
 
     class Meta:
@@ -1183,7 +1226,7 @@ class UserNode(GeneralUserNode):
         return get_submodel(self).__name__
 
     def resolve_messages(self, *args, **kwargs):
-        return models.Message.objects.filter(
+        return models.MessageDirect.objects.filter(
             Q(user=self.id) | Q(target=self.id))
 
     @classmethod
@@ -1758,12 +1801,58 @@ class CommentCreate(Mutation):
         return CommentCreate(comment=comment)
 
 
-# --- Message --------------------------------------------------------------- #
+# --- Channel ----------------------------------------------------------------- #
 
 
-class MessageNode(DjangoObjectType):
+class ChannelNode(DjangoObjectType):
     class Meta:
-        model = models.Message
+        model = models.Channel
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    member = DjangoFilterConnectionField(
+        lambda: UserNode,
+        filterset_class=UserFilter,
+    )
+    subscriber = DjangoFilterConnectionField(
+        lambda: UserNode,
+        filterset_class=UserFilter,
+    )
+    messages = DjangoFilterConnectionField(
+        lambda: MessageChannelNode,
+        filterset_class=MessageChannelFilter,
+    )
+
+    def resolve_member(self, *args, **kwargs):
+        return self.member
+
+    def resolve_subscriber(self, *args, **kwargs):
+        return self.subscriber
+
+    def resolve_messages(self, *args, **kwargs):
+        return models.MessageChannel.objects.filter(target=self.id)
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
+
+        if info.context.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            Q(member__isnull=True)
+            | Q(
+                id__in=models.User.objects.get(
+                    id=info.context.user.id).channel_set.all())).distinct()
+
+
+# --- Direct Message -------------------------------------------------------- #
+
+
+class MessageDirectNode(DjangoObjectType):
+    class Meta:
+        model = models.MessageDirect
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -1776,13 +1865,13 @@ class MessageNode(DjangoObjectType):
             Q(user=info.context.user) | Q(target=info.context.user))
 
 
-class MessageCreate(Mutation):
+class MessageDirectCreate(Mutation):
     class Arguments:
         user = graphene.ID(required=True)
         target = graphene.ID(required=True)
         description = graphene.String(required=True)
 
-    message = graphene.Field(MessageNode)
+    message_direct = graphene.Field(MessageDirectNode)
 
     def mutate(self, info, user, target, description):
         if not (info.context.user.is_superuser
@@ -1792,13 +1881,63 @@ class MessageCreate(Mutation):
         user_obj = models.User.objects.get(pk=from_global_id(user)[1])
         target_obj = models.User.objects.get(pk=from_global_id(target)[1])
 
-        message = models.Message.objects.create(
+        message_direct = models.MessageDirect.objects.create(
             user=user_obj,
             target=target_obj,
             description=description,
         )
 
-        return MessageCreate(message=message)
+        return MessageDirectCreate(message_direct=message_direct)
+
+
+# --- MessageChannel ---------------------------------------------------------- #
+
+
+class MessageChannelNode(DjangoObjectType):
+    class Meta:
+        model = models.MessageChannel
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_superuser:
+            return queryset
+
+        return queryset.filter(
+            Q(target__member__isnull=True)
+            | Q(
+                target__id__in=models.User.objects.get(
+                    id=info.context.user.id).channel_set.all())).distinct()
+
+
+class MessageChannelCreate(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+        description = graphene.String(required=True)
+
+    message_channel = graphene.Field(MessageChannelNode)
+
+    def mutate(self, info, user, target, description):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == int(from_global_id(user)[1])):
+            raise GraphQLError('You do not have sufficient permission')
+
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Channel.objects.get(pk=from_global_id(target)[1])
+
+        if not (target_obj.member.count() == 0
+                or target_obj.member.filter(pk=user_obj.pk).exists()):
+            raise GraphQLError('You do not have sufficient permission')
+
+        message_channel = models.MessageChannel.objects.create(
+            user=user_obj,
+            target=target_obj,
+            description=description,
+        )
+
+        return MessageChannelCreate(message_channel=message_channel)
 
 
 # --- Follow ---------------------------------------------------------------- #
@@ -1943,6 +2082,40 @@ class RsvpDelete(RsvpMutation):
         return RsvpMutation.mutate(info, 'remove', **kwargs)
 
 
+# --- Subscription ---------------------------------------------------------- #
+
+
+class SubscriptionMutation(Mutation):
+    class Arguments:
+        user = graphene.ID(required=True)
+        target = graphene.ID(required=True)
+
+    state = graphene.Boolean()
+
+    @classmethod
+    def mutate(cls, info, operation, user, target):
+        if not (info.context.user.is_superuser
+                or info.context.user.id == int(from_global_id(user)[1])):
+            raise GraphQLError('You do not have sufficient permission')
+
+        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
+        target_obj = models.Channel.objects.get(pk=from_global_id(target)[1])
+        getattr(target_obj.subscriber, operation)(user_obj)
+        target_obj.save()
+        return SubscriptionMutation(
+            state=target_obj.subscriber.filter(id=user_obj.id).exists())
+
+
+class SubscriptionCreate(SubscriptionMutation):
+    def mutate(self, info, **kwargs):
+        return SubscriptionMutation.mutate(info, 'add', **kwargs)
+
+
+class SubscriptionDelete(SubscriptionMutation):
+    def mutate(self, info, **kwargs):
+        return SubscriptionMutation.mutate(info, 'remove', **kwargs)
+
+
 # --------------------------------------------------------------------------- #
 
 
@@ -1964,7 +2137,9 @@ class Query(object):
     post = EntryNodeInterface.Field(PostNode)
     activity = EntryNodeInterface.Field(ActivityNode)
     comment = EntryNodeInterface.Field(CommentNode)
-    message = EntryNodeInterface.Field(MessageNode)
+    channel = relay.Node.Field(ChannelNode)
+    message_direct = EntryNodeInterface.Field(MessageDirectNode)
+    message_channel = EntryNodeInterface.Field(MessageChannelNode)
 
     all_organization_categories = DjangoFilterConnectionField(
         OrganizationCategoryNode)
@@ -2025,9 +2200,17 @@ class Query(object):
         CommentNode,
         filterset_class=CommentFilter,
     )
-    all_messages = DjangoFilterConnectionField(
-        MessageNode,
-        filterset_class=MessageFilter,
+    all_channels = DjangoFilterConnectionField(
+        ChannelNode,
+        filterset_class=ChannelFilter,
+    )
+    all_messages_direct = DjangoFilterConnectionField(
+        MessageDirectNode,
+        filterset_class=MessageDirectFilter,
+    )
+    all_messages_channel = DjangoFilterConnectionField(
+        MessageChannelNode,
+        filterset_class=MessageChannelFilter,
     )
 
 
@@ -2040,11 +2223,13 @@ class Mutation(graphene.ObjectType):
     create_post = PostCreate.Field()
     create_activity = ActivityCreate.Field()
     create_comment = CommentCreate.Field()
-    create_message = MessageCreate.Field()
+    create_message_direct = MessageDirectCreate.Field()
+    create_message_channel = MessageChannelCreate.Field()
     create_follow = FollowCreate.Field()
     create_like = LikeCreate.Field()
     create_bookmark = BookmarkCreate.Field()
     create_RSVP = RsvpCreate.Field()
+    create_subscription = SubscriptionCreate.Field()
 
     update_organization = OrganizationUpdate.Field()
     update_person = PersonUpdate.Field()

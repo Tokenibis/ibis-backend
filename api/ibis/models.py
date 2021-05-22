@@ -514,18 +514,47 @@ class Comment(Entry):
         return current
 
 
+class Channel(TimeStampedModel):
+    name = models.TextField(unique=True, validators=[MinLengthValidator(1)])
+    member = models.ManyToManyField(
+        User,
+        blank=True,  # no members implies public channel
+    )
+    subscriber = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='subscribe_to',
+    )
+
+    def clean(self):
+        username_validator(self.name)
+
+
 class Message(TimeStampedModel):
+    class Meta:
+        abstract = True
+
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='message_sent',
-    )
-    target = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='message_received',
     )
     description = models.TextField(validators=[MinLengthValidator(1)])
 
     def __str__(self):
         return '{} -> {}'.format(self.user, self.target)
+
+
+class MessageDirect(Message):
+    target = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='message_received',
+    )
+
+
+class MessageChannel(Message):
+    target = models.ForeignKey(
+        Channel,
+        on_delete=models.CASCADE,
+        related_name='message_received',
+    )

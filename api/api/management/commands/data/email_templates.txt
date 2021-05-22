@@ -127,8 +127,14 @@ Congratulations on accumulating more donations! We've processed a withdrawal of 
 
 Please allow about 5-7 business days for the check to arrive. If you run into any issues, then please let us know at __info@tokenibis.org__. Thanks!
 
-***Message:New Notification***
+***MessageDirect:New Notification***
 
 {sender} sent you a new direct message!
 
 Respond to them [here]({link}).
+
+***MessageChannel:New Notification***
+
+{sender} sent you a new message to your channel!
+
+Check it out [here]({link}).

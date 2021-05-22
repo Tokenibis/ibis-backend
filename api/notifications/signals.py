@@ -268,17 +268,18 @@ def handleCommentCreate(sender, instance, created, **kwargs):
         )
 
 
-@receiver(post_save, sender=ibis.models.Message)
-def handleMessageCreate(sender, instance, created, **kwargs):
+@receiver(post_save, sender=ibis.models.MessageDirect)
+def handleMessageDirectCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    description = 'You have a new message from {}'.format(str(instance.user))
+    description = 'You have a new direct message from {}'.format(
+        str(instance.user))
 
-    models.MessageNotification.objects.create(
+    models.MessageDirectNotification.objects.create(
         notifier=instance.target.notifier,
         reference='{}:{}'.format(
-            ibis.models.Message.__name__,
+            ibis.models.MessageDirect.__name__,
             to_global_id('UserNode', instance.user.id),
         ),
         description=description,
@@ -287,9 +288,38 @@ def handleMessageCreate(sender, instance, created, **kwargs):
     )
 
     # If a user responds, assumed they've "seen" all previous messages
-    for prev_message in ibis.models.Message.objects.filter(
+    for prev_message in ibis.models.MessageDirect.objects.filter(
             user=instance.target, target=instance.user):
-        for prev_notification in models.MessageNotification.objects.filter(
+        for prev_notification in models.MessageDirectNotification.objects.filter(
+                subject=prev_message, clicked=False):
+            prev_notification.clicked = True
+            prev_notification.save()
+
+
+@receiver(post_save, sender=ibis.models.MessageChannel)
+def handleMessageChannelCreate(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    description = 'You have a new channel message from {}'.format(
+        str(instance.user))
+
+    for subscriber in instance.target.subscriber.all():
+        models.MessageChannelNotification.objects.create(
+            notifier=subscriber.notifier,
+            reference='{}:{}'.format(
+                ibis.models.MessageChannel.__name__,
+                to_global_id('UserNode', instance.user.id),
+            ),
+            description=description,
+            subject=instance,
+            created=instance.created,
+        )
+
+    # If a user responds, assumed they've "seen" all previous messages
+    for prev_message in ibis.models.MessageChannel.objects.filter(
+            target=instance.target):
+        for prev_notification in models.MessageChannelNotification.objects.filter(
                 subject=prev_message, clicked=False):
             prev_notification.clicked = True
             prev_notification.save()

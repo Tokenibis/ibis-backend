@@ -8,7 +8,8 @@ from django.http.request import RawPostDataException
 DIR = os.path.dirname(os.path.realpath(__file__))
 
 IGNORE = {
-    'MessageList',
+    'MessageDirectList',
+    'MessageChannelList',
     'Notifier',
     'NotifierUpdate',
 }
