@@ -2,9 +2,14 @@ from django.contrib import admin
 
 import notifications.models as models
 
+
+@admin.register(models.Email)
+class EmailAdmin(admin.ModelAdmin):
+    raw_id_fields = ['notification']
+
+
 admin.site.register(models.Notifier)
 admin.site.register(models.Notification)
-admin.site.register(models.Email)
 admin.site.register(models.EmailTemplateWelcome)
 admin.site.register(models.EmailTemplateMessage)
 admin.site.register(models.EmailTemplateFollow)
