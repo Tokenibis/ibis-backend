@@ -22,7 +22,9 @@ NUM_BOOKMARK = 100
 NUM_BOT = 3
 NUM_ACTIVITY = 100
 NUM_COMMENT = 100
-NUM_MESSAGE = 100
+NUM_CHANNEL = 3
+NUM_MESSAGE_DIRECT = 100
+NUM_MESSAGE_CHANNEL = 50
 NUM_DEPOSIT = 30
 NUM_DONATION = 100
 NUM_EVENT = 100
@@ -54,7 +56,9 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         num_bot=NUM_BOT,
         num_activity=NUM_ACTIVITY,
         num_comment=NUM_COMMENT,
-        num_message=NUM_MESSAGE,
+        num_channel=NUM_CHANNEL,
+        num_message_direct=NUM_MESSAGE_DIRECT,
+        num_message_channel=NUM_MESSAGE_CHANNEL,
         num_deposit=NUM_DEPOSIT,
         num_donation=NUM_DONATION,
         num_event=NUM_EVENT,
@@ -104,10 +108,14 @@ class BaseTestCase(GraphQLTestCase):
         'Home',
         'LikeCreate',
         'LikeDelete',
-        'MessageCreate',
-        'MessageInbox',
-        'MessageList',
-        'MessageUser',
+        'MessageChannelCreate',
+        'MessageChannelInbox',
+        'MessageChannelList',
+        'MessageChannelName',
+        'MessageDirectCreate',
+        'MessageDirectInbox',
+        'MessageDirectList',
+        'MessageDirectName',
         'News',
         'NewsCreate',
         'NewsList',
@@ -170,7 +178,8 @@ class BaseTestCase(GraphQLTestCase):
         assert len(models.Event.objects.all()) == NUM_EVENT
         assert len(models.Post.objects.all()) == NUM_POST
         assert len(models.Comment.objects.all()) == NUM_COMMENT
-        assert len(models.Message.objects.all()) == NUM_MESSAGE
+        assert len(models.MessageDirect.objects.all()) == NUM_MESSAGE_DIRECT
+        assert len(models.MessageChannel.objects.all()) == NUM_MESSAGE_CHANNEL
 
         with freeze_time(TEST_TIME.astimezone(utc).date()):
             self.staff = users.models.GeneralUser.objects.create(

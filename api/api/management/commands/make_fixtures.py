@@ -111,7 +111,9 @@ class Model:
         self.posts = []
         self.activities = []
         self.comments = []
-        self.messages = []
+        self.channels = []
+        self.messages_direct = []
+        self.messages_channel = []
         self.gift_types = []
 
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
@@ -568,11 +570,42 @@ class Model:
 
         return pk
 
-    def add_message(self, user, target, description):
-        pk = len(self.messages) + 1
+    def add_channel(self, name, members, subscribers):
+        pk = len(self.channels) + 1
 
-        self.messages.append({
-            'model': 'ibis.Message',
+        self.channels.append({
+            'model': 'ibis.Channel',
+            'pk': pk,
+            'fields': {
+                'name': name,
+                'member': members,
+                'subscriber': subscribers,
+            },
+        })
+
+        return pk
+
+    def add_message_direct(self, user, target, description):
+        pk = len(self.messages_direct) + 1
+
+        self.messages_direct.append({
+            'model': 'ibis.MessageDirect',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'target': target,
+                'description': description,
+                'created': self._random_time(),
+            }
+        })
+
+        return pk
+
+    def add_message_channel(self, user, target, description):
+        pk = len(self.messages_channel) + 1
+
+        self.messages_channel.append({
+            'model': 'ibis.MessageChannel',
             'pk': pk,
             'fields': {
                 'user': user,
@@ -672,8 +705,12 @@ class Model:
         for x in serializable_deposits:
             x['fields']['created'] = str(x['fields']['created'])
 
-        serializable_messages = copy.deepcopy(self.messages)
-        for x in serializable_messages:
+        serializable_messages_direct = copy.deepcopy(self.messages_direct)
+        for x in serializable_messages_direct:
+            x['fields']['created'] = str(x['fields']['created'])
+
+        serializable_messages_channel = copy.deepcopy(self.messages_channel)
+        for x in serializable_messages_channel:
             x['fields']['created'] = str(x['fields']['created'])
 
         serializable_users = copy.deepcopy(self.general_users)
@@ -710,7 +747,9 @@ class Model:
             self.comments,
             self.gift_types,
             serializable_entries,
-            serializable_messages,
+            self.channels,
+            serializable_messages_direct,
+            serializable_messages_channel,
             self.sites,
             self.socialApplications,
         ]
@@ -732,7 +771,9 @@ class Command(BaseCommand):
         parser.add_argument('--num_post', type=int, required=True)
         parser.add_argument('--num_activity', type=int, required=True)
         parser.add_argument('--num_comment', type=int, required=True)
-        parser.add_argument('--num_message', type=int, required=True)
+        parser.add_argument('--num_channel', type=int, required=True)
+        parser.add_argument('--num_message_direct', type=int, required=True)
+        parser.add_argument('--num_message_channel', type=int, required=True)
         parser.add_argument('--num_follow', type=int, required=True)
         parser.add_argument('--num_rsvp', type=int, required=True)
         parser.add_argument('--num_bookmark', type=int, required=True)
@@ -753,7 +794,9 @@ class Command(BaseCommand):
             num_post=options['num_post'],
             num_activity=options['num_activity'],
             num_comment=options['num_comment'],
-            num_message=options['num_message'],
+            num_channel=options['num_channel'],
+            num_message_direct=options['num_message_direct'],
+            num_message_channel=options['num_message_channel'],
             num_follow=options['num_follow'],
             num_rsvp=options['num_rsvp'],
             num_bookmark=options['num_bookmark'],
@@ -775,7 +818,9 @@ class Command(BaseCommand):
             num_post,
             num_activity,
             num_comment,
-            num_message,
+            num_channel,
+            num_message_direct,
+            num_message_channel,
             num_follow,
             num_rsvp,
             num_bookmark,
@@ -1072,10 +1117,47 @@ class Command(BaseCommand):
                     random.randint(0, 100),
                 ))
 
-        # make fake messages
-        for i in range(num_message):
+        # make channels
+        channel_names = [
+            'The {} Channel'.format(x) for x in random.sample(nouns, num_channel)
+        ]
+        members = random.sample(
+            people + organizations + bots,
+            random.randint(1, len(people + organizations + bots)),
+        )
+        channels = [
+            model.add_channel(
+                channel_names[0],
+                members,
+                random.sample(members, random.randint(0, len(members))),
+            )
+        ]
+        for i in range(num_channel - 1):
+            subscribers = random.sample(
+                people + organizations + bots,
+                random.randint(0, len(people + organizations + bots)),
+            )
+            channels.append(
+                model.add_channel(
+                    channel_names[i + 1],
+                    [],
+                    subscribers,
+                ))
+
+        # make direct messages
+        for i in range(num_message_direct):
             user, target = random.sample(people + organizations + bots, 2)
-            model.add_message(
+            model.add_message_direct(
+                user,
+                target,
+                markov.generate_markov_text(size=random.randint(25, 100)),
+            )
+
+        # make channel messages
+        for i in range(num_message_channel):
+            user = random.choice(people + organizations + bots)
+            target = random.choice(channels)
+            model.add_message_channel(
                 user,
                 target,
                 markov.generate_markov_text(size=random.randint(25, 100)),
