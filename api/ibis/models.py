@@ -526,9 +526,6 @@ class Channel(TimeStampedModel):
         related_name='subscribe_to',
     )
 
-    def clean(self):
-        username_validator(self.name)
-
 
 class Message(TimeStampedModel):
     class Meta:
@@ -545,6 +542,9 @@ class Message(TimeStampedModel):
 
 
 class MessageDirect(Message):
+    class Meta:
+        verbose_name_plural = 'Messages Direct'
+
     target = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -553,6 +553,9 @@ class MessageDirect(Message):
 
 
 class MessageChannel(Message):
+    class Meta:
+        verbose_name_plural = 'Messages Channel'
+
     target = models.ForeignKey(
         Channel,
         on_delete=models.CASCADE,

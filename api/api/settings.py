@@ -272,8 +272,8 @@ def APP_LINK_RESOLVER(reference=None):
         'Activity': '/Activity/Activity?id={}',
         'Deposit': '/_/Deposit?id={}',
         'Withdrawal': '/_/Withdrawal?id={}',
-        'MessageDirect': '/_/MessageDirect?id={}',
-        'MessageChannel': '/_/MessageChannel?id={}',
+        'MessageDirect': '/_/MessageDirectList?id={}',
+        'MessageChannel': '/_/MessageChannelList?id={}',
     }
 
     if not reference:

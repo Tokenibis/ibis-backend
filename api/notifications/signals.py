@@ -304,12 +304,12 @@ def handleMessageChannelCreate(sender, instance, created, **kwargs):
     description = 'You have a new channel message from {}'.format(
         str(instance.user))
 
-    for subscriber in instance.target.subscriber.all():
+    for subscriber in instance.target.subscriber.exclude(id=instance.user.id):
         models.MessageChannelNotification.objects.create(
             notifier=subscriber.notifier,
             reference='{}:{}'.format(
                 ibis.models.MessageChannel.__name__,
-                to_global_id('UserNode', instance.user.id),
+                to_global_id('ChannelNode', instance.target.id),
             ),
             description=description,
             subject=instance,
@@ -320,7 +320,10 @@ def handleMessageChannelCreate(sender, instance, created, **kwargs):
     for prev_message in ibis.models.MessageChannel.objects.filter(
             target=instance.target):
         for prev_notification in models.MessageChannelNotification.objects.filter(
-                subject=prev_message, clicked=False):
+                notifier__user=instance.user,
+                subject=prev_message,
+                clicked=False,
+        ):
             prev_notification.clicked = True
             prev_notification.save()
 
