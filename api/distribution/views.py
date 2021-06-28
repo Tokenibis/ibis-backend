@@ -9,7 +9,7 @@ from rest_framework import generics, response
 class AmountView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         time = localtime()
-        total_amount = models.get_distribution_amount(time)
+        _, total_amount = models.get_distribution_amount(time)
         shares = models.get_distribution_shares(time)
         max_share = max(shares.values())
 

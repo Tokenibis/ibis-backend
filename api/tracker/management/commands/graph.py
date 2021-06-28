@@ -28,12 +28,6 @@ class Command(BaseCommand):
             distribution.models.to_step_start(x.created),
             x.amount,
             sum(
-                y.amount for y in ibis.models.Reward.objects.filter(
-                    created__gte=distribution.models.to_step_start(x.created),
-                    created__lt=distribution.models.to_step_start(
-                        x.created, offset=1),
-                )),
-            sum(
                 y.amount for y in ibis.models.Donation.objects.filter(
                     created__gte=distribution.models.to_step_start(x.created),
                     created__lt=distribution.models.to_step_start(
@@ -41,24 +35,22 @@ class Command(BaseCommand):
                 )),
         ) for x in distribution.models.Goal.objects.order_by('created')]
 
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+
         plt.step(
             [x[0] for x in data],
             [x[1] / 100 for x in data],
-            label='Donation Target',
+            label='Target Donations',
         )
 
         plt.plot(
             [x[0] for x in data],
             [x[2] / 100 for x in data],
-            label='Bot Rewards',
-        )
-
-        plt.plot(
-            [x[0] for x in data],
-            [x[3] / 100 for x in data],
             label='Actual Donations',
         )
 
+        ax.set_ylim(ymin=0)
         plt.xlabel('Date (weekly)')
         plt.ylabel('Amount ($)')
         plt.legend()

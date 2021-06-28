@@ -15,18 +15,22 @@ class GiftTestCase(BaseTestCase):
         root_org = ibis.models.Organization.objects.get(
             username=settings.IBIS_USERNAME_ROOT)
 
-        num_messages = ibis.models.Message.objects.count()
+        num_messages = ibis.models.MessageDirect.objects.count()
         num_gifts = gifts.models.Gift.objects.count()
         balance = root_org.balance()
 
         management.call_command('give')
 
-        assert ibis.models.Message.objects.count() == num_messages + 1
+        assert ibis.models.MessageDirect.objects.count() == num_messages + 1
         assert gifts.models.Gift.objects.count() == num_gifts + 1
 
         gift = gifts.models.Gift.objects.order_by('created').last()
 
-        gift.send_gift(gift.choices.order_by('?').first(), '1234 Main St', 'None')
+        gift.send_gift(
+            gift.choices.order_by('?').first(),
+            '1234 Main St',
+            'None',
+        )
 
         assert gift.choice
         assert root_org.balance() == balance - settings.GIFT_AMOUNT

@@ -53,7 +53,7 @@ def initiate_gift():
     for x in GiftType.objects.order_by('?')[:settings.GIFT_CHOICE_NUMBER]:
         gift.choices.add(x)
 
-    ibis.models.Message.objects.create(
+    ibis.models.MessageDirect.objects.create(
         user=ibis.models.Organization.objects.get(
             username=settings.IBIS_USERNAME_ROOT),
         target=user,
