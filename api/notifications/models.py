@@ -706,7 +706,7 @@ class EmailTemplateUBP(EmailTemplate):
                 ))
         for x in ibis.models.News.objects.filter(
                 created__gte=time - timedelta(days=7)):
-            feed.append('{} just posted an article: [{}]({})'.format(
+            feed.append('{} just published an article: [{}]({})'.format(
                 x.user,
                 x.title,
                 settings.APP_LINK_RESOLVER('{}:{}'.format(
@@ -724,6 +724,16 @@ class EmailTemplateUBP(EmailTemplate):
                     to_global_id('EntryNode', x.pk),
                 )),
                 x.date.strftime('%B %d'),
+            ))
+        for x in ibis.models.Post.objects.filter(
+                created__gte=time - timedelta(days=7)):
+            feed.append('{} just made a post: [{}]({})'.format(
+                x.user,
+                x.title,
+                settings.APP_LINK_RESOLVER('{}:{}'.format(
+                    ibis.models.Post.__name__,
+                    to_global_id('EntryNode', x.pk),
+                )),
             ))
 
         for x in ibis.models.Bot.objects.filter(
