@@ -32,17 +32,16 @@ def distribute_all_safe():
     if Goal.objects.filter(created__gte=to_step_start(time)).exists():
         return
 
-    amount = get_distribution_amount(time)
+    goal, actual = get_distribution_amount(time)
     shares = get_distribution_shares(time)
 
     for person in shares:
-        person.distributor.distribute_safe(time,
-                                           round(amount * shares[person]))
+        person.distributor.distribute_safe(
+            time,
+            round(actual * shares[person]),
+        )
 
-    Goal.objects.create(
-        amount=settings.DISTRIBUTION_GOAL,
-        created=time,
-    )
+    Goal.objects.create(amount=goal, created=time)
 
 
 def get_distribution_amount(time):
@@ -51,11 +50,15 @@ def get_distribution_amount(time):
     deviation of effective weekly donations from the specified goal
     and the control signal is the weekly UBP amount. """
 
+    goal = sum(
+        x.amount for x in Grant.objects.filter(start__lte=time.date())
+        if not x.duration
+        or x.start + timedelta(days=7) * x.duration > time.date())
     error = [x[1] - x[0] for x in get_control_history(time)]
 
     # Let settle for first three weeks
     if len(error) < 3:
-        return settings.DISTRIBUTION_GOAL
+        return goal, goal
 
     # PID controller
     control = settings.DISTRIBUTION_CONTROLLER_KP * sum([
@@ -65,12 +68,12 @@ def get_distribution_amount(time):
     ])
 
     # Impose max/min thresholds
-    if control < -0.5 * settings.DISTRIBUTION_GOAL:
-        control = -0.5 * settings.DISTRIBUTION_GOAL
-    elif control > 0.5 * settings.DISTRIBUTION_GOAL:
-        control = 0.5 * settings.DISTRIBUTION_GOAL
+    if control < -0.5 * goal:
+        control = -0.5 * goal
+    elif control > 0.5 * goal:
+        control = 0.5 * goal
 
-    return settings.DISTRIBUTION_GOAL - control
+    return goal, goal - control
 
 
 def get_control_history(time):
@@ -162,6 +165,21 @@ def to_step_start(time, offset=0):
     )
 
 
+class Grant(TimeStampedModel):
+    name = models.TextField()
+    amount = models.PositiveIntegerField()
+    start = models.DateField()
+    duration = models.PositiveIntegerField()
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return '{} ${:.2f} x {}'.format(
+            self.name,
+            self.amount / 100,
+            self.duration if self.duration <= 0 else 'Indefinite',
+        )
+
+
 class Goal(TimeStampedModel):
     amount = models.PositiveIntegerField()
 
@@ -219,7 +237,7 @@ class Distributor(models.Model):
                 amount=settings.DISTRIBUTION_INITIAL,
             )
         else:
-            total = get_distribution_amount(time)
+            _, total = get_distribution_amount(time)
             shares = get_distribution_shares(time, initial=[self.person])
             population_discount = len(shares) / (
                 ibis.models.Deposit.objects.filter(

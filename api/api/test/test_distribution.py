@@ -30,7 +30,13 @@ with open(os.path.join(DIR, '../../../config.json')) as fd:
 class DistributionTestCase(BaseTestCase):
     def setUp(self, *args, **kwargs):
         settings.DISTRIBUTION_DAY = 'Friday'
-        settings.DISTRIBUTION_GOAL = 100000
+        if not distribution.models.Grant.objects.all().exists():
+            distribution.models.Grant.objects.create(
+                start=TEST_TIME,
+                duration=0,
+                amount=100000,
+            )
+
         self._max_transfer_old = settings.MAX_TRANSFER
         settings.MAX_TRANSFER = 1e20
         if hasattr(settings, 'DISTRIBUTION_INITIAL'):
@@ -413,7 +419,11 @@ class DistributionTestCase(BaseTestCase):
             _check_epoch()
 
             # Epoch 4: moon
-            settings.DISTRIBUTION_GOAL *= 4
+            distribution.models.Grant.objects.create(
+                start=TEST_TIME,
+                duration=TS_WEEKS,
+                amount=300000,
+            )
             for _ in range(TS_WEEKS):
                 _tick_transient(
                     activity,

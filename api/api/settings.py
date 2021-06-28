@@ -326,8 +326,6 @@ BOT_GAS_QUERY_FIXED = 10
 
 BOT_GAS_QUERY_VARIABLE = 1
 
-DISTRIBUTION_GOAL = CONF['ibis']['distribution']['goal']
-
 DISTRIBUTION_DAY = CONF['ibis']['distribution']['day']
 
 DISTRIBUTION_HORIZON = 3
