@@ -152,7 +152,7 @@ class DistributionTestCase(BaseTestCase):
                     category=UBP_CATEGORY,
                     created__gte=step,
                 ).aggregate(Sum('amount'))['amount__sum']
-                for x in activity
+                for x in activity if type(x) == ibis.models.Person
             }
 
             by_tier = [[
@@ -170,12 +170,13 @@ class DistributionTestCase(BaseTestCase):
                         assert abs(x[0] * 2**i - by_tier[0][0]) < 1e5
 
             # check that there is no payout of activity exceeds horizon
-            assert not any(payouts[x] for x in activity
-                           if activity[x] >= settings.DISTRIBUTION_HORIZON)
+            assert not any(payouts[x]
+                           for x in activity if type(x) == ibis.models.Person
+                           and activity[x] >= settings.DISTRIBUTION_HORIZON)
 
             # check that new users get paid something, but less than active
             for x in activity:
-                if x.date_joined >= step:
+                if type(x) == ibis.models.Person and x.date_joined >= step:
                     assert payouts[x]
                     if by_tier[0]:
                         assert payouts[x] < by_tier[0][0]
@@ -200,7 +201,7 @@ class DistributionTestCase(BaseTestCase):
                         int(a / sum(amounts) * x.balance() * random.random())
                         for a in amounts
                     ]
-                    amounts = [x if x else 1 for x in amounts]
+                    amounts = [x for x in amounts if x]
 
                     for y in amounts:
                         if y > 0 and type(x) == ibis.models.Person:
@@ -211,7 +212,7 @@ class DistributionTestCase(BaseTestCase):
                                 amount=y,
                             )
                         elif y > 0 and type(x) == ibis.models.Bot:
-                            self._reward(
+                            self._reward(  # 
                                 user=x,
                                 target=ibis.models.Person.objects.order_by(
                                     '?').first(),
@@ -287,11 +288,6 @@ class DistributionTestCase(BaseTestCase):
                             created__gte=x,
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
-                    -_none_zero(
-                        ibis.models.Reward.objects.filter(
-                            created__gte=x,
-                            created__lt=x + timedelta(days=7),
-                        ).aggregate(Sum('amount'))['amount__sum']),
                     -sum(
                         d.amount for d in ibis.models.Deposit.objects.exclude(
                             category=UBP_CATEGORY).filter(
@@ -342,7 +338,11 @@ class DistributionTestCase(BaseTestCase):
                         title='admin'),
                 )
 
-            activity = {x: 0 for x in ibis.models.Person.objects.all()}
+            activity = {
+                x: 0
+                for x in list(ibis.models.Person.objects.all()) +
+                list(ibis.models.Bot.objects.all())
+            }
 
             # make sure everything has settled
             for i in range(settings.DISTRIBUTION_HORIZON + 1):
@@ -357,8 +357,7 @@ class DistributionTestCase(BaseTestCase):
                 _tick_transient(
                     activity,
                     users=random.sample(
-                        list(activity) + list(ibis.models.Bot.objects.all()
-                                              [:int(len(activity) / 2)]),
+                        list(activity),
                         int(len(activity) / 2),
                     ),
                 )
