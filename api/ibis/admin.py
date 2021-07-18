@@ -100,6 +100,8 @@ class PersonAdmin(UserAdmin):
                 'avatar',
                 'balance_str',
                 'donated_str',
+                'referral',
+                'verified',
             )
         },
     ), )
