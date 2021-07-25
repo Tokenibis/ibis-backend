@@ -178,6 +178,11 @@ class Investment(TimeStampedModel):
     start = models.DateField()
     end = models.DateField()
     description = models.TextField(blank=True, null=True)
+    deposit = models.ForeignKey(
+        ibis.models.Deposit,
+        on_delete=models.CASCADE,
+        null=True,
+    )
 
     def __str__(self):
         return '{} ${:.2f} {} - {}'.format(

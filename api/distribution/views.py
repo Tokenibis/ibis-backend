@@ -96,6 +96,7 @@ class PaymentView(generics.GenericAPIView):
                 start=date,
                 end=date,
                 description='On-app deposit',
+                deposit=deposit,
             )
 
         return response.Response({
