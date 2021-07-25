@@ -11,7 +11,6 @@ urlpatterns = [
         name='change-pass'),
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('identify/', views.IdentifyView.as_view(), name='identify'),
-    path('payment/', views.PaymentView.as_view(), name='payment'),
     path('phone/number/', views.PhoneNumberView.as_view(), name='phone-number'),
     path('phone/code/', views.PhoneCodeView.as_view(), name='phone-code'),
     path('phone/confirm/', views.PhoneConfirmView.as_view(), name='phone-confirm'),

@@ -1,15 +1,21 @@
+import logging
 import ibis.models
 import distribution.models as models
 
+from django.db import transaction
+from .payments import PayPalClient
 from django.conf import settings
 from django.utils.timezone import localtime
-from rest_framework import generics, response
+from graphql_relay.node.node import to_global_id
+from rest_framework import generics, response, exceptions
+
+logger = logging.getLogger(__name__)
 
 
 class AmountView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         time = localtime()
-        _, total_amount = models.get_distribution_amount(time)
+        total_amount = models.get_distribution_amount(time)
         shares = models.get_distribution_shares(time)
         max_share = max(shares.values())
 
@@ -48,4 +54,51 @@ class AmountView(generics.GenericAPIView):
             time,
             'exact_amounts':
             exact,
+        })
+
+
+class PaymentView(generics.GenericAPIView):
+    serializer_class = ibis.serializers.PaymentSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.paypal_client = PayPalClient()
+
+    def post(self, request, *args, **kwargs):
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail="No valid values")
+        description, net, fee = self.paypal_client.get_order(
+            request.data['orderID'])
+
+        if not (description and net):
+            logger.error('Error fetching order information')
+            return response.Response({
+                'depositID': '',
+            })
+
+        user = ibis.models.User.objects.get(pk=request.user.id)
+
+        date = localtime().date()
+
+        with transaction.atomic():
+            deposit = ibis.models.Deposit.objects.create(
+                user=user,
+                amount=net,
+                description='paypal:{}:{}'.format(fee, description),
+                category=ibis.models.ExchangeCategory.objects.get(
+                    title='paypal'),
+            )
+
+            models.Investment.objects.create(
+                name=str(user),
+                amount=net,
+                start=date,
+                end=date,
+                description='On-app deposit',
+            )
+
+        return response.Response({
+            'depositID':
+            to_global_id('DepositNode', deposit.id),
         })

@@ -1,4 +1,5 @@
 import ibis.models
+import distribution.models as models
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver

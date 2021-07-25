@@ -20,7 +20,6 @@ from allauth.socialaccount.models import SocialAccount
 from graphql_relay.node.node import to_global_id
 from django.utils.timezone import localtime, timedelta
 
-from .payments import PayPalClient
 from api.utils import get_submodel
 
 logger = logging.getLogger(__name__)
@@ -189,40 +188,6 @@ class IdentifyView(generics.GenericAPIView):
             user_type = ''
 
         return response.Response({'user_id': user_id, 'user_type': user_type})
-
-
-class PaymentView(generics.GenericAPIView):
-    serializer_class = ibis.serializers.PaymentSerializer
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.paypal_client = PayPalClient()
-
-    def post(self, request, *args, **kwargs):
-        serializerform = self.get_serializer(data=request.data)
-        if not serializerform.is_valid():
-            raise exceptions.ParseError(detail="No valid values")
-        description, net, fee = self.paypal_client.get_order(
-            request.data['orderID'])
-
-        if not (description and net):
-            logger.error('Error fetching order information')
-            return response.Response({
-                'depositID': '',
-            })
-
-        user = models.User.objects.get(pk=request.user.id)
-        deposit = models.Deposit.objects.create(
-            user=user,
-            amount=net,
-            description='paypal:{}:{}'.format(fee, description),
-            category=models.ExchangeCategory.objects.get(title='paypal'),
-        )
-
-        return response.Response({
-            'depositID':
-            to_global_id('DepositNode', deposit.id),
-        })
 
 
 class PhoneNumberView(generics.GenericAPIView):

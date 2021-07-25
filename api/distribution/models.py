@@ -5,6 +5,7 @@ from hashlib import sha256
 from django.db import models
 from django.conf import settings
 from django.utils.timezone import datetime, localtime, timedelta, utc
+from datetime import date
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 
@@ -29,10 +30,20 @@ def distribute_all_safe():
 
     time = localtime()
 
-    if Goal.objects.filter(created__gte=to_step_start(time)).exists():
+    if Goal.objects.filter(
+            created__gte=to_step_start(time),
+            processed=True,
+    ).exists():
         return
+    elif Goal.objects.filter(
+            created__gte=to_step_start(time),
+            processed=False,
+    ).exists():
+        goal = Goal.objects.get(created__gte=time, processed=False)
+    else:
+        goal = Goal.objects.create(created=time)
 
-    goal, actual = get_distribution_amount(time)
+    actual = get_distribution_amount(time)
     shares = get_distribution_shares(time)
 
     for person in shares:
@@ -41,7 +52,8 @@ def distribute_all_safe():
             round(actual * shares[person]),
         )
 
-    Goal.objects.create(amount=goal, created=time)
+    goal.processed = True
+    goal.save()
 
 
 def get_distribution_amount(time):
@@ -50,15 +62,17 @@ def get_distribution_amount(time):
     deviation of effective weekly donations from the specified goal
     and the control signal is the weekly UBP amount. """
 
-    goal = sum(
-        x.amount for x in Grant.objects.filter(start__lte=time.date())
-        if not x.duration
-        or x.start + timedelta(days=7) * x.duration > time.date())
+    try:
+        goal_amount = Goal.objects.get(
+            created__gte=to_step_start(time)).amount()
+    except Goal.DoesNotExist:
+        goal_amount = 0
+
     error = [x[1] - x[0] for x in get_control_history(time)]
 
     # Let settle for first three weeks
     if len(error) < 3:
-        return goal, goal
+        return goal_amount
 
     # PID controller
     control = settings.DISTRIBUTION_CONTROLLER_KP * sum([
@@ -68,12 +82,12 @@ def get_distribution_amount(time):
     ])
 
     # Impose max/min thresholds
-    if control < -0.5 * goal:
-        control = -0.5 * goal
-    elif control > 0.5 * goal:
-        control = 0.5 * goal
+    if control < -0.5 * goal_amount:
+        control = -0.5 * goal_amount
+    elif control > 0.5 * goal_amount:
+        control = 0.5 * goal_amount
 
-    return goal, goal - control
+    return goal_amount - control
 
 
 def get_control_history(time):
@@ -89,23 +103,13 @@ def get_control_history(time):
             created__lt=to_step_start(time)).order_by('created'))
 
     return [
-        [
-            x.amount,
-            sum([
-                sum(  # sum of all donations
-                    x.amount for x in ibis.models.Donation.objects.filter(
-                        created__gte=to_step_start(x.created),
-                        created__lt=to_step_start(x.created, offset=1))),
-                -sum(  # sum of non-UBP deposits
-                    x.amount for x in ibis.models.Deposit.objects.exclude(
-                        category=ibis.models.ExchangeCategory.objects.get(
-                            title=settings.IBIS_CATEGORY_UBP)).filter(
-                                created__gte=to_step_start(x.created),
-                                created__lt=to_step_start(x.created, offset=1))
-                    if ibis.models.Person.objects.filter(
-                        id=x.user.id).exists()),
-            ]),
-        ] for x in goals
+        (
+            x.amount(),
+            sum(  # sum of all donations
+                x.amount for x in ibis.models.Donation.objects.filter(
+                    created__gte=to_step_start(x.created),
+                    created__lt=to_step_start(x.created, offset=1))),
+        ) for x in goals
     ]
 
 
@@ -142,7 +146,14 @@ def to_step_start(time, offset=0):
     increments or decrements the provided number of weeks
     """
 
-    # will be 0, -1, or 1 hours off of the midnight, depending on tz
+    if type(time) == date:
+        time = datetime.combine(
+            time,
+            datetime.min.time(),
+            tzinfo=localtime().tzinfo,
+        )
+
+    # will be 0, -1, or 1 hours off of midnight, depending on tz
     raw = localtime(
         datetime.combine(
             time.date() - timedelta(
@@ -161,23 +172,31 @@ def to_step_start(time, offset=0):
     )
 
 
-class Grant(TimeStampedModel):
+class Investment(TimeStampedModel):
     name = models.TextField()
     amount = models.PositiveIntegerField()
     start = models.DateField()
-    duration = models.PositiveIntegerField()
+    end = models.DateField()
     description = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return '{} ${:.2f} x {}'.format(
+        return '{} ${:.2f} {} - {}'.format(
             self.name,
             self.amount / 100,
-            self.duration if self.duration <= 0 else 'Indefinite',
+            self.start,
+            self.end,
         )
 
 
 class Goal(TimeStampedModel):
-    amount = models.PositiveIntegerField()
+    processed = models.BooleanField(default=False)
+
+    def amount(self):
+        return sum(x.amount / (
+            (to_step_start(x.end) - to_step_start(x.start)).days / 7)
+                   for x in Investment.objects.filter(
+                       end__gte=to_step_start(self.created),
+                       start__lt=to_step_start(self.created, offset=1)))
 
 
 class Distributor(models.Model):
@@ -233,7 +252,7 @@ class Distributor(models.Model):
                 amount=settings.DISTRIBUTION_INITIAL,
             )
         else:
-            _, total = get_distribution_amount(time)
+            total = get_distribution_amount(time)
             shares = get_distribution_shares(time, initial=[self.person])
             population_discount = len(shares) / (
                 ibis.models.Deposit.objects.filter(

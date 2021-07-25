@@ -6,7 +6,6 @@ import distribution
 import matplotlib.pyplot as plt
 
 from pathlib import Path
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -20,25 +19,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         Path(PATH).mkdir(parents=True, exist_ok=True)
-        # self.graph_control_response()
-        # self.graph_organization_distribution()
-        # self.graph_organization_edges()
-        # self.graph_users_active()
-        # self.graph_users_total()
+        self.graph_control_response()
+        self.graph_organization_distribution()
+        self.graph_organization_edges()
+        self.graph_users_active()
+        self.graph_users_total()
         self.graph_organization_engagement()
 
     def graph_control_response(self):
         data = [(
             distribution.models.to_step_start(x.created),
-            x.amount + sum(
-                y.amount for y in ibis.models.Deposit.objects.exclude(
-                    category=ibis.models.ExchangeCategory.objects.get(
-                        title=settings.IBIS_CATEGORY_UBP)).
-                filter(
-                    created__gte=distribution.models.to_step_start(x.created),
-                    created__lt=distribution.models.to_step_start(
-                        x.created, offset=1),
-                ) if ibis.models.Person.objects.filter(id=y.user.id).exists()),
+            x.amount(),
             sum(
                 y.amount for y in ibis.models.Donation.objects.filter(
                     created__gte=distribution.models.to_step_start(x.created),

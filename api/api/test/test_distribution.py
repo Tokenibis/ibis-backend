@@ -30,12 +30,6 @@ with open(os.path.join(DIR, '../../../config.json')) as fd:
 class DistributionTestCase(BaseTestCase):
     def setUp(self, *args, **kwargs):
         settings.DISTRIBUTION_DAY = 'Friday'
-        if not distribution.models.Grant.objects.all().exists():
-            distribution.models.Grant.objects.create(
-                start=TEST_TIME,
-                duration=0,
-                amount=100000,
-            )
 
         self._max_transfer_old = settings.MAX_TRANSFER
         settings.MAX_TRANSFER = 1e20
@@ -257,7 +251,10 @@ class DistributionTestCase(BaseTestCase):
                 for x in distribution.models.Goal.objects.all()
             ][:-1]
 
-            goals = [x.amount for x in distribution.models.Goal.objects.all()]
+            goals = [
+                x.amount()
+                for x in distribution.models.Goal.objects.order_by('created')
+            ]
 
             # make sure goal events are properly spaced and contiguous
             for step in steps:
@@ -288,13 +285,6 @@ class DistributionTestCase(BaseTestCase):
                             created__gte=x,
                             created__lt=x + timedelta(days=7),
                         ).aggregate(Sum('amount'))['amount__sum']),
-                    -sum(
-                        d.amount for d in ibis.models.Deposit.objects.exclude(
-                            category=UBP_CATEGORY).filter(
-                                created__gte=x,
-                                created__lt=x + timedelta(days=7),
-                            ) if ibis.models.Person.objects.filter(
-                                id=d.user.id).exists()),
                 ]) for x in steps
             ]
 
@@ -319,7 +309,7 @@ class DistributionTestCase(BaseTestCase):
             # make sure the difference is within a reasonable amount
             assert abs(
                 sum(goals[i] - adjusted[i] for i in range(len(steps)))
-            ) < distribution.models.Goal.objects.last().amount * EPSILON
+            ) < distribution.models.Goal.objects.last().amount() * EPSILON
 
         with freeze_time(TEST_TIME.astimezone(utc).date()) as frozen_datetime:
 
@@ -351,6 +341,13 @@ class DistributionTestCase(BaseTestCase):
 
             # trigger first (failed) attempt at payment
             self._fast_forward_cron(frozen_datetime, 2, seconds=5)
+
+            distribution.models.Investment.objects.create(
+                start=localtime().date(),
+                end=(localtime() +
+                     timedelta(days=4 * 7 * (TS_WEEKS + SS_WEEKS))).date(),
+                amount=100000 * (TS_WEEKS + SS_WEEKS) * 4,
+            )
 
             # Epoch 1: random
             for _ in range(TS_WEEKS):
@@ -418,10 +415,10 @@ class DistributionTestCase(BaseTestCase):
             _check_epoch()
 
             # Epoch 4: moon
-            distribution.models.Grant.objects.create(
-                start=TEST_TIME,
-                duration=TS_WEEKS,
-                amount=300000,
+            distribution.models.Investment.objects.create(
+                start=localtime(),
+                end=(localtime() + timedelta(days=4 * 7 * TS_WEEKS)).date(),
+                amount=300000 * TS_WEEKS,
             )
             for _ in range(TS_WEEKS):
                 _tick_transient(

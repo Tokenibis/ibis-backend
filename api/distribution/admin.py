@@ -8,5 +8,5 @@ class GoalAdmin(admin.ModelAdmin):
 
 
 admin.site.register(models.Goal, GoalAdmin)
-admin.site.register(models.Grant)
+admin.site.register(models.Investment)
 admin.site.register(models.Distributor)
