@@ -146,12 +146,13 @@ def to_step_start(time, offset=0):
     increments or decrements the provided number of weeks
     """
 
-    if type(time) == date:
+    if isinstance(time, date):
         time = datetime.combine(
             time,
             datetime.min.time(),
             tzinfo=localtime().tzinfo,
         )
+
 
     # will be 0, -1, or 1 hours off of midnight, depending on tz
     raw = localtime(
@@ -182,6 +183,7 @@ class Investment(TimeStampedModel):
         ibis.models.Deposit,
         on_delete=models.CASCADE,
         null=True,
+        blank=True,
     )
 
     def __str__(self):
@@ -198,7 +200,7 @@ class Goal(TimeStampedModel):
 
     def amount(self):
         return sum(x.amount / (
-            (to_step_start(x.end) - to_step_start(x.start)).days / 7)
+            (to_step_start(x.end, offset=1) - to_step_start(x.start)).days / 7)
                    for x in Investment.objects.filter(
                        end__gte=to_step_start(self.created),
                        start__lt=to_step_start(self.created, offset=1)))
