@@ -2,6 +2,7 @@ import os
 import csv
 import math
 import ibis
+import random
 import distribution
 import matplotlib.pyplot as plt
 
@@ -22,8 +23,7 @@ class Command(BaseCommand):
         self.graph_control_response()
         self.graph_organization_distribution()
         self.graph_organization_edges()
-        self.graph_users_active()
-        self.graph_users_total()
+        self.graph_users_time()
         self.graph_organization_engagement()
 
     def graph_control_response(self):
@@ -36,7 +36,7 @@ class Command(BaseCommand):
                     created__lt=distribution.models.to_step_start(
                         x.created, offset=1),
                 )),
-        ) for x in distribution.models.Goal.objects.order_by('created')][:-1]
+        ) for x in distribution.models.Goal.objects.order_by('created')][1:-1]
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -84,21 +84,29 @@ class Command(BaseCommand):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
 
+        random.seed(0)
+
         plt.stackplot(
             x_axis,
             *[x[1] for x in data],
             labels=[x[0] for x in data],
-        )
+            colors=[
+                '#%02X%02X%02X' % (
+                    random.randint(0, 255),
+                    random.randint(0, 255),
+                    random.randint(0, 255),
+                ) for _ in data
+            ])
 
         plt.xlabel('Date (weekly)')
         plt.ylabel('Amount ($)')
 
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(
-            handles[-1:-8:-1],
-            labels[-1:-8:-1],
-            title='Line',
+            handles[-1:-13:-1],
+            labels[-1:-13:-1],
             loc='upper left',
+            fontsize=8,
         )
         plt.savefig(os.path.join(PATH, 'organization_distribution.pdf'))
         plt.clf()
@@ -136,7 +144,7 @@ class Command(BaseCommand):
             for i, line in enumerate(graph):
                 writer.writerow([str(orgs[i])] + line)
 
-    def graph_users_active(self):
+    def graph_users_time(self):
         data = [(
             distribution.models.to_step_start(x.created),
             len(
@@ -147,34 +155,13 @@ class Command(BaseCommand):
                         created__lt=distribution.models.to_step_start(
                             x.created, offset=1),
                     ))),
-        ) for x in distribution.models.Goal.objects.order_by('created')][:-1]
-
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
-
-        plt.plot([x[0] for x in data], [x[1] for x in data])
-
-        ax.set_ylim(ymin=0)
-        plt.xlabel('Date (weekly)')
-        plt.ylabel('Number of Active People')
-        plt.savefig(os.path.join(PATH, 'users_active.pdf'))
-        plt.clf()
-
-    def graph_users_total(self):
-        data = [(
-            distribution.models.to_step_start(x.created),
-            ibis.models.Person.objects.filter(
-                is_active=True,
-                date_joined__lt=distribution.models.to_step_start(
-                    x.created, offset=1)).count(),
-            ibis.models.Organization.objects.filter(
-                is_active=True,
-                date_joined__lt=distribution.models.to_step_start(
-                    x.created, offset=1)).count(),
-            ibis.models.Bot.objects.filter(
-                is_active=True,
-                date_joined__lt=distribution.models.to_step_start(
-                    x.created, offset=1)).count(),
+            len(
+                set(
+                    y for y in ibis.models.Person.objects.filter(
+                        is_active=True,
+                        date_joined__lt=distribution.models.to_step_start(
+                            x.created, offset=1))
+                    if ibis.models.Donation.objects.filter(user=y).exists())),
         ) for x in distribution.models.Goal.objects.order_by('created')][:-1]
 
         fig = plt.figure()
@@ -183,24 +170,19 @@ class Command(BaseCommand):
         plt.plot(
             [x[0] for x in data],
             [x[1] for x in data],
-            label='People',
+            label='Active Users (Weekly)',
         )
         plt.plot(
             [x[0] for x in data],
             [x[2] for x in data],
-            label='Organizations',
-        )
-        plt.plot(
-            [x[0] for x in data],
-            [x[3] for x in data],
-            label='Bots',
+            label='Total Users (Culmulative)',
         )
 
         ax.set_ylim(ymin=0)
         plt.xlabel('Date (weekly)')
-        plt.ylabel('Total Number of People')
+        plt.ylabel('Number of Users')
         plt.legend()
-        plt.savefig(os.path.join(PATH, 'users_total.pdf'))
+        plt.savefig(os.path.join(PATH, 'users_time.pdf'))
         plt.clf()
 
     def graph_organization_engagement(self):
