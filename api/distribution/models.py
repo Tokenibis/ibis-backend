@@ -1,5 +1,6 @@
 import random
 
+from collections import defaultdict
 from hashlib import sha256
 
 from django.db import models
@@ -153,7 +154,6 @@ def to_step_start(time, offset=0):
             tzinfo=localtime().tzinfo,
         )
 
-
     # will be 0, -1, or 1 hours off of midnight, depending on tz
     raw = localtime(
         datetime.combine(
@@ -185,6 +185,71 @@ class Investment(TimeStampedModel):
         null=True,
         blank=True,
     )
+
+    @staticmethod
+    def account_investments():
+        def _diff(t1, t2):
+            return round((to_step_start(t1) - to_step_start(t2)).days / 7)
+
+        result = defaultdict(lambda: defaultdict(lambda: 0))
+
+        investments = list(Investment.objects.order_by('start'))
+
+        # grid where rows are investments and columns are weeks
+        grid = [[
+            0 for x in range(
+                _diff(
+                    Investment.objects.order_by('end').last().end,
+                    investments[0].start,
+                ) + 1)
+        ] for _ in investments]
+
+        # fill grid with money amounts from investments
+        for i, x in enumerate(investments):
+            chunk = int(x.amount / (_diff(x.end, x.start) + 1))
+            for j in range(
+                    _diff(x.start, investments[0].start),
+                    _diff(x.end, investments[0].start),
+            ):
+                grid[i][j] = chunk
+            grid[i][_diff(
+                x.end,
+                investments[0].start,
+            )] = x.amount - chunk * _diff(x.end, x.start)
+
+        # account grid with money from donations
+        i, j = 0, 0
+        for x in ibis.models.Donation.objects.order_by('created'):
+            remainder, offset, anchor = x.amount, 0, i
+
+            while remainder > 0:
+                if grid[i][j + offset]:
+                    if remainder > grid[i][j + offset]:
+                        result[investments[i]][x] += grid[i][j + offset]
+                        remainder -= grid[i][j + offset]
+                        grid[i][j + offset] = 0
+                    else:
+                        result[investments[i]][x] += remainder
+                        grid[i][j + offset] -= remainder
+                        remainder = 0
+                else:
+                    if j + offset + 1 < len(
+                            grid[0]) and grid[i][j + offset + 1] > 0:
+                        # still have space on the current investment
+                        offset += 1
+                    elif (i + 1) % len(grid) != anchor:
+                        # still have more investments in the current week
+                        offset, i = (0, (i + 1) % len(grid))
+                    elif j + 1 < len(grid[0]):
+                        # still have more weeks to increment to
+                        i, j, offset = anchor, j + 1, 0
+                    else:
+                        # uh-oh, we're probably broke
+                        raise ValueError('More donations than investments')
+
+            i = (i + 1) % len(grid)
+
+        return result
 
     def __str__(self):
         return '{} ${:.2f} {} - {}'.format(
