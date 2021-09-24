@@ -9,7 +9,7 @@ class GoalAdmin(admin.ModelAdmin):
 
 @admin.register(models.Investment)
 class InvestmentAdmin(admin.ModelAdmin):
-    raw_id_fields = ['deposit']
+    raw_id_fields = ['deposit', 'funded']
 
 
 admin.site.register(models.Goal, GoalAdmin)

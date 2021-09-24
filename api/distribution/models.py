@@ -1,3 +1,4 @@
+import logging
 import random
 
 from collections import defaultdict
@@ -21,6 +22,8 @@ DAYS = (
     'Saturday',
     'Sunday',
 )
+
+logger = logging.getLogger(__name__)
 
 
 def distribute_all_safe():
@@ -185,13 +188,18 @@ class Investment(TimeStampedModel):
         null=True,
         blank=True,
     )
+    funded = models.ManyToManyField(
+        ibis.models.Donation,
+        related_name='funded_by',
+        blank=True,
+    )
 
     @staticmethod
     def account_investments():
         def _diff(t1, t2):
             return round((to_step_start(t1) - to_step_start(t2)).days / 7)
 
-        result = defaultdict(lambda: defaultdict(lambda: 0))
+        result = defaultdict(lambda: set())
 
         investments = list(Investment.objects.order_by('start'))
 
@@ -219,37 +227,42 @@ class Investment(TimeStampedModel):
 
         # account grid with money from donations
         i, j = 0, 0
-        for x in ibis.models.Donation.objects.order_by('created'):
-            remainder, offset, anchor = x.amount, 0, i
+        try:
+            for x in ibis.models.Donation.objects.order_by('created'):
+                remainder, offset, anchor = x.amount, 0, i
 
-            while remainder > 0:
-                if grid[i][j + offset]:
-                    if remainder > grid[i][j + offset]:
-                        result[investments[i]][x] += grid[i][j + offset]
-                        remainder -= grid[i][j + offset]
-                        grid[i][j + offset] = 0
+                while remainder > 0:
+                    if grid[i][j + offset]:
+                        result[investments[i]].add(x)
+                        if remainder > grid[i][j + offset]:
+                            remainder -= grid[i][j + offset]
+                            grid[i][j + offset] = 0
+                        else:
+                            grid[i][j + offset] -= remainder
+                            remainder = 0
                     else:
-                        result[investments[i]][x] += remainder
-                        grid[i][j + offset] -= remainder
-                        remainder = 0
-                else:
-                    if j + offset + 1 < len(
-                            grid[0]) and grid[i][j + offset + 1] > 0:
-                        # still have space on the current investment
-                        offset += 1
-                    elif (i + 1) % len(grid) != anchor:
-                        # still have more investments in the current week
-                        offset, i = (0, (i + 1) % len(grid))
-                    elif j + 1 < len(grid[0]):
-                        # still have more weeks to increment to
-                        i, j, offset = anchor, j + 1, 0
-                    else:
-                        # uh-oh, we're probably broke
-                        raise ValueError('More donations than investments')
+                        if j + offset + 1 < len(
+                                grid[0]) and grid[i][j + offset + 1] > 0:
+                            # still have space on the current investment
+                            offset += 1
+                        elif (i + 1) % len(grid) != anchor:
+                            # still have more investments in the current week
+                            offset, i = (0, (i + 1) % len(grid))
+                        elif j + 1 < len(grid[0]):
+                            # still have more weeks to increment to
+                            i, j, offset = anchor, j + 1, 0
+                        else:
+                            # uh-oh, we're probably broke
+                            raise ValueError('More donations than investments')
 
-            i = (i + 1) % len(grid)
+                i = (i + 1) % len(grid)
+        except ValueError as e:
+            logger.warning(e)
 
-        return result
+        for investment, donations in result.items():
+            if not set(investment.funded.all()) == donations:
+                investment.funded.clear()
+                investment.funded.add(*donations)
 
     def __str__(self):
         return '{} ${:.2f} {} - {}'.format(
