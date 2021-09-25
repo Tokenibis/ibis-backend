@@ -194,6 +194,18 @@ class Investment(TimeStampedModel):
         blank=True,
     )
 
+    @property
+    def info_str(self):
+        amounts = sum(x.amount for x in self.funded.all())
+
+        return '\n'.join('{}: {}'.format(x, y) for x, y in [
+            ('Total Investment', '${:.2f}'.format(self.amount / 100)),
+            ('Donations Funded', self.funded.count()),
+            ('Spending Timeline', '{} to {}'.format(self.start, self.end)),
+            ('Percent Spent',
+             '{}%'.format(min(100, round(100 * amounts / self.amount)))),
+        ])
+
     @staticmethod
     def account_investments():
         def _diff(t1, t2):
