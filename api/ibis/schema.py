@@ -535,38 +535,6 @@ class DepositNode(DjangoObjectType):
         return queryset.filter(user=info.context.user)
 
 
-class DepositCreate(Mutation):
-    class Arguments:
-        user = graphene.ID(required=True)
-        amount = graphene.Int(required=True)
-        description = graphene.String(required=True)
-        category = graphene.ID(required=True)
-
-    deposit = graphene.Field(DepositNode)
-
-    def mutate(self, info, user, amount, description, category):
-        if not info.context.user.is_superuser:
-            raise GraphQLError('You are not a staff member')
-
-        try:
-            assert amount > 0
-            assert amount <= settings.MAX_EXCHANGE
-        except AssertionError:
-            raise GraphQLError('Arguments do not satisfy constraints')
-
-        user_obj = models.User.objects.get(pk=from_global_id(user)[1])
-
-        deposit = models.Deposit.objects.create(
-            user=user_obj,
-            amount=amount,
-            description=description,
-            category=models.ExchangeCategory.objects.get(
-                pk=from_global_id(category)[1]),
-        )
-        deposit.save()
-        return DepositCreate(deposit=deposit)
-
-
 # --- Withdrawal ------------------------------------------------------------ #
 
 
@@ -2215,7 +2183,6 @@ class Query(object):
 
 
 class Mutation(graphene.ObjectType):
-    create_deposit = DepositCreate.Field()
     create_donation = DonationCreate.Field()
     create_reward = RewardCreate.Field()
     create_news = NewsCreate.Field()

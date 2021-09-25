@@ -58,8 +58,7 @@ class TransferTestCase(BaseTestCase):
 
         models.Deposit.objects.create(
             user=self.me_bot,
-            amount=int(
-                (settings.MAX_TRANSFER - self.me_bot.balance()) * 1.5),
+            amount=int((settings.MAX_TRANSFER - self.me_bot.balance()) * 1.5),
             description='unique_test_transfer_limit_reward',
             category=models.ExchangeCategory.objects.first(),
         )
@@ -76,38 +75,16 @@ class TransferTestCase(BaseTestCase):
     # send money around randomly and make sure that balances agree at the end
     def test_transfer_dynamic(self):
         def deposit(user, amount):
-            self._client.force_login(self.staff)
-            result = json.loads(
-                self.query(
-                    '''
-                    mutation DepositCreate($user: ID! $amount: Int! $description: String! $category: ID!) {
-                        createDeposit(user: $user amount: $amount description: $description category: $category) {
-                            deposit {
-                                id
-                            }
-                        }
-                    }
-                    ''',
-                    op_name='DepositCreate',
-                    variables={
-                        'user':
-                        to_global_id('PersonNode', user.id),
-                        'amount':
-                        amount,
-                        'description':
-                        'unique_{}_{}'.format(
-                            user.username,
-                            len(user.deposit_set.all()),
-                        ),
-                        'category':
-                        to_global_id(
-                            'ExchangeCategory',
-                            models.ExchangeCategory.objects.first().id,
-                        ),
-                    },
-                ).content)
-            self._client.logout()
-            return result
+            models.Deposit.objects.create(
+                user=user,
+                amount=amount,
+                description='unique_{}_{}'.format(
+                    user.username,
+                    len(user.deposit_set.all()),
+                ),
+                category=models.ExchangeCategory.objects.first(),
+            )
+            return '{"success": true}'
 
         def donate(user, target, amount):
             self._client.force_login(user)
