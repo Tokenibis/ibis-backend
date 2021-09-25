@@ -561,3 +561,42 @@ class MessageChannel(Message):
         on_delete=models.CASCADE,
         related_name='message_received',
     )
+
+
+class Investment(TimeStampedModel, Valuable):
+    name = models.TextField()
+    start = models.DateField()
+    end = models.DateField()
+    description = models.TextField(blank=True, null=True)
+    funded = models.ManyToManyField(
+        Donation,
+        related_name='funded_by',
+        blank=True,
+    )
+    user = models.ForeignKey(
+        Person,
+        on_delete=models.CASCADE,
+        related_name='invested',
+        null=True,
+        blank=True,
+    )
+
+    @property
+    def info_str(self):
+        amounts = sum(x.amount for x in self.funded.all())
+
+        return '\n'.join('{}: {}'.format(x, y) for x, y in [
+            ('Total Investment', '${:.2f}'.format(self.amount / 100)),
+            ('Donations Funded', self.funded.count()),
+            ('Spending Timeline', '{} to {}'.format(self.start, self.end)),
+            ('Percent Spent',
+             '{}%'.format(min(100, round(100 * amounts / self.amount)))),
+        ])
+
+    def __str__(self):
+        return '{} ${:.2f} {} - {}'.format(
+            self.name,
+            self.amount / 100,
+            self.start,
+            self.end,
+        )

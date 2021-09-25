@@ -487,7 +487,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['DepositList'],
                 op_name='DepositList',
                 variables={
-                    'withUser': user.gid,
+                    'user': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                     'after': 1,
@@ -495,6 +495,20 @@ class PermissionTestCase(BaseTestCase):
             ).content)
         success['DepositList'] = 'errors' not in result and bool(
             len(result['data']['allDeposits']['edges']) > 0)
+
+        result = json.loads(
+            self.query(
+                self.gql['InvestmentList'],
+                op_name='InvestmentList',
+                variables={
+                    'user': user.gid,
+                    'orderBy': '-start',
+                    'first': 25,
+                    'after': 1,
+                },
+            ).content)
+        success['InvestmentList'] = 'errors' not in result and bool(
+            len(result['data']['allInvestments']['edges']) > 0)
 
         result = json.loads(
             self.query(
@@ -627,7 +641,7 @@ class PermissionTestCase(BaseTestCase):
                 self.gql['WithdrawalList'],
                 op_name='WithdrawalList',
                 variables={
-                    'withUser': self.me_organization.gid,
+                    'user': user.gid,
                     'orderBy': '-created',
                     'first': 25,
                 },
@@ -945,6 +959,7 @@ class PermissionTestCase(BaseTestCase):
             'ActivityUpdate',
             'RewardForm',
             'RewardCreate',
+            'InvestmentList',
         ]
         self._client.force_login(self.me_organization)
         results = self.run_all(self.me_organization)
@@ -968,6 +983,7 @@ class PermissionTestCase(BaseTestCase):
             'NewsUpdate',
             'EventCreate',
             'EventUpdate',
+            'InvestmentList',
         ]
         self._client.force_login(self.me_bot)
         results = self.run_all(self.me_bot)
@@ -998,6 +1014,7 @@ class PermissionTestCase(BaseTestCase):
             'FollowCreate': False,
             'FollowDelete': False,
             'Home': True,
+            'InvestmentList': False,
             'UserList': True,
             'LikeCreate': False,
             'LikeDelete': False,

@@ -7,4 +7,4 @@ class Command(BaseCommand):
     help = 'Account for investments by linking them to donations'
 
     def handle(self, *args, **options):
-        models.Investment.account_investments()
+        models.refresh_accounting()

@@ -154,6 +154,11 @@ class BotAdmin(UserAdmin):
         return '${:.2f}'.format(obj.rewarded() / 100)
 
 
+@admin.register(models.Investment)
+class InvestmentAdmin(admin.ModelAdmin):
+    raw_id_fields = ['funded']
+
+
 admin.site.register(models.OrganizationCategory)
 admin.site.register(models.ExchangeCategory)
 admin.site.register(models.News)

@@ -5,7 +5,7 @@ import random
 
 from django.core.management import call_command
 from django.conf import settings
-from django.utils.timezone import now, localtime, utc
+from django.utils.timezone import now, localtime, utc, timedelta
 from graphene_django.utils.testing import GraphQLTestCase
 from graphql_relay.node.node import to_global_id
 from freezegun import freeze_time
@@ -26,6 +26,7 @@ NUM_CHANNEL = 3
 NUM_MESSAGE_DIRECT = 100
 NUM_MESSAGE_CHANNEL = 50
 NUM_DEPOSIT = 30
+NUM_INVESTMENT = 30
 NUM_DONATION = 100
 NUM_EVENT = 100
 NUM_FOLLOW = 100
@@ -60,6 +61,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         num_message_direct=NUM_MESSAGE_DIRECT,
         num_message_channel=NUM_MESSAGE_CHANNEL,
         num_deposit=NUM_DEPOSIT,
+        num_investment=NUM_INVESTMENT,
         num_donation=NUM_DONATION,
         num_event=NUM_EVENT,
         num_follow=NUM_FOLLOW,
@@ -106,6 +108,7 @@ class BaseTestCase(GraphQLTestCase):
         'FollowCreate',
         'FollowDelete',
         'Home',
+        'InvestmentList',
         'LikeCreate',
         'LikeDelete',
         'MessageChannelCreate',
@@ -227,6 +230,15 @@ class BaseTestCase(GraphQLTestCase):
                 amount=1,
                 description='unique_1',
                 category=models.ExchangeCategory.objects.first(),
+            )
+
+            models.Investment.objects.create(
+                user=self.me_person,
+                name=str(self.me_person),
+                amount=1000,
+                start=localtime().date(),
+                end=(localtime() + timedelta(days=7)).date(),
+                description='unique_1',
             )
 
             models.Deposit.objects.create(

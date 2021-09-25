@@ -7,8 +7,6 @@ from .payments import PayPalClient
 from django.conf import settings
 from django.utils.timezone import localtime
 from graphql_relay.node.node import to_global_id
-from django.views.generic.list import ListView
-from django.views.decorators.clickjacking import xframe_options_exempt
 from rest_framework import generics, response, exceptions
 
 logger = logging.getLogger(__name__)
@@ -92,7 +90,7 @@ class PaymentView(generics.GenericAPIView):
                     title='paypal'),
             )
 
-            models.Investment.objects.create(
+            ibis.models.Investment.objects.create(
                 name=str(user),
                 amount=net,
                 start=date,
@@ -105,18 +103,3 @@ class PaymentView(generics.GenericAPIView):
             'depositID':
             to_global_id('DepositNode', deposit.id),
         })
-
-
-class InvestmentView(ListView):
-    template_name = 'investment_list.html'
-    model = models.Investment
-    paginate_by = 50
-    ordering = ['-start']
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
-
-    @xframe_options_exempt
-    def get(self, *args, **kwargs):
-        return super().get(*args, **kwargs)

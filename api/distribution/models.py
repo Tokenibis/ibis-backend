@@ -144,6 +144,76 @@ def get_distribution_shares(time, initial=[]):
     return {x: raw[x] / total for x in raw if raw[x]} if total else {}
 
 
+def refresh_accounting():
+    def _diff(t1, t2):
+        return round((to_step_start(t1) - to_step_start(t2)).days / 7)
+
+    result = defaultdict(lambda: set())
+
+    investments = list(ibis.models.Investment.objects.order_by('start'))
+
+    # grid where rows are investments and columns are weeks
+    grid = [[
+        0 for x in range(
+            _diff(
+                ibis.models.Investment.objects.order_by('end').last().end,
+                investments[0].start,
+            ) + 1)
+    ] for _ in investments]
+
+    # fill grid with money amounts from investments
+    for i, x in enumerate(investments):
+        chunk = int(x.amount / (_diff(x.end, x.start) + 1))
+        for j in range(
+                _diff(x.start, investments[0].start),
+                _diff(x.end, investments[0].start),
+        ):
+            grid[i][j] = chunk
+        grid[i][_diff(
+            x.end,
+            investments[0].start,
+        )] = x.amount - chunk * _diff(x.end, x.start)
+
+    # account grid with money from donations
+    i, j = 0, 0
+    try:
+        for x in ibis.models.Donation.objects.order_by('created'):
+            remainder, offset, anchor = x.amount, 0, i
+
+            while remainder > 0:
+                if grid[i][j + offset]:
+                    result[investments[i]].add(x)
+                    if remainder > grid[i][j + offset]:
+                        remainder -= grid[i][j + offset]
+                        grid[i][j + offset] = 0
+                    else:
+                        grid[i][j + offset] -= remainder
+                        remainder = 0
+                else:
+                    if j + offset + 1 < len(
+                            grid[0]) and grid[i][j + offset + 1] > 0:
+                        # still have space on the current investment
+                        offset += 1
+                    elif (i + 1) % len(grid) != anchor:
+                        # still have more investments in the current week
+                        offset, i = (0, (i + 1) % len(grid))
+                    elif j + 1 < len(grid[0]):
+                        # still have more weeks to increment to
+                        i, j, offset = anchor, j + 1, 0
+                    else:
+                        # uh-oh, we're probably broke
+                        raise ValueError('More donations than investments')
+
+            i = (i + 1) % len(grid)
+    except ValueError as e:
+        logger.warning(e)
+
+    for investment, donations in result.items():
+        if not set(investment.funded.all()) == donations:
+            investment.funded.clear()
+            investment.funded.add(*donations)
+
+
 def to_step_start(time, offset=0):
     """Calculate the exact time (midnight) of the previous timestep as
     defined by the project settings. The optional offset parameter
@@ -176,122 +246,13 @@ def to_step_start(time, offset=0):
     )
 
 
-class Investment(TimeStampedModel):
-    name = models.TextField()
-    amount = models.PositiveIntegerField()
-    start = models.DateField()
-    end = models.DateField()
-    description = models.TextField(blank=True, null=True)
-    deposit = models.ForeignKey(
-        ibis.models.Deposit,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
-    funded = models.ManyToManyField(
-        ibis.models.Donation,
-        related_name='funded_by',
-        blank=True,
-    )
-
-    @property
-    def info_str(self):
-        amounts = sum(x.amount for x in self.funded.all())
-
-        return '\n'.join('{}: {}'.format(x, y) for x, y in [
-            ('Total Investment', '${:.2f}'.format(self.amount / 100)),
-            ('Donations Funded', self.funded.count()),
-            ('Spending Timeline', '{} to {}'.format(self.start, self.end)),
-            ('Percent Spent',
-             '{}%'.format(min(100, round(100 * amounts / self.amount)))),
-        ])
-
-    @staticmethod
-    def account_investments():
-        def _diff(t1, t2):
-            return round((to_step_start(t1) - to_step_start(t2)).days / 7)
-
-        result = defaultdict(lambda: set())
-
-        investments = list(Investment.objects.order_by('start'))
-
-        # grid where rows are investments and columns are weeks
-        grid = [[
-            0 for x in range(
-                _diff(
-                    Investment.objects.order_by('end').last().end,
-                    investments[0].start,
-                ) + 1)
-        ] for _ in investments]
-
-        # fill grid with money amounts from investments
-        for i, x in enumerate(investments):
-            chunk = int(x.amount / (_diff(x.end, x.start) + 1))
-            for j in range(
-                    _diff(x.start, investments[0].start),
-                    _diff(x.end, investments[0].start),
-            ):
-                grid[i][j] = chunk
-            grid[i][_diff(
-                x.end,
-                investments[0].start,
-            )] = x.amount - chunk * _diff(x.end, x.start)
-
-        # account grid with money from donations
-        i, j = 0, 0
-        try:
-            for x in ibis.models.Donation.objects.order_by('created'):
-                remainder, offset, anchor = x.amount, 0, i
-
-                while remainder > 0:
-                    if grid[i][j + offset]:
-                        result[investments[i]].add(x)
-                        if remainder > grid[i][j + offset]:
-                            remainder -= grid[i][j + offset]
-                            grid[i][j + offset] = 0
-                        else:
-                            grid[i][j + offset] -= remainder
-                            remainder = 0
-                    else:
-                        if j + offset + 1 < len(
-                                grid[0]) and grid[i][j + offset + 1] > 0:
-                            # still have space on the current investment
-                            offset += 1
-                        elif (i + 1) % len(grid) != anchor:
-                            # still have more investments in the current week
-                            offset, i = (0, (i + 1) % len(grid))
-                        elif j + 1 < len(grid[0]):
-                            # still have more weeks to increment to
-                            i, j, offset = anchor, j + 1, 0
-                        else:
-                            # uh-oh, we're probably broke
-                            raise ValueError('More donations than investments')
-
-                i = (i + 1) % len(grid)
-        except ValueError as e:
-            logger.warning(e)
-
-        for investment, donations in result.items():
-            if not set(investment.funded.all()) == donations:
-                investment.funded.clear()
-                investment.funded.add(*donations)
-
-    def __str__(self):
-        return '{} ${:.2f} {} - {}'.format(
-            self.name,
-            self.amount / 100,
-            self.start,
-            self.end,
-        )
-
-
 class Goal(TimeStampedModel):
     processed = models.BooleanField(default=False)
 
     def amount(self):
         return sum(x.amount / (
             (to_step_start(x.end, offset=1) - to_step_start(x.start)).days / 7)
-                   for x in Investment.objects.filter(
+                   for x in ibis.models.Investment.objects.filter(
                        end__gte=to_step_start(self.created),
                        start__lt=to_step_start(self.created, offset=1)))
 

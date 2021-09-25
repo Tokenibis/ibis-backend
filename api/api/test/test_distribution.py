@@ -342,7 +342,7 @@ class DistributionTestCase(BaseTestCase):
             # trigger first (failed) attempt at payment
             self._fast_forward_cron(frozen_datetime, 2, seconds=5)
 
-            distribution.models.Investment.objects.create(
+            ibis.models.Investment.objects.create(
                 start=localtime().date(),
                 end=(localtime() +
                      timedelta(days=4 * 7 * (TS_WEEKS + SS_WEEKS))).date(),
@@ -415,7 +415,7 @@ class DistributionTestCase(BaseTestCase):
             _check_epoch()
 
             # Epoch 4: moon
-            distribution.models.Investment.objects.create(
+            ibis.models.Investment.objects.create(
                 start=localtime(),
                 end=(localtime() + timedelta(days=4 * 7 * TS_WEEKS)).date(),
                 amount=300000 * TS_WEEKS,

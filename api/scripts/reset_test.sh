@@ -23,6 +23,7 @@ cd $DIR/.. && \
 	    --num_bot 10 \
 	    --num_deposit 100 \
 	    --num_withdrawal 100 \
+	    --num_investment 100 \
 	    --num_donation 200 \
 	    --num_reward 200 \
 	    --num_news 200 \

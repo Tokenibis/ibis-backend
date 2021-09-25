@@ -103,6 +103,7 @@ class Model:
         self.organizations = []
         self.deposits = []
         self.withdrawals = []
+        self.investments = []
         self.entries = []
         self.donations = []
         self.rewards = []
@@ -647,9 +648,29 @@ class Model:
             'fields': {
                 'user': user,
                 'amount': amount,
-                'created': self._random_time(),
                 'category': category,
                 'created': created if created else self._random_time(),
+            }
+        })
+
+        return pk
+
+    def add_investment(self, user, amount, created=None):
+        pk = len(self.investments) + 1
+
+        created = created if created else self._random_time()
+
+        self.investments.append({
+            'model': 'ibis.Investment',
+            'pk': pk,
+            'fields': {
+                'user': user,
+                'name': 'John Doe {}'.format(random.random()),
+                'amount': amount,
+                'created': created,
+                'start': created.date(),
+                'end':
+                (created + timedelta(days=random.randint(0, 52))).date(),
             }
         })
 
@@ -705,6 +726,12 @@ class Model:
         for x in serializable_deposits:
             x['fields']['created'] = str(x['fields']['created'])
 
+        serializable_investments = copy.deepcopy(self.investments)
+        for x in serializable_investments:
+            x['fields']['created'] = str(x['fields']['created'])
+            x['fields']['start'] = str(x['fields']['start'])
+            x['fields']['end'] = str(x['fields']['end'])
+
         serializable_messages_direct = copy.deepcopy(self.messages_direct)
         for x in serializable_messages_direct:
             x['fields']['created'] = str(x['fields']['created'])
@@ -737,6 +764,7 @@ class Model:
             self.bots,
             self.users,
             serializable_deposits,
+            serializable_investments,
             partial_entries,
             self.donations,
             self.activities,
@@ -764,6 +792,7 @@ class Command(BaseCommand):
         parser.add_argument('--num_organization', type=int, required=True)
         parser.add_argument('--num_deposit', type=int, required=True)
         parser.add_argument('--num_withdrawal', type=int, required=True)
+        parser.add_argument('--num_investment', type=int, required=True)
         parser.add_argument('--num_donation', type=int, required=True)
         parser.add_argument('--num_reward', type=int, required=True)
         parser.add_argument('--num_news', type=int, required=True)
@@ -787,6 +816,7 @@ class Command(BaseCommand):
             num_organization=options['num_organization'],
             num_deposit=options['num_deposit'],
             num_withdrawal=options['num_withdrawal'],
+            num_investment=options['num_investment'],
             num_donation=options['num_donation'],
             num_reward=options['num_reward'],
             num_news=options['num_news'],
@@ -811,6 +841,7 @@ class Command(BaseCommand):
             num_organization,
             num_deposit,
             num_withdrawal,
+            num_investment,
             num_donation,
             num_reward,
             num_news,
@@ -1002,6 +1033,15 @@ class Command(BaseCommand):
                     random.randint(0, 100),
                 ))
 
+        # make investments
+        for _ in range(num_investment):
+            model.add_investment(
+                random.choice(people) if random.random() < 0.5 else None,
+                amount=int(
+                    1.2 * sum(x['fields']['amount']
+                              for x in model.donations) / num_investment),
+            )
+
         # make fake news
         news = []
         for i in range(num_news):
@@ -1119,7 +1159,8 @@ class Command(BaseCommand):
 
         # make channels
         channel_names = [
-            'The {} Channel'.format(x) for x in random.sample(nouns, num_channel)
+            'The {} Channel'.format(x)
+            for x in random.sample(nouns, num_channel)
         ]
         members = random.sample(
             people + organizations + bots,

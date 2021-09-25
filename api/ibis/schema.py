@@ -185,6 +185,14 @@ class WithdrawalFilter(django_filters.FilterSet):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
+class InvestmentFilter(django_filters.FilterSet):
+    user = django_filters.CharFilter(method='filter_user')
+    order_by = django_filters.OrderingFilter(fields=(('start', 'start'), ))
+
+    def filter_user(self, qs, name, value):
+        return qs.filter(Q(user_id=from_global_id(value)[1]))
+
+
 class EntryOrderingFilter(django_filters.OrderingFilter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -289,9 +297,15 @@ class TransferFilter(EntryFilter):
 
 
 class DonationFilter(TransferFilter):
+    from_investment = django_filters.CharFilter(
+        method='filter_from_investment')
+
     class Meta:
         model = models.Donation
         fields = []
+
+    def filter_from_investment(self, qs, name, value):
+        return qs.filter(funded_by=from_global_id(value)[1])
 
 
 class RewardFilter(TransferFilter):
@@ -530,7 +544,6 @@ class DepositNode(DjangoObjectType):
     @classmethod
     def get_queryset(cls, queryset, info):
         if info.context.user.is_superuser:
-
             return queryset
         return queryset.filter(user=info.context.user)
 
@@ -541,6 +554,22 @@ class DepositNode(DjangoObjectType):
 class WithdrawalNode(DjangoObjectType):
     class Meta:
         model = models.Withdrawal
+        filter_fields = []
+        interfaces = (relay.Node, )
+
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        if info.context.user.is_superuser:
+            return queryset
+        return queryset.filter(user=info.context.user)
+
+
+# --- Deposit --------------------------------------------------------------- #
+
+
+class InvestmentNode(DjangoObjectType):
+    class Meta:
+        model = models.Investment
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -2098,6 +2127,7 @@ class Query(object):
     withdrawal = relay.Node.Field(WithdrawalNode)
     entry = EntryNodeInterface.Field(EntryNode)
     deposit = relay.Node.Field(DepositNode)
+    investment = relay.Node.Field(InvestmentNode)
     donation = EntryNodeInterface.Field(DonationNode)
     reward = EntryNodeInterface.Field(RewardNode)
     news = EntryNodeInterface.Field(NewsNode)
@@ -2135,6 +2165,10 @@ class Query(object):
     all_withdrawals = DjangoFilterConnectionField(
         WithdrawalNode,
         filterset_class=WithdrawalFilter,
+    )
+    all_investments = DjangoFilterConnectionField(
+        InvestmentNode,
+        filterset_class=InvestmentFilter,
     )
     all_entries = DjangoFilterConnectionField(
         EntryNode,
