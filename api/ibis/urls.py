@@ -15,4 +15,5 @@ urlpatterns = [
     path('phone/code/', views.PhoneCodeView.as_view(), name='phone-code'),
     path('phone/confirm/', views.PhoneConfirmView.as_view(), name='phone-confirm'),
     path('investment/', views.InvestmentView.as_view(), name='investment'),
+    path('payment/', views.PaymentView.as_view(), name='payment'),
 ]

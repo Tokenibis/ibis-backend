@@ -127,6 +127,11 @@ class DistributionTestCase(BaseTestCase):
         assert person2.deposit_set.count() == 1
         assert person2.balance() != 1000
 
+    def test_accounting(self):
+        distribution.models.refresh_accounting()
+        for x in ibis.models.Donation.objects.all():
+            assert x.funded_by.exists()
+
     def test_distribution(self):
         def _create_person(activity):
             activity[ibis.models.Person.objects.create(

@@ -9,6 +9,8 @@ import requests
 import ibis.serializers
 import ibis.models as models
 
+from .payments import PayPalClient
+from django.db import transaction
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
@@ -313,3 +315,51 @@ class InvestmentView(ListView):
     @xframe_options_exempt
     def get(self, *args, **kwargs):
         return super().get(*args, **kwargs)
+
+
+class PaymentView(generics.GenericAPIView):
+    serializer_class = ibis.serializers.PaymentSerializer
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.paypal_client = PayPalClient()
+
+    def post(self, request, *args, **kwargs):
+        serializerform = self.get_serializer(data=request.data)
+        if not serializerform.is_valid():
+            raise exceptions.ParseError(detail="No valid values")
+        description, net, fee = self.paypal_client.get_order(
+            request.data['orderID'])
+
+        if not (description and net):
+            logger.error('Error fetching order information')
+            return response.Response({
+                'depositID': '',
+            })
+
+        user = models.User.objects.get(pk=request.user.id)
+
+        date = localtime().date()
+
+        with transaction.atomic():
+            deposit = models.Deposit.objects.create(
+                user=user,
+                amount=net,
+                description='paypal:{}:{}'.format(fee, description),
+                category=models.ExchangeCategory.objects.get(
+                    title='paypal'),
+            )
+
+            models.Investment.objects.create(
+                name=str(user),
+                amount=net,
+                start=date,
+                end=date,
+                description='On-app deposit',
+                deposit=deposit,
+            )
+
+        return response.Response({
+            'depositID':
+            to_global_id('DepositNode', deposit.id),
+        })
