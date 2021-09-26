@@ -10,7 +10,6 @@ import ibis.serializers
 import ibis.models as models
 
 from .payments import PayPalClient
-from django.db import transaction
 from django.contrib.auth import update_session_auth_hash
 from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
@@ -341,25 +340,16 @@ class PaymentView(generics.GenericAPIView):
 
         date = localtime().date()
 
-        with transaction.atomic():
-            deposit = models.Deposit.objects.create(
-                user=user,
-                amount=net,
-                description='paypal:{}:{}'.format(fee, description),
-                category=models.ExchangeCategory.objects.get(
-                    title='paypal'),
-            )
-
-            models.Investment.objects.create(
-                name=str(user),
-                amount=net,
-                start=date,
-                end=date,
-                description='On-app deposit',
-                deposit=deposit,
-            )
+        investment = models.Investment.objects.create(
+            name=str(user),
+            amount=net,
+            start=date,
+            end=date,
+            description='On-app investment',
+            user=user,
+        )
 
         return response.Response({
-            'depositID':
-            to_global_id('DepositNode', deposit.id),
+            'investmentID':
+            to_global_id('InvestmentNode', investment.id),
         })
