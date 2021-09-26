@@ -15,7 +15,7 @@ from graphql_relay.node.node import to_global_id
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 
-TS_WEEKS = 9
+TS_WEEKS = 10
 SS_WEEKS = 15
 
 UBP_CATEGORY = ibis.models.ExchangeCategory.objects.get(
@@ -283,18 +283,16 @@ class DistributionTestCase(BaseTestCase):
                     ) if x != x.user.deposit_set.first()) for x in steps
             ]
 
-            adjusted = [
-                sum([
-                    _none_zero(
-                        ibis.models.Donation.objects.filter(
-                            created__gte=x,
-                            created__lt=x + timedelta(days=7),
-                        ).aggregate(Sum('amount'))['amount__sum']),
-                ]) for x in steps
+            donations = [
+                ibis.models.Donation.objects.filter(
+                    created__gte=x,
+                    created__lt=x + timedelta(days=7),
+                ).aggregate(Sum('amount'))['amount__sum'] for x in steps
             ]
 
             assert all(
-                x[0] == goals[i] and x[1] == adjusted[i] for i, x in enumerate(
+                x[0] == goals[i] and x[1] == donations[i]
+                for i, x in enumerate(
                     distribution.models.get_control_history(localtime())[:-1]))
 
             # make sure that the control signal never exceeds bounds
@@ -303,17 +301,8 @@ class DistributionTestCase(BaseTestCase):
                     regular_ubp[i] >= goals[i] * 0.4
                     and regular_ubp[i] <= goals[i] * 1.6)
 
-            # ensure monotonic convergence for latter half of steady state
-            abs_error = [
-                abs(goals[0] - adjusted[-1]) for i in range(len(steps))
-            ]
-            assert all(abs_error[i] <= abs_error[i - 1]
-                       for i in range(int(-SS_WEEKS / 2),
-                                      len(abs_error) - 1))
-
-            # make sure the difference is within a reasonable amount
             assert abs(
-                sum(goals[i] - adjusted[i] for i in range(len(steps)))
+                sum(goals[i] - donations[i] for i in range(len(steps)))
             ) < distribution.models.Goal.objects.last().amount() * EPSILON
 
         with freeze_time(TEST_TIME.astimezone(utc).date()) as frozen_datetime:
@@ -392,14 +381,6 @@ class DistributionTestCase(BaseTestCase):
             # Epoch 3: surge
             for _ in range(TS_WEEKS):
                 # add random number of users every week
-                for x in ibis.models.Bot.objects.all():
-                    ibis.models.Deposit.objects.create(
-                        user=x,
-                        amount=10000,
-                        category=ibis.models.ExchangeCategory.objects.get(
-                            title='admin'),
-                    )
-
                 _tick_transient(
                     activity,
                     users=random.sample(
@@ -408,7 +389,7 @@ class DistributionTestCase(BaseTestCase):
                         len(activity),
                     ),
                 )
-                for _ in range(random.randint(1, 4)):
+                for _ in range(random.randint(0, 1)):
                     _create_person(activity)
                 self._fast_forward_cron(frozen_datetime, 7, days=1)
                 _check_transient(activity)
