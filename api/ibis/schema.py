@@ -193,7 +193,7 @@ class InvestmentFilter(django_filters.FilterSet):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
-class DonationInvestmentFilter(django_filters.FilterSet):
+class InvestmentDonationFilter(django_filters.FilterSet):
     with_donation = django_filters.CharFilter(
         method='filter_with_donation')
 
@@ -201,7 +201,7 @@ class DonationInvestmentFilter(django_filters.FilterSet):
         method='filter_with_investment')
 
     class Meta:
-        model = models.DonationInvestment
+        model = models.InvestmentDonation
         fields = []
 
     def filter_with_donation(self, qs, name, value):
@@ -587,8 +587,8 @@ class WithdrawalNode(DjangoObjectType):
 
 class InvestmentNode(DjangoObjectType):
     donation_amount = DjangoFilterConnectionField(
-        lambda: DonationInvestmentNode,
-        filterset_class=DonationInvestmentFilter,
+        lambda: InvestmentDonationNode,
+        filterset_class=InvestmentDonationFilter,
     )
 
     class Meta:
@@ -603,12 +603,12 @@ class InvestmentNode(DjangoObjectType):
         return queryset.filter(user=info.context.user)
 
     def resolve_donation_amount(self, *args, **kwargs):
-        return self.donationinvestment_set.all()
+        return self.investmentdonation_set.all()
 
 
-class DonationInvestmentNode(DjangoObjectType):
+class InvestmentDonationNode(DjangoObjectType):
     class Meta:
-        model = models.DonationInvestment
+        model = models.InvestmentDonation
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -747,8 +747,8 @@ class EntryNode(DjangoObjectType):
 class DonationNode(EntryNode):
     amount = graphene.Int()
     investment_amount = DjangoFilterConnectionField(
-        lambda: DonationInvestmentNode,
-        filterset_class=DonationInvestmentFilter,
+        lambda: InvestmentDonationNode,
+        filterset_class=InvestmentDonationFilter,
     )
 
     class Meta:
@@ -772,7 +772,7 @@ class DonationNode(EntryNode):
             | Q(target_id=info.context.user.id)).distinct()
 
     def resolve_investment_amount(self, *args, **kwargs):
-        return self.donationinvestment_set.all()
+        return self.investmentdonation_set.all()
 
 
 class DonationCreate(Mutation):

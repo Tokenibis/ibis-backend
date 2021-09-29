@@ -138,23 +138,23 @@ class DistributionTestCase(BaseTestCase):
         assert sum(
             x.amount for x in ibis.models.Donation.objects.all()) == sum(
                 y.amount for x in ibis.models.Investment.objects.all()
-                for y in x.donationinvestment_set.all())
+                for y in x.investmentdonation_set.all())
 
         # make sure accounting is deterministic
         old = set((
             x.investment,
             x.donation,
             x.amount,
-        ) for x in ibis.models.DonationInvestment.objects.all())
+        ) for x in ibis.models.InvestmentDonation.objects.all())
 
-        ibis.models.DonationInvestment.objects.all().delete()
+        ibis.models.InvestmentDonation.objects.all().delete()
         distribution.models.refresh_accounting()
 
         new = set((
             x.investment,
             x.donation,
             x.amount,
-        ) for x in ibis.models.DonationInvestment.objects.all())
+        ) for x in ibis.models.InvestmentDonation.objects.all())
 
         assert old == new
 

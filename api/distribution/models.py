@@ -216,10 +216,10 @@ def refresh_accounting():
         ) for donation, amount in donations.items()) != set((
                 x.donation,
                 x.amount,
-        ) for x in investment.donationinvestment_set.all()):
-            investment.donationinvestment_set.all().delete()
+        ) for x in investment.investmentdonation_set.all()):
+            investment.investmentdonation_set.all().delete()
             for donation, amount in donations.items():
-                ibis.models.DonationInvestment.objects.create(
+                ibis.models.InvestmentDonation.objects.create(
                     investment=investment,
                     donation=donation,
                     amount=amount,
