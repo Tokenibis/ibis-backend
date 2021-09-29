@@ -571,6 +571,7 @@ class Investment(TimeStampedModel, Valuable):
     funded = models.ManyToManyField(
         Donation,
         related_name='funded_by',
+        through='DonationInvestment',
         blank=True,
     )
     user = models.ForeignKey(
@@ -600,3 +601,14 @@ class Investment(TimeStampedModel, Valuable):
             self.start,
             self.end,
         )
+
+
+class DonationInvestment(Valuable):
+    investment = models.ForeignKey(
+        Investment,
+        on_delete=models.CASCADE,
+    )
+    donation = models.ForeignKey(
+        Donation,
+        on_delete=models.CASCADE,
+    )

@@ -129,8 +129,34 @@ class DistributionTestCase(BaseTestCase):
 
     def test_accounting(self):
         distribution.models.refresh_accounting()
+
+        # all donations should have at least one investment
         for x in ibis.models.Donation.objects.all():
             assert x.funded_by.exists()
+
+        # total investment accounting should equal total donations
+        assert sum(
+            x.amount for x in ibis.models.Donation.objects.all()) == sum(
+                y.amount for x in ibis.models.Investment.objects.all()
+                for y in x.donationinvestment_set.all())
+
+        # make sure accounting is deterministic
+        old = set((
+            x.investment,
+            x.donation,
+            x.amount,
+        ) for x in ibis.models.DonationInvestment.objects.all())
+
+        ibis.models.DonationInvestment.objects.all().delete()
+        distribution.models.refresh_accounting()
+
+        new = set((
+            x.investment,
+            x.donation,
+            x.amount,
+        ) for x in ibis.models.DonationInvestment.objects.all())
+
+        assert old == new
 
     def test_distribution(self):
         def _create_person(activity):

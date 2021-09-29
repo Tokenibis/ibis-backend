@@ -154,9 +154,15 @@ class BotAdmin(UserAdmin):
         return '${:.2f}'.format(obj.rewarded() / 100)
 
 
+class DonationInvestmentInline(admin.TabularInline):
+    model = models.DonationInvestment
+    extra = 0
+
+
 @admin.register(models.Investment)
 class InvestmentAdmin(admin.ModelAdmin):
-    raw_id_fields = ['funded']
+    raw_id_fields = ('funded', )
+    inlines = (DonationInvestmentInline, )
 
 
 admin.site.register(models.OrganizationCategory)

@@ -148,7 +148,7 @@ def refresh_accounting():
     def _diff(t1, t2):
         return round((to_step_start(t1) - to_step_start(t2)).days / 7)
 
-    result = defaultdict(lambda: set())
+    result = defaultdict(lambda: defaultdict(lambda: 0))
 
     investments = list(ibis.models.Investment.objects.order_by('start'))
 
@@ -182,12 +182,13 @@ def refresh_accounting():
 
             while remainder > 0:
                 if grid[i][j + offset]:
-                    result[investments[i]].add(x)
                     if remainder > grid[i][j + offset]:
                         remainder -= grid[i][j + offset]
+                        result[investments[i]][x] += grid[i][j + offset]
                         grid[i][j + offset] = 0
                     else:
                         grid[i][j + offset] -= remainder
+                        result[investments[i]][x] += remainder
                         remainder = 0
                 else:
                     if j + offset + 1 < len(
@@ -209,9 +210,20 @@ def refresh_accounting():
         logger.warning(e)
 
     for investment, donations in result.items():
-        if not set(investment.funded.all()) == donations:
-            investment.funded.clear()
-            investment.funded.add(*donations)
+        if set((
+                donation,
+                amount,
+        ) for donation, amount in donations.items()) != set((
+                x.donation,
+                x.amount,
+        ) for x in investment.donationinvestment_set.all()):
+            investment.donationinvestment_set.all().delete()
+            for donation, amount in donations.items():
+                ibis.models.DonationInvestment.objects.create(
+                    investment=investment,
+                    donation=donation,
+                    amount=amount,
+                )
 
 
 def to_step_start(time, offset=0):
