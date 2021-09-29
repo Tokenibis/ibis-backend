@@ -921,6 +921,28 @@ class PermissionTestCase(BaseTestCase):
 
         return success
 
+    def _parse_results(self, results, expected_fail=[]):
+        try:
+            assert all(r for o, r in results.items() if o not in expected_fail)
+        except AssertionError:
+            print(
+                'The following queries failed unexpectedly',
+                list(o for o, r in results.items()
+                     if not r and o not in expected_fail),
+            )
+            return False
+        try:
+            assert not any(r for o, r in results.items() if o in expected_fail)
+        except AssertionError:
+            print(
+                'The following queries succeeded unexpectedly',
+                list(
+                    o for r, o in results.items() if r and o in expected_fail),
+            )
+            return False
+
+        return True
+
     # # anonymous users can't do anything
     # def test_anonymous(self):
     #     assert not any(self.run_all(self.me_person).values())
@@ -940,13 +962,11 @@ class PermissionTestCase(BaseTestCase):
         ]
         self._client.force_login(self.staff)
         results = self.run_all(self.me_person)
-        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
-        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+        assert self._parse_results(results, expected_fail)
 
         self._client.force_login(self.staff)
         results = self.run_all(self.me_person)
-        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
-        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+        assert self._parse_results(results, expected_fail)
 
     # logged in users can see all of their own information
     def test_organization(self):
@@ -963,13 +983,11 @@ class PermissionTestCase(BaseTestCase):
         ]
         self._client.force_login(self.me_organization)
         results = self.run_all(self.me_organization)
-        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
-        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+        assert self._parse_results(results, expected_fail)
 
         self._client.force_login(self.staff)
         results = self.run_all(self.me_organization)
-        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
-        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+        assert self._parse_results(results, expected_fail)
 
     # logged in users can see all of their own information
     def test_bots(self):
@@ -987,13 +1005,11 @@ class PermissionTestCase(BaseTestCase):
         ]
         self._client.force_login(self.me_bot)
         results = self.run_all(self.me_bot)
-        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
-        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+        assert self._parse_results(results, expected_fail)
 
         self._client.force_login(self.staff)
         results = self.run_all(self.me_bot)
-        assert all(x[1] for x in results.items() if x[0] not in expected_fail)
-        assert not any(x[1] for x in results.items() if x[0] in expected_fail)
+        assert self._parse_results(results, expected_fail)
 
     # logged in users can see some of other people's information
     def test_other_public(self):
