@@ -185,7 +185,7 @@ class WithdrawalFilter(django_filters.FilterSet):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
-class InvestmentFilter(django_filters.FilterSet):
+class GrantFilter(django_filters.FilterSet):
     user = django_filters.CharFilter(method='filter_user')
     order_by = django_filters.OrderingFilter(fields=(('start', 'start'), ))
 
@@ -193,22 +193,22 @@ class InvestmentFilter(django_filters.FilterSet):
         return qs.filter(Q(user_id=from_global_id(value)[1]))
 
 
-class InvestmentDonationFilter(django_filters.FilterSet):
+class GrantDonationFilter(django_filters.FilterSet):
     with_donation = django_filters.CharFilter(
         method='filter_with_donation')
 
-    with_investment = django_filters.CharFilter(
-        method='filter_with_investment')
+    with_grant = django_filters.CharFilter(
+        method='filter_with_grant')
 
     class Meta:
-        model = models.InvestmentDonation
+        model = models.GrantDonation
         fields = []
 
     def filter_with_donation(self, qs, name, value):
         return qs.filter(donation=from_global_id(value)[1])
 
-    def filter_with_investment(self, qs, name, value):
-        return qs.filter(investment=from_global_id(value)[1])
+    def filter_with_grant(self, qs, name, value):
+        return qs.filter(grant=from_global_id(value)[1])
 
 
 class EntryOrderingFilter(django_filters.OrderingFilter):
@@ -315,14 +315,14 @@ class TransferFilter(EntryFilter):
 
 
 class DonationFilter(TransferFilter):
-    with_investment = django_filters.CharFilter(
-        method='filter_with_investment')
+    with_grant = django_filters.CharFilter(
+        method='filter_with_grant')
 
     class Meta:
         model = models.Donation
         fields = []
 
-    def filter_with_investment(self, qs, name, value):
+    def filter_with_grant(self, qs, name, value):
         return qs.filter(funded_by=from_global_id(value)[1])
 
 
@@ -582,19 +582,22 @@ class WithdrawalNode(DjangoObjectType):
         return queryset.filter(user=info.context.user)
 
 
-# --- Investment ------------------------------------------------------------ #
+# --- Grant ------------------------------------------------------------ #
 
 
-class InvestmentNode(DjangoObjectType):
-    donation_amount = DjangoFilterConnectionField(
-        lambda: InvestmentDonationNode,
-        filterset_class=InvestmentDonationFilter,
+class GrantNode(DjangoObjectType):
+    grantdonation_set = DjangoFilterConnectionField(
+        lambda: GrantDonationNode,
+        filterset_class=GrantDonationFilter,
     )
 
     class Meta:
-        model = models.Investment
+        model = models.Grant
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_grantdonation_set(self, *args, **kwargs):
+        return self.grantdonation_set.all()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -602,13 +605,10 @@ class InvestmentNode(DjangoObjectType):
             return queryset
         return queryset.filter(user=info.context.user)
 
-    def resolve_donation_amount(self, *args, **kwargs):
-        return self.investmentdonation_set.all()
 
-
-class InvestmentDonationNode(DjangoObjectType):
+class GrantDonationNode(DjangoObjectType):
     class Meta:
-        model = models.InvestmentDonation
+        model = models.GrantDonation
         filter_fields = []
         interfaces = (relay.Node, )
 
@@ -616,7 +616,7 @@ class InvestmentDonationNode(DjangoObjectType):
     def get_queryset(cls, queryset, info):
         if info.context.user.is_superuser:
             return queryset
-        return queryset.filter(investment__user=info.context.user)
+        return queryset.filter(grant__user=info.context.user)
 
 
 # --- Entry ----------------------------------------------------------------- #
@@ -746,9 +746,9 @@ class EntryNode(DjangoObjectType):
 
 class DonationNode(EntryNode):
     amount = graphene.Int()
-    investment_amount = DjangoFilterConnectionField(
-        lambda: InvestmentDonationNode,
-        filterset_class=InvestmentDonationFilter,
+    grantdonation_set = DjangoFilterConnectionField(
+        lambda: GrantDonationNode,
+        filterset_class=GrantDonationFilter,
     )
 
     class Meta:
@@ -758,6 +758,9 @@ class DonationNode(EntryNode):
 
     def resolve_amount(self, *args, **kwargs):
         return self.amount
+
+    def resolve_grantdonation_set(self, *args, **kwargs):
+        return self.grantdonation_set.all()
 
     @classmethod
     def get_queryset(cls, queryset, info):
@@ -770,9 +773,6 @@ class DonationNode(EntryNode):
         return queryset.filter(
             Q(private=False) | Q(user__id=info.context.user.id)
             | Q(target_id=info.context.user.id)).distinct()
-
-    def resolve_investment_amount(self, *args, **kwargs):
-        return self.investmentdonation_set.all()
 
 
 class DonationCreate(Mutation):
@@ -2173,7 +2173,7 @@ class Query(object):
     withdrawal = relay.Node.Field(WithdrawalNode)
     entry = EntryNodeInterface.Field(EntryNode)
     deposit = relay.Node.Field(DepositNode)
-    investment = relay.Node.Field(InvestmentNode)
+    grant = relay.Node.Field(GrantNode)
     donation = EntryNodeInterface.Field(DonationNode)
     reward = EntryNodeInterface.Field(RewardNode)
     news = EntryNodeInterface.Field(NewsNode)
@@ -2212,9 +2212,9 @@ class Query(object):
         WithdrawalNode,
         filterset_class=WithdrawalFilter,
     )
-    all_investments = DjangoFilterConnectionField(
-        InvestmentNode,
-        filterset_class=InvestmentFilter,
+    all_grants = DjangoFilterConnectionField(
+        GrantNode,
+        filterset_class=GrantFilter,
     )
     all_entries = DjangoFilterConnectionField(
         EntryNode,

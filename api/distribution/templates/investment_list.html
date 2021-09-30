@@ -10,11 +10,11 @@
     <div class="container" style="padding-top: 20px; padding-bottom: 40px;">
       <div class="row justify-content-center">
         <div class="col-12">
-	  {% for investment in page_obj %}
+	  {% for grant in page_obj %}
 	  <div style="display:flex;justify-content:space-between;">
-	    <div><strong> {{ investment.name }}</strong> &ndash;
-	      {{ investment.start }}</div>
-	    <div style="color:#84ab3f;font-weight:bold;" title="{{ investment.info_str }}">
+	    <div><strong> {{ grant.name }}</strong> &ndash;
+	      {{ grant.start }}</div>
+	    <div style="color:#84ab3f;font-weight:bold;" title="{{ grant.info_str }}">
 	      $$$
 	    </div>
 	  </div>

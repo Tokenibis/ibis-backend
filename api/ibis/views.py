@@ -301,9 +301,9 @@ class PhoneConfirmView(generics.GenericAPIView):
         })
 
 
-class InvestmentView(ListView):
-    template_name = 'investment_list.html'
-    model = models.Investment
+class GrantView(ListView):
+    template_name = 'grant_list.html'
+    model = models.Grant
     paginate_by = 50
     ordering = ['-start']
 
@@ -340,16 +340,16 @@ class PaymentView(generics.GenericAPIView):
 
         date = localtime().date()
 
-        investment = models.Investment.objects.create(
+        grant = models.Grant.objects.create(
             name=str(user),
             amount=net,
             start=date,
             end=date,
-            description='On-app investment',
+            description='On-app',
             user=user,
         )
 
         return response.Response({
-            'investmentID':
-            to_global_id('InvestmentNode', investment.id),
+            'grantID':
+            to_global_id('GrantNode', grant.id),
         })

@@ -150,28 +150,28 @@ def refresh_accounting():
 
     result = defaultdict(lambda: defaultdict(lambda: 0))
 
-    investments = list(ibis.models.Investment.objects.order_by('start'))
+    grants = list(ibis.models.Grant.objects.order_by('start'))
 
-    # grid where rows are investments and columns are weeks
+    # grid where rows are grants and columns are weeks
     grid = [[
         0 for x in range(
             _diff(
-                ibis.models.Investment.objects.order_by('end').last().end,
-                investments[0].start,
+                ibis.models.Grant.objects.order_by('end').last().end,
+                grants[0].start,
             ) + 1)
-    ] for _ in investments]
+    ] for _ in grants]
 
-    # fill grid with money amounts from investments
-    for i, x in enumerate(investments):
+    # fill grid with money amounts from grants
+    for i, x in enumerate(grants):
         chunk = int(x.amount / (_diff(x.end, x.start) + 1))
         for j in range(
-                _diff(x.start, investments[0].start),
-                _diff(x.end, investments[0].start),
+                _diff(x.start, grants[0].start),
+                _diff(x.end, grants[0].start),
         ):
             grid[i][j] = chunk
         grid[i][_diff(
             x.end,
-            investments[0].start,
+            grants[0].start,
         )] = x.amount - chunk * _diff(x.end, x.start)
 
     # account grid with money from donations
@@ -184,43 +184,43 @@ def refresh_accounting():
                 if grid[i][j + offset]:
                     if remainder > grid[i][j + offset]:
                         remainder -= grid[i][j + offset]
-                        result[investments[i]][x] += grid[i][j + offset]
+                        result[grants[i]][x] += grid[i][j + offset]
                         grid[i][j + offset] = 0
                     else:
                         grid[i][j + offset] -= remainder
-                        result[investments[i]][x] += remainder
+                        result[grants[i]][x] += remainder
                         remainder = 0
                 else:
                     if j + offset + 1 < len(
                             grid[0]) and grid[i][j + offset + 1] > 0:
-                        # still have space on the current investment
+                        # still have space on the current grant
                         offset += 1
                     elif (i + 1) % len(grid) != anchor:
-                        # still have more investments in the current week
+                        # still have more grants in the current week
                         offset, i = (0, (i + 1) % len(grid))
                     elif j + 1 < len(grid[0]):
                         # still have more weeks to increment to
                         i, j, offset = anchor, j + 1, 0
                     else:
                         # uh-oh, we're probably broke
-                        raise ValueError('More donations than investments')
+                        raise ValueError('More donations than grants')
 
             i = (i + 1) % len(grid)
     except ValueError as e:
         logger.warning(e)
 
-    for investment, donations in result.items():
+    for grant, donations in result.items():
         if set((
                 donation,
                 amount,
         ) for donation, amount in donations.items()) != set((
                 x.donation,
                 x.amount,
-        ) for x in investment.investmentdonation_set.all()):
-            investment.investmentdonation_set.all().delete()
+        ) for x in grant.grantdonation_set.all()):
+            grant.grantdonation_set.all().delete()
             for donation, amount in donations.items():
-                ibis.models.InvestmentDonation.objects.create(
-                    investment=investment,
+                ibis.models.GrantDonation.objects.create(
+                    grant=grant,
                     donation=donation,
                     amount=amount,
                 )
@@ -264,7 +264,7 @@ class Goal(TimeStampedModel):
     def amount(self):
         return sum(x.amount / (
             (to_step_start(x.end, offset=1) - to_step_start(x.start)).days / 7)
-                   for x in ibis.models.Investment.objects.filter(
+                   for x in ibis.models.Grant.objects.filter(
                        end__gte=to_step_start(self.created),
                        start__lt=to_step_start(self.created, offset=1)))
 

@@ -26,7 +26,7 @@ NUM_CHANNEL = 3
 NUM_MESSAGE_DIRECT = 100
 NUM_MESSAGE_CHANNEL = 50
 NUM_DEPOSIT = 30
-NUM_INVESTMENT = 30
+NUM_GRANT = 30
 NUM_DONATION = 100
 NUM_EVENT = 100
 NUM_FOLLOW = 100
@@ -61,7 +61,7 @@ with freeze_time(TEST_TIME.astimezone(utc).date()):
         num_message_direct=NUM_MESSAGE_DIRECT,
         num_message_channel=NUM_MESSAGE_CHANNEL,
         num_deposit=NUM_DEPOSIT,
-        num_investment=NUM_INVESTMENT,
+        num_grant=NUM_GRANT,
         num_donation=NUM_DONATION,
         num_event=NUM_EVENT,
         num_follow=NUM_FOLLOW,
@@ -108,7 +108,7 @@ class BaseTestCase(GraphQLTestCase):
         'FollowCreate',
         'FollowDelete',
         'Home',
-        'InvestmentList',
+        'GrantList',
         'LikeCreate',
         'LikeDelete',
         'MessageChannelCreate',
@@ -232,7 +232,7 @@ class BaseTestCase(GraphQLTestCase):
                 category=models.ExchangeCategory.objects.first(),
             )
 
-            models.Investment.objects.create(
+            models.Grant.objects.create(
                 user=self.me_person,
                 name=str(self.me_person),
                 amount=1000,

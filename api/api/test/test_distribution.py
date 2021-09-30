@@ -130,31 +130,31 @@ class DistributionTestCase(BaseTestCase):
     def test_accounting(self):
         distribution.models.refresh_accounting()
 
-        # all donations should have at least one investment
+        # all donations should have at least one grant
         for x in ibis.models.Donation.objects.all():
             assert x.funded_by.exists()
 
-        # total investment accounting should equal total donations
+        # total grant accounting should equal total donations
         assert sum(
             x.amount for x in ibis.models.Donation.objects.all()) == sum(
-                y.amount for x in ibis.models.Investment.objects.all()
-                for y in x.investmentdonation_set.all())
+                y.amount for x in ibis.models.Grant.objects.all()
+                for y in x.grantdonation_set.all())
 
         # make sure accounting is deterministic
         old = set((
-            x.investment,
+            x.grant,
             x.donation,
             x.amount,
-        ) for x in ibis.models.InvestmentDonation.objects.all())
+        ) for x in ibis.models.GrantDonation.objects.all())
 
-        ibis.models.InvestmentDonation.objects.all().delete()
+        ibis.models.GrantDonation.objects.all().delete()
         distribution.models.refresh_accounting()
 
         new = set((
-            x.investment,
+            x.grant,
             x.donation,
             x.amount,
-        ) for x in ibis.models.InvestmentDonation.objects.all())
+        ) for x in ibis.models.GrantDonation.objects.all())
 
         assert old == new
 
@@ -362,7 +362,7 @@ class DistributionTestCase(BaseTestCase):
             # trigger first (failed) attempt at payment
             self._fast_forward_cron(frozen_datetime, 2, seconds=5)
 
-            ibis.models.Investment.objects.create(
+            ibis.models.Grant.objects.create(
                 start=localtime().date(),
                 end=(localtime() +
                      timedelta(days=4 * 7 * (TS_WEEKS + SS_WEEKS))).date(),
@@ -427,7 +427,7 @@ class DistributionTestCase(BaseTestCase):
             _check_epoch()
 
             # Epoch 4: moon
-            ibis.models.Investment.objects.create(
+            ibis.models.Grant.objects.create(
                 start=localtime(),
                 end=(localtime() + timedelta(days=4 * 7 * TS_WEEKS)).date(),
                 amount=300000 * TS_WEEKS,

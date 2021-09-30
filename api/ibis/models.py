@@ -563,7 +563,7 @@ class MessageChannel(Message):
     )
 
 
-class Investment(TimeStampedModel, Valuable):
+class Grant(TimeStampedModel, Valuable):
     name = models.TextField()
     start = models.DateField()
     end = models.DateField()
@@ -571,13 +571,13 @@ class Investment(TimeStampedModel, Valuable):
     funded = models.ManyToManyField(
         Donation,
         related_name='funded_by',
-        through='InvestmentDonation',
+        through='GrantDonation',
         blank=True,
     )
     user = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
-        related_name='invested',
+        related_name='granted',
         null=True,
         blank=True,
     )
@@ -587,7 +587,7 @@ class Investment(TimeStampedModel, Valuable):
         amounts = sum(x.amount for x in self.funded.all())
 
         return '\n'.join('{}: {}'.format(x, y) for x, y in [
-            ('Total Investment', '${:.2f}'.format(self.amount / 100)),
+            ('Total Grant', '${:.2f}'.format(self.amount / 100)),
             ('Donations Funded', self.funded.count()),
             ('Spending Timeline', '{} to {}'.format(self.start, self.end)),
             ('Percent Spent',
@@ -603,9 +603,9 @@ class Investment(TimeStampedModel, Valuable):
         )
 
 
-class InvestmentDonation(Valuable):
-    investment = models.ForeignKey(
-        Investment,
+class GrantDonation(Valuable):
+    grant = models.ForeignKey(
+        Grant,
         on_delete=models.CASCADE,
     )
     donation = models.ForeignKey(

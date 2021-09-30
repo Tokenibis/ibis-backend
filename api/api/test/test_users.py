@@ -498,8 +498,8 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['InvestmentList'],
-                op_name='InvestmentList',
+                self.gql['GrantList'],
+                op_name='GrantList',
                 variables={
                     'user': user.gid,
                     'orderBy': '-start',
@@ -507,8 +507,8 @@ class PermissionTestCase(BaseTestCase):
                     'after': 1,
                 },
             ).content)
-        success['InvestmentList'] = 'errors' not in result and bool(
-            len(result['data']['allInvestments']['edges']) > 0)
+        success['GrantList'] = 'errors' not in result and bool(
+            len(result['data']['allGrants']['edges']) > 0)
 
         result = json.loads(
             self.query(
@@ -979,7 +979,7 @@ class PermissionTestCase(BaseTestCase):
             'ActivityUpdate',
             'RewardForm',
             'RewardCreate',
-            'InvestmentList',
+            'GrantList',
         ]
         self._client.force_login(self.me_organization)
         results = self.run_all(self.me_organization)
@@ -1001,7 +1001,7 @@ class PermissionTestCase(BaseTestCase):
             'NewsUpdate',
             'EventCreate',
             'EventUpdate',
-            'InvestmentList',
+            'GrantList',
         ]
         self._client.force_login(self.me_bot)
         results = self.run_all(self.me_bot)
@@ -1030,7 +1030,7 @@ class PermissionTestCase(BaseTestCase):
             'FollowCreate': False,
             'FollowDelete': False,
             'Home': True,
-            'InvestmentList': False,
+            'GrantList': False,
             'UserList': True,
             'LikeCreate': False,
             'LikeDelete': False,
