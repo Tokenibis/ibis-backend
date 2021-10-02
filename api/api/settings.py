@@ -375,6 +375,10 @@ MAX_TRANSFER = 10000
 
 MAX_EXCHANGE = 100000
 
+MAX_WEEKLY_GRANT = 10000
+
+MAX_GRANT_TIME = 52
+
 PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
 
 PAYPAL_SANDBOX_CLIENT_ID = CONF['payment']['paypal']['sandbox']['client_id']

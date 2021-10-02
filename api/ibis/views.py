@@ -338,13 +338,16 @@ class PaymentView(generics.GenericAPIView):
 
         user = models.User.objects.get(pk=request.user.id)
 
-        date = localtime().date()
+        time = localtime()
 
         grant = models.Grant.objects.create(
             name=str(user),
             amount=net,
-            start=date,
-            end=date,
+            start=time.date(),
+            end=(time + timedelta(days=7 * min(
+                settings.MAX_GRANT_TIME,
+                int(net / settings.MAX_WEEKLY_GRANT),
+            )).date()),
             description='On-app',
             user=user,
         )
