@@ -14,7 +14,7 @@ By using this app, you are empowered to be informed about:
 * What your money supports
 * Other ventures you can share or support
 
-Additionally, Token Ibis stands as an app through which you can interact and share. You can deposit your own money to or earn more money by interacting with our friendly bots. You can also follow activities and pages of the organizations you support, as well as be notified of any upcoming events or opportunities to get involved. As long as you make any donation during the week (even just 1 cent), then we'll throw more philanthropy dollars your way every Friday morning.
+Additionally, Token Ibis stands as an app through which you can interact and share. You can earn more money by interacting with our friendly bots or put in your own money to make grants to other users. You can also follow activities and pages of the organizations you support, as well as be notified of any upcoming events or opportunities to get involved. As long as you make any donation during the week (even just 1 cent), then we'll throw more philanthropy dollars your way every Friday morning.
 
 If anything exciting happens on the app, we'll also send some email notifications your way, which you can adjust in your settings.
 
@@ -22,49 +22,13 @@ By engaging with and interacting through Token Ibis, you can increase your abili
 
 If you have made it to this part of the Welcome! email, congratulations! You are one tenacious and dedicated individual. Thank you so much for your interest and involvement in Token Ibis; with your help, we can make social change and impact through charitable giving more accessible to everyone.
 
-***Follow:New Notification***
-
-Oooh, looks like you’re turning heads! Someone has followed you on Token Ibis!
-
-See what they've been up to [here]({link}).
-
----
-
-Hearken! Someone just followed you on Token Ibis!
-
-See what they've been up to [here]({link}).
-
-***Deposit:New Notification***
-
-My, what a responsible fellow you are. Thank you for depositing {amount} for future philanthropic purposes.
-
-Head over [here]({link}) to start using it.
-
----
-
-You’re a treasure! Thank you for depositing {amount} for future philanthropic purposes.
-
-Head over [here]({link}) to start using it.
-
----
-
-You are basically a perfect human specimen (not that we’re experimenting on you...) for depositing {amount} for future philanthropic purposes! You go!
-
-Head over [here]({link}) to start using it.
-
----
-
-I think I’m in love with you... for depositing {amount} for future philanthropic purposes!
-
-Head over [here]({link}) to start using it.
-
-***Deposit:New Notification***
+***Withdrawal:New Notification***
 
 Congratulations on accumulating more donations! We've processed a withdrawal of {amount}. You can see this and all previous withdrawals [here]({link}).
 
 Please allow about 5-7 business days for the check to arrive. If you run into any issues, then please let us know at __info@tokenibis.org__. Thanks!
 
-***UBP:New Notification***
+***Deposit:New Notification***
 
 Heads up, lucky duck! You’ve received your weekly gift of {amount}! Check it out [here]({link}).
 
@@ -115,6 +79,18 @@ Click [here]({link}) to see who has commented on your {entry_type}.
 
 Talking to you is a treat! Check out what someone commented on your {entry_type} by heading [here]({link}).
 
+---
+
+Oooh, looks like you’re turning heads! Someone has commented on your {entry_type}!
+
+Check it out [here]({link}).
+
+---
+
+Hearken! Someone just commented on your {entry_type} on Token Ibis!
+
+Check it out [here]({link}).
+
 ***Mention:New Notification***
 
 Someone mentioned you in their {entry_type}!
@@ -138,3 +114,28 @@ Respond to them [here]({link}).
 {sender} sent you a new message to your channel!
 
 Check it out [here]({link}).
+
+***Grant:New Notification***
+
+My, what a responsible fellow you are. Thank you for your grant of {amount} for future philanthropic purposes.
+
+Head over [here]({link}) to see who puts it to use.
+
+---
+
+You’re a treasure! Thank you for your grant of {amount} for future philanthropic purposes.
+
+Head over [here]({link}) to see who puts it to use.
+
+---
+
+You are basically a perfect human specimen (not that we’re
+experimenting on you...) for making a grant of {amount} for future philanthropic purposes! You go!
+
+Head over [here]({link}) to see who puts it to use.
+
+---
+
+I think I’m in love with you... for making a grant {amount} for future philanthropic purposes!
+
+Head over [here]({link}) to see who puts it to use.

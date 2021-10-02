@@ -16,17 +16,6 @@ class PermissionTestCase(BaseTestCase):
 
         result = json.loads(
             self.query(
-                self.gql['Finance'],
-                op_name='Finance',
-                variables={
-                    'id': to_global_id('UserNode', user.id),
-                },
-            ).content)
-        success['Finance'] = 'errors' not in result and bool(
-            result['data']['user']['id'])
-
-        result = json.loads(
-            self.query(
                 self.gql['DonationCreate'],
                 op_name='DonationCreate',
                 variables={

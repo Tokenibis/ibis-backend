@@ -43,21 +43,6 @@ def handleDepositCreate(sender, instance, created, **kwargs):
         description = 'You have a fresh ${:.2f} waiting for you'.format(
             instance.amount / 100)
 
-        models.UbpNotification.objects.create(
-            notifier=instance.user.notifier,
-            reference='{}:{}'.format(
-                ibis.models.Deposit.__name__,
-                to_global_id('DepositNode', instance.pk),
-            ),
-            description=description,
-            subject=instance,
-            created=instance.created,
-        )
-
-    else:
-        description = 'Your deposit of ${:.2f} was successful'.format(
-            instance.amount / 100)
-
         models.DepositNotification.objects.create(
             notifier=instance.user.notifier,
             reference='{}:{}'.format(
@@ -88,6 +73,28 @@ def handleWithdrawalCreate(sender, instance, created, **kwargs):
         subject=instance,
         created=instance.created,
     )
+
+
+@receiver(post_save, sender=ibis.models.Grant)
+def handleGrantCreate(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+
+    if instance.user:
+        description = 'Your grant of ${:.2f} has been received'.format(
+            instance.amount / 100)
+
+        models.GrantNotification.objects.create(
+            notifier=instance.user.notifier,
+            reference='{}:{}'.format(
+                ibis.models.Grant.__name__,
+                to_global_id('GrantNode', instance.pk),
+            ),
+            description=description,
+            subject=instance,
+            created=instance.created,
+        )
 
 
 @receiver(post_save, sender=ibis.models.Donation)

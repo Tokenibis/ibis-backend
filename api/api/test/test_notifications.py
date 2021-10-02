@@ -136,7 +136,6 @@ class NotificationTestCase(BaseTestCase):
             assert 'errors' not in result
             return result['data']['user']['notifier']['unseenCount']
 
-        self.person.notifier.email_follow = True
         self.person.notifier.email_reward = True
         self.person.notifier.email_comment = True
         self.person.notifier.email_like = True
@@ -148,6 +147,14 @@ class NotificationTestCase(BaseTestCase):
             amount=200,
             description='unique_test_notifications',
             category=models.ExchangeCategory.objects.first(),
+        )
+
+        models.Grant.objects.create(
+            user=self.me_person,
+            amount=200,
+            description='unique_test_notifications',
+            start=now(),
+            end=now() + timedelta(days=14),
         )
 
         self.person.following.add(self.me_organization)

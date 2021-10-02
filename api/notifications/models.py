@@ -60,10 +60,6 @@ class Notifier(models.Model):
         verbose_name='message',
         default=True,
     )
-    email_follow = models.BooleanField(
-        verbose_name='follow',
-        default=True,
-    )
     email_donation = models.BooleanField(
         verbose_name='donation',
         default=True,
@@ -86,6 +82,10 @@ class Notifier(models.Model):
     )
     email_withdrawal = models.BooleanField(
         verbose_name='withdrawal',
+        default=True,
+    )
+    email_grant = models.BooleanField(
+        verbose_name='grant',
         default=True,
     )
     email_like = models.BooleanField(
@@ -215,34 +215,6 @@ class MessageChannelNotification(Notification):
             logger.error('No email template found')
 
 
-class UbpNotification(Notification):
-    subject = models.ForeignKey(
-        ibis.models.Deposit,
-        on_delete=models.CASCADE,
-    )
-
-    def save(self, *args, **kwargs):
-        adding = self._state.adding
-        super().save(*args, **kwargs)
-        if not adding:
-            return
-
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
-                subject, body, html = EmailTemplateUBP.choose().make_email(
-                    self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
-
-
 class DepositNotification(Notification):
     subject = models.ForeignKey(
         ibis.models.Deposit,
@@ -286,6 +258,34 @@ class WithdrawalNotification(Notification):
         try:
             if not STATE['LOADING_DATA'] and self.notifier.email_withdrawal:
                 subject, body, html = EmailTemplateWithdrawal.choose(
+                ).make_email(self, self.subject)
+                Email.objects.create(
+                    notification=self,
+                    subject=subject,
+                    body=body,
+                    html=html,
+                    schedule=localtime() +
+                    timedelta(minutes=settings.EMAIL_DELAY),
+                )
+        except IndexError:
+            logger.error('No email template found')
+
+
+class GrantNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Grant,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        try:
+            if not STATE['LOADING_DATA'] and self.notifier.email_grant:
+                subject, body, html = EmailTemplateGrant.choose(
                 ).make_email(self, self.subject)
                 Email.objects.create(
                     notification=self,
@@ -431,21 +431,6 @@ class FollowNotification(Notification):
         if previous.exists():
             previous.delete()
             return
-
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_follow:
-                subject, body, html = EmailTemplateFollow.choose().make_email(
-                    self)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
 
 
 class LikeNotification(Notification):
@@ -637,34 +622,6 @@ class EmailTemplateMessageChannel(EmailTemplate):
         )
 
 
-class EmailTemplateFollow(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['link'])
-
-    def make_email(self, notification):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                link=settings.APP_LINK_RESOLVER(notification.reference), ),
-        )
-
-
-class EmailTemplateDeposit(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['amount', 'link'])
-
-    def make_email(self, notification, deposit):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                amount='${:.2f}'.format(deposit.amount / 100),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
 class EmailTemplateWithdrawal(EmailTemplate):
     def clean(self):
         super()._check_keys([], ['amount', 'link'])
@@ -680,7 +637,22 @@ class EmailTemplateWithdrawal(EmailTemplate):
         )
 
 
-class EmailTemplateUBP(EmailTemplate):
+class EmailTemplateGrant(EmailTemplate):
+    def clean(self):
+        super()._check_keys([], ['amount', 'link'])
+
+    def make_email(self, notification, grant):
+        return EmailTemplate._apply_top_template(
+            notification.notifier,
+            self.subject,
+            self.body.format(
+                amount='${:.2f}'.format(grant.amount / 100),
+                link=settings.APP_LINK_RESOLVER(notification.reference),
+            ),
+        )
+
+
+class EmailTemplateDeposit(EmailTemplate):
     def clean(self):
         super()._check_keys([], ['amount', 'link'])
 
