@@ -575,7 +575,7 @@ class Grant(TimeStampedModel, Valuable):
         blank=True,
     )
     user = models.ForeignKey(
-        Person,
+        User,
         on_delete=models.CASCADE,
         related_name='granted',
         null=True,

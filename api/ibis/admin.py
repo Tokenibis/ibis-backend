@@ -157,11 +157,11 @@ class BotAdmin(UserAdmin):
 class GrantDonationInline(admin.TabularInline):
     model = models.GrantDonation
     extra = 0
-
+    raw_id_fields = ('grant', 'donation')
 
 @admin.register(models.Grant)
 class GrantAdmin(admin.ModelAdmin):
-    raw_id_fields = ('funded', )
+    raw_id_fields = ('funded', 'user',)
     inlines = (GrantDonationInline, )
 
 

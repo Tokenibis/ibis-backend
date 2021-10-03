@@ -346,8 +346,8 @@ class PaymentView(generics.GenericAPIView):
             start=time.date(),
             end=(time + timedelta(days=7 * min(
                 settings.MAX_GRANT_TIME,
-                int(net / settings.MAX_WEEKLY_GRANT),
-            )).date()),
+                int(net / settings.MAX_GRANT_WEEKLY),
+            ))).date(),
             description='On-app',
             user=user,
         )
