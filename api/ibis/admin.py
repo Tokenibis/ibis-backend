@@ -1,12 +1,18 @@
 import os
+import ibis.models as models
 
+from django.db import transaction
+from django.conf import settings
+from django.utils.safestring import mark_safe
+from django.utils.timezone import localtime
+from django.utils.dateparse import parse_datetime
+from django.http import HttpResponseRedirect
+from django.urls import path
 from django import forms
 from django.contrib import admin
-from graphql_relay.node.node import to_global_id
-
-import ibis.models as models
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm
+from graphql_relay.node.node import to_global_id
 
 
 class UserAdminChangeForm(UserChangeForm):
@@ -159,10 +165,60 @@ class GrantDonationInline(admin.TabularInline):
     extra = 0
     raw_id_fields = ('grant', 'donation')
 
+
 @admin.register(models.Grant)
 class GrantAdmin(admin.ModelAdmin):
-    raw_id_fields = ('funded', 'user',)
+    raw_id_fields = ('funded', 'user')
     inlines = (GrantDonationInline, )
+
+
+@admin.register(models.Withdrawal)
+class WithdrawalAdmin(admin.ModelAdmin):
+    change_list_template = "withdrawal_changelist.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path('settle-balances/', self.settle_balances),
+        ]
+        return my_urls + urls
+
+    def get_balances(self, time):
+        return sorted(
+            [(x, x.balance(time=time))
+             for x in models.Organization.objects.all()
+             if x.balance(time=time) > settings.SETTLE_BALANCE_MIN
+             and x.is_active and x.username != settings.IBIS_USERNAME_ROOT],
+            key=lambda x: str(x[0]),
+        )
+
+    def get_changelist(self, request, *args, **kwargs):
+        time = localtime()
+        request.session['settle_balance_time'] = str(time)
+        balances = self.get_balances(time)
+        message = 'Outstanding Balances<br/><br/>{}{}Total: ${:.2f}'.format(
+            '<br/>'.join(
+                '{}: ${:.2f}'.format(org, bal / 100) for org, bal in balances),
+            '<br/><br/>' if balances else '',
+            sum(bal for _, bal in balances) / 100,
+        )
+
+        self.message_user(request, mark_safe(message))
+        return super().get_changelist(request, *args, **kwargs)
+
+    def settle_balances(self, request):
+        with transaction.atomic():
+            for org, bal in self.get_balances(
+                    parse_datetime(request.session['settle_balance_time'])):
+                models.Withdrawal.objects.create(
+                    user=org,
+                    amount=bal,
+                    description='admin',
+                    category=models.ExchangeCategory.objects.get(
+                        title='check'),
+                )
+        self.message_user(request, 'Success. All balances have been settled')
+        return HttpResponseRedirect('../')
 
 
 admin.site.register(models.OrganizationCategory)
@@ -175,7 +231,6 @@ admin.site.register(models.Reward)
 admin.site.register(models.Activity)
 admin.site.register(models.Comment)
 admin.site.register(models.Deposit)
-admin.site.register(models.Withdrawal)
 admin.site.register(models.Entry)
 admin.site.register(models.Channel)
 admin.site.register(models.MessageDirect)

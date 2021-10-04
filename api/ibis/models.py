@@ -131,7 +131,47 @@ class User(GeneralUser, Scoreable):
             self.last_name,
         )
 
-    def balance(self):
+    def balance(self, time=None):
+        if time:
+            return sum([
+                +sum([
+                    x.amount for x in Deposit.objects.filter(
+                        user=self.id,
+                        created__lt=time,
+                    )
+                ]),
+                +sum([
+                    x.amount for x in Donation.objects.filter(
+                        target=self.id,
+                        created__lt=time,
+                    )
+                ]),
+                +sum([
+                    x.amount for x in Reward.objects.filter(
+                        target=self.id,
+                        created__lt=time,
+                    )
+                ]),
+                -sum([
+                    x.amount for x in Donation.objects.filter(
+                        user=self.id,
+                        created__lt=time,
+                    )
+                ]),
+                -sum([
+                    x.amount for x in Reward.objects.filter(
+                        user=self.id,
+                        created__lt=time,
+                    )
+                ]),
+                -sum([
+                    x.amount for x in Withdrawal.objects.filter(
+                        user=self.id,
+                        created__lt=time,
+                    )
+                ]),
+            ])
+
         return sum([
             +sum([x.amount for x in Deposit.objects.filter(user=self.id)]),
             +sum([x.amount for x in Donation.objects.filter(target=self.id)]),
