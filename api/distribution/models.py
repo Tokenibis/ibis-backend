@@ -261,12 +261,19 @@ def to_step_start(time, offset=0):
 class Goal(TimeStampedModel):
     processed = models.BooleanField(default=False)
 
-    def amount(self):
-        return sum(x.amount / (
-            (to_step_start(x.end, offset=1) - to_step_start(x.start)).days / 7)
+    @staticmethod
+    def amount_static(created, offset=0):
+        return sum(x.amount / round(((to_step_start(
+            x.end,
+            offset=1,
+        ) - to_step_start(x.start)).days / 7))
                    for x in ibis.models.Grant.objects.filter(
-                       end__gte=to_step_start(self.created),
-                       start__lt=to_step_start(self.created, offset=1)))
+                       end__gte=to_step_start(created, offset=offset),
+                       start__lt=to_step_start(created, offset=offset + 1),
+                   ))
+
+    def amount(self):
+        return Goal.amount_static(self.created)
 
 
 class Distributor(models.Model):
