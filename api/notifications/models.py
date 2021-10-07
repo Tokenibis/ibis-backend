@@ -23,11 +23,21 @@ DIR = os.path.dirname(os.path.realpath(__file__))
 
 logger = logging.getLogger(__name__)
 
-with open(os.path.join(DIR, 'top_email_templates/body.txt')) as fd:
+with open(os.path.join(DIR, 'messages/body.txt')) as fd:
     top_body_template = fd.read()
 
-with open(os.path.join(DIR, 'top_email_templates/html.html')) as fd:
+with open(os.path.join(DIR, 'messages/html.html')) as fd:
     top_html_template = fd.read()
+
+with open(os.path.join(DIR, 'messages/emails.txt')) as fd:
+    parts = fd.read().split('***')[1:]
+    email_templates = {
+        parts[i].split(':')[0]: {
+            'subject': parts[i].split(':')[1],
+            'body': [x.strip() for x in parts[i + 1].split('---')],
+        }
+        for i in range(0, len(parts), 2)
+    }
 
 
 def send_email(destinations, subject, body, html, notifier):
@@ -158,6 +168,34 @@ class Notification(TimeStampedModel):
             self.clicked = True
         super().save(*args, **kwargs)
 
+    def create_email(self, subject, body):
+        if not STATE['LOADING_DATA']:
+            Email.objects.create(
+                notification=self,
+                subject=subject,
+                body=top_body_template.format(
+                    user=self.notifier.user.first_name,
+                    content=body,
+                    settings_link=settings.API_ROOT_PATH +
+                    self.notifier.create_settings_link(),
+                    unsubscribe_link=settings.API_ROOT_PATH +
+                    self.notifier.create_unsubscribe_link(),
+                ),
+                html=top_html_template.format(
+                    user=self.notifier.user.first_name,
+                    subject=subject,
+                    content=markdown.markdown(body).replace(
+                        '<a href=',
+                        '<a style="color: #84ab3f" href=',
+                    ),
+                    settings_link=settings.API_ROOT_PATH +
+                    self.notifier.create_settings_link(),
+                    unsubscribe_link=settings.API_ROOT_PATH +
+                    self.notifier.create_unsubscribe_link(),
+                ),
+                schedule=localtime() + timedelta(minutes=settings.EMAIL_DELAY),
+            )
+
 
 class MessageDirectNotification(Notification):
     subject = models.ForeignKey(
@@ -171,20 +209,14 @@ class MessageDirectNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_message:
-                subject, body, html = EmailTemplateMessageDirect.choose(
-                ).make_email(self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_message:
+            self.create_email(
+                email_templates['MessageDirect']['subject'],
+                random.choice(email_templates['MessageDirect']['body']).format(
+                    sender=str(self.subject.user),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
 
 
 class MessageChannelNotification(Notification):
@@ -199,20 +231,15 @@ class MessageChannelNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_message:
-                subject, body, html = EmailTemplateMessageChannel.choose(
-                ).make_email(self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_message:
+            self.create_email(
+                email_templates['MessageChannel']['subject'],
+                random.choice(
+                    email_templates['MessageChannel']['body']).format(
+                        sender=str(self.subject.user),
+                        link=settings.APP_LINK_RESOLVER(self.reference),
+                    ),
+            )
 
 
 class DepositNotification(Notification):
@@ -227,20 +254,84 @@ class DepositNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_deposit:
-                subject, body, html = EmailTemplateDeposit.choose().make_email(
-                    self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
+        if not self.notifier.user.deposit_set.exists():
+            self.create_email(
+                email_templates['Welcome']['subject'],
+                random.choice(email_templates['Welcome']['body']).format(
+                    link=settings.APP_ROOT_PATH),
+            )
+        elif self.notifier.email_deposit:
+            body = random.choice(email_templates['Deposit']['body']).format(
+                amount='${:.2f}'.format(self.subject.amount / 100),
+                link=settings.APP_LINK_RESOLVER(),
+            )
+
+            time = localtime()
+
+            feed = []
+
+            for x in ibis.models.Organization.objects.filter(
+                    date_joined__gte=time - timedelta(days=7)):
+                feed.append(
+                    'Please welcome our newest nonprofit: [{}]({}).'.format(
+                        x,
+                        settings.APP_LINK_RESOLVER('{}:{}'.format(
+                            ibis.models.Organization.__name__,
+                            to_global_id('UserNode', x.pk),
+                        )),
+                    ))
+            for x in ibis.models.News.objects.filter(
+                    created__gte=time - timedelta(days=7)):
+                feed.append('{} just published an article: [{}]({})'.format(
+                    x.user,
+                    x.title,
+                    settings.APP_LINK_RESOLVER('{}:{}'.format(
+                        ibis.models.News.__name__,
+                        to_global_id('EntryNode', x.pk),
+                    )),
+                ))
+            for x in ibis.models.Event.objects.filter(date__gte=time).filter(
+                    date__lt=time + timedelta(days=14)):
+                feed.append('{}\'s event, [{}]({}), is coming up on {}'.format(
+                    x.user,
+                    x.title,
+                    settings.APP_LINK_RESOLVER('{}:{}'.format(
+                        ibis.models.Event.__name__,
+                        to_global_id('EntryNode', x.pk),
+                    )),
+                    x.date.strftime('%B %d'),
+                ))
+            for x in ibis.models.Post.objects.filter(
+                    created__gte=time - timedelta(days=7)):
+                feed.append('{} just made a post: [{}]({})'.format(
+                    x.user,
+                    x.title,
+                    settings.APP_LINK_RESOLVER('{}:{}'.format(
+                        ibis.models.Post.__name__,
+                        to_global_id('EntryNode', x.pk),
+                    )),
+                ))
+
+            for x in ibis.models.Bot.objects.filter(
+                    date_joined__gte=time - timedelta(days=7)):
+                feed.append('Please welcome our newest bot: [{}]({}).'.format(
+                    x,
+                    settings.APP_LINK_RESOLVER('{}:{}'.format(
+                        ibis.models.Bot.__name__,
+                        to_global_id('UserNode', x.pk),
+                    )),
+                ))
+
+            if feed:
+                body = '{}\n\n__This week on Token Ibis:__\n\n* {}'.format(
+                    body,
+                    '\n\n* '.join(feed),
                 )
-        except IndexError:
-            logger.error('No email template found')
+
+            self.create_email(
+                email_templates['Deposit']['subject'],
+                body,
+            )
 
 
 class WithdrawalNotification(Notification):
@@ -255,20 +346,13 @@ class WithdrawalNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_withdrawal:
-                subject, body, html = EmailTemplateWithdrawal.choose(
-                ).make_email(self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        self.create_email(
+            email_templates['Withdrawal']['subject'],
+            random.choice(email_templates['Withdrawal']['body']).format(
+                amount='${:.2f}'.format(self.subject.amount / 100),
+                link=settings.APP_LINK_RESOLVER(self.reference),
+            ),
+        )
 
 
 class GrantNotification(Notification):
@@ -283,20 +367,14 @@ class GrantNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_grant:
-                subject, body, html = EmailTemplateGrant.choose(
-                ).make_email(self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_grant:
+            self.create_email(
+                email_templates['Grant']['subject'],
+                random.choice(email_templates['Grant']['body']).format(
+                    amount='${:.2f}'.format(self.subject.amount / 100),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
 
 
 class DonationNotification(Notification):
@@ -311,20 +389,14 @@ class DonationNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_donation:
-                subject, body, html = EmailTemplateDonation.choose(
-                ).make_email(self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_donation:
+            self.create_email(
+                email_templates['Donation']['subject'],
+                random.choice(email_templates['Donation']['body']).format(
+                    sender=str(self.subject.user),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
 
 
 class RewardNotification(Notification):
@@ -339,20 +411,14 @@ class RewardNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_reward:
-                subject, body, html = EmailTemplateReward.choose().make_email(
-                    self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_reward:
+            self.create_email(
+                email_templates['Reward']['subject'],
+                random.choice(email_templates['Reward']['body']).format(
+                    sender=str(self.subject.user),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
 
 
 class NewsNotification(Notification):
@@ -395,20 +461,15 @@ class CommentNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_comment:
-                subject, body, html = EmailTemplateComment.choose().make_email(
-                    self, self.subject.parent)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_comment:
+            self.create_email(
+                email_templates['Comment']['subject'],
+                random.choice(email_templates['Comment']['body']).format(
+                    entry_type=get_submodel(
+                        self.subject.parent).__name__.lower(),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
 
 
 class FollowNotification(Notification):
@@ -468,20 +529,14 @@ class MentionNotification(Notification):
         if not adding:
             return
 
-        try:
-            if not STATE['LOADING_DATA'] and self.notifier.email_mention:
-                subject, body, html = EmailTemplateMention.choose().make_email(
-                    self, self.subject)
-                Email.objects.create(
-                    notification=self,
-                    subject=subject,
-                    body=body,
-                    html=html,
-                    schedule=localtime() +
-                    timedelta(minutes=settings.EMAIL_DELAY),
-                )
-        except IndexError:
-            logger.error('No email template found')
+        if self.notifier.email_mention:
+            self.create_email(
+                email_templates['Mention']['subject'],
+                random.choice(email_templates['Mention']['body']).format(
+                    entry_type=get_submodel(self.subject).__name__.lower(),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
 
 
 class Email(models.Model):
@@ -576,217 +631,6 @@ class EmailTemplate(models.Model):
                 notifier.create_settings_link(),
                 unsubscribe_link=settings.API_ROOT_PATH +
                 notifier.create_unsubscribe_link(),
-            ),
-        )
-
-
-class EmailTemplateWelcome(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['link'])
-
-    def make_email(self, notifier):
-        return EmailTemplate._apply_top_template(
-            notifier,
-            self.subject,
-            self.body.format(link=settings.APP_ROOT_PATH, ),
-        )
-
-
-class EmailTemplateMessageDirect(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['sender', 'link'])
-
-    def make_email(self, notification, message):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                sender=str(message.user),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateMessageChannel(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['sender', 'link'])
-
-    def make_email(self, notification, message):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                sender=str(message.user),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateWithdrawal(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['amount', 'link'])
-
-    def make_email(self, notification, withdrawal):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                amount='${:.2f}'.format(withdrawal.amount / 100),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateGrant(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['amount', 'link'])
-
-    def make_email(self, notification, grant):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                amount='${:.2f}'.format(grant.amount / 100),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateDeposit(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['amount', 'link'])
-
-    def make_email(self, notification, deposit):
-        body = self.body.format(
-            amount='${:.2f}'.format(deposit.amount / 100),
-            link=settings.APP_LINK_RESOLVER(),
-        )
-
-        time = localtime()
-
-        feed = []
-
-        for x in ibis.models.Organization.objects.filter(
-                date_joined__gte=time - timedelta(days=7)):
-            feed.append(
-                'Please welcome our newest nonprofit: [{}]({}).'.format(
-                    x,
-                    settings.APP_LINK_RESOLVER('{}:{}'.format(
-                        ibis.models.Organization.__name__,
-                        to_global_id('UserNode', x.pk),
-                    )),
-                ))
-        for x in ibis.models.News.objects.filter(
-                created__gte=time - timedelta(days=7)):
-            feed.append('{} just published an article: [{}]({})'.format(
-                x.user,
-                x.title,
-                settings.APP_LINK_RESOLVER('{}:{}'.format(
-                    ibis.models.News.__name__,
-                    to_global_id('EntryNode', x.pk),
-                )),
-            ))
-        for x in ibis.models.Event.objects.filter(date__gte=time).filter(
-                date__lt=time + timedelta(days=14)):
-            feed.append('{}\'s event, [{}]({}), is coming up on {}'.format(
-                x.user,
-                x.title,
-                settings.APP_LINK_RESOLVER('{}:{}'.format(
-                    ibis.models.Event.__name__,
-                    to_global_id('EntryNode', x.pk),
-                )),
-                x.date.strftime('%B %d'),
-            ))
-        for x in ibis.models.Post.objects.filter(
-                created__gte=time - timedelta(days=7)):
-            feed.append('{} just made a post: [{}]({})'.format(
-                x.user,
-                x.title,
-                settings.APP_LINK_RESOLVER('{}:{}'.format(
-                    ibis.models.Post.__name__,
-                    to_global_id('EntryNode', x.pk),
-                )),
-            ))
-
-        for x in ibis.models.Bot.objects.filter(
-                date_joined__gte=time - timedelta(days=7)):
-            feed.append('Please welcome our newest bot: [{}]({}).'.format(
-                x,
-                settings.APP_LINK_RESOLVER('{}:{}'.format(
-                    ibis.models.Bot.__name__,
-                    to_global_id('UserNode', x.pk),
-                )),
-            ))
-
-        if feed:
-            body = '{}\n\n__This week on Token Ibis:__\n\n* {}'.format(
-                body,
-                '\n\n* '.join(feed),
-            )
-
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            body,
-        )
-
-
-class EmailTemplateDonation(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['sender', 'link'])
-
-    def make_email(self, notification, donation):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                sender=str(donation.user),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateReward(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['sender', 'link'])
-
-    def make_email(self, notification, reward):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                sender=str(reward.user),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateComment(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['entry_type', 'link'])
-
-    def make_email(self, notification, parent):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                entry_type=get_submodel(parent).__name__.lower(),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
-            ),
-        )
-
-
-class EmailTemplateMention(EmailTemplate):
-    def clean(self):
-        super()._check_keys([], ['entry_type', 'link'])
-
-    def make_email(self, notification, entry):
-        return EmailTemplate._apply_top_template(
-            notification.notifier,
-            self.subject,
-            self.body.format(
-                entry_type=get_submodel(entry).__name__.lower(),
-                link=settings.APP_LINK_RESOLVER(notification.reference),
             ),
         )
 

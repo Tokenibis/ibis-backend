@@ -10,13 +10,3 @@ class EmailAdmin(admin.ModelAdmin):
 
 admin.site.register(models.Notifier)
 admin.site.register(models.Notification)
-admin.site.register(models.EmailTemplateWelcome)
-admin.site.register(models.EmailTemplateMessageDirect)
-admin.site.register(models.EmailTemplateMessageChannel)
-admin.site.register(models.EmailTemplateDeposit)
-admin.site.register(models.EmailTemplateWithdrawal)
-admin.site.register(models.EmailTemplateGrant)
-admin.site.register(models.EmailTemplateDonation)
-admin.site.register(models.EmailTemplateReward)
-admin.site.register(models.EmailTemplateComment)
-admin.site.register(models.EmailTemplateMention)

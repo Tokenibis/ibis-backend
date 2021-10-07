@@ -11,8 +11,6 @@ import random
 import json
 import hashlib
 
-from api.management.commands.run_setup import make_email_templates
-
 from django.utils.timezone import now, timedelta
 
 from django.core.management.base import BaseCommand
@@ -94,7 +92,6 @@ class Model:
     def __init__(self):
         self.organization_categories = []
         self.exchange_categories = []
-        self.email_templates = []
         self.donation_messages = []
         self.users = []
         self.general_users = []
@@ -184,20 +181,6 @@ class Model:
         })
 
         return pk
-
-    def add_email_template(self, template_type, subject, body):
-        pk = len(self.email_templates) + 1
-
-        self.email_templates.append({
-            'model':
-            'notifications.EmailTemplate{}'.format(template_type),
-            'pk':
-            pk,
-            'fields': {
-                'subject': subject,
-                'body': body,
-            }
-        })
 
     def add_donation_message(self, description):
         pk = len(self.donation_messages) + 1
@@ -757,7 +740,6 @@ class Model:
             partial_users,
             self.organization_categories,
             self.exchange_categories,
-            self.email_templates,
             self.donation_messages,
             self.organizations,
             self.people,
@@ -873,8 +855,6 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/exchange_categories.json')) as fd:
             dp_cat_raw = json.load(fd)
 
-        email_templates = make_email_templates()
-
         with open(os.path.join(DIR, 'data/organizations.json')) as fd:
             np_raw = sorted(json.load(fd), key=lambda x: x['name'])
 
@@ -923,14 +903,6 @@ class Command(BaseCommand):
         exchange_categories = [
             model.add_exchange_category(x) for x in dp_cat_raw
         ]
-
-        for template_type, templates in email_templates.items():
-            for template in templates:
-                model.add_email_template(
-                    template_type,
-                    template['subject'],
-                    template['body'],
-                )
 
         # add donation messages
         with open(os.path.join(DIR, 'data/donation_messages.json')) as fd:

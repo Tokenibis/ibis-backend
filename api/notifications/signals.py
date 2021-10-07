@@ -12,26 +12,6 @@ from api.management.commands.loaddata import STATE
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=ibis.models.Person)
-def handlePersonCreate(sender, instance, created, raw, **kwargs):
-    if STATE['LOADING_DATA'] or raw or not created:
-        return
-
-    try:
-        subject, body, html = models.EmailTemplateWelcome.choose().make_email(
-            instance.notifier)
-        if settings.EMAIL_ACTIVE and instance.user.email:
-            models.send_email(
-                [instance.user.email],
-                subject,
-                body,
-                html,
-                instance.notifier,
-            )
-    except IndexError:
-        logger.error('No email template found')
-
-
 @receiver(post_save, sender=ibis.models.Deposit)
 def handleDepositCreate(sender, instance, created, **kwargs):
     if not created:
@@ -79,7 +59,6 @@ def handleWithdrawalCreate(sender, instance, created, **kwargs):
 def handleGrantCreate(sender, instance, created, **kwargs):
     if not created:
         return
-
 
     if instance.user:
         description = 'Your grant of ${:.2f} has been received'.format(

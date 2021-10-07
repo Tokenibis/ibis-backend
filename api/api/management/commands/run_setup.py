@@ -1,5 +1,4 @@
 import os
-import re
 import json
 
 from django.core.management.base import BaseCommand
@@ -10,19 +9,6 @@ import ibis.models as models
 import notifications.models
 
 DIR = os.path.dirname(os.path.realpath(__file__))
-
-
-def make_email_templates():
-    with open(os.path.join(DIR, 'data/email_templates.txt')) as fd:
-        parts = fd.read().split('***')[1:]
-
-    return {
-        parts[i].split(':')[0]: [{
-            'subject': parts[i].split(':')[1],
-            'body': x,
-        } for x in parts[i + 1].split('---')]
-        for i in range(0, len(parts), 2)
-    }
 
 
 class Command(BaseCommand):
@@ -52,8 +38,6 @@ class Command(BaseCommand):
         for message in donation_messages:
             notifications.models.DonationMessage.objects.create(
                 description=message)
-
-        email_templates = make_email_templates()
 
         for template_type, templates in email_templates.items():
             for template in templates:
