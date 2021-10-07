@@ -19,7 +19,7 @@ def make_email_templates():
     return {
         parts[i].split(':')[0]: [{
             'subject': parts[i].split(':')[1],
-            'body': x,
+            'body': x.strip(),
         } for x in parts[i + 1].split('---')]
         for i in range(0, len(parts), 2)
     }
