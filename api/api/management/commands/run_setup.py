@@ -39,15 +39,6 @@ class Command(BaseCommand):
             notifications.models.DonationMessage.objects.create(
                 description=message)
 
-        for template_type, templates in email_templates.items():
-            for template in templates:
-                getattr(
-                    notifications.models,
-                    'EmailTemplate{}'.format(template_type)).objects.create(
-                        subject=template['subject'],
-                        body=template['body'],
-                    )
-
         with open(os.path.join(DIR, '../../../../config.json')) as fd:
             config = json.load(fd)
 

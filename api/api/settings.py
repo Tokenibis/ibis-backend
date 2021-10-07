@@ -371,13 +371,13 @@ IBIS_USERNAME_ROOT = 'tokenibis'
 
 IBIS_CATEGORY_UBP = 'ubp'
 
-MAX_TRANSFER = 10000
-
 MAX_EXCHANGE = 100000
 
-MAX_WEEKLY_GRANT = 10000
-
 MAX_GRANT_TIME = 52
+
+MAX_GRANT_WEEKLY = 10000
+
+MAX_TRANSFER = 10000
 
 PAYPAL_USE_SANDBOX = CONF['payment']['paypal']['use_sandbox']
 
@@ -409,6 +409,8 @@ REDIRECT_URL_NOTIFICATIONS = 'https://{}/#/_/Settings'.format(
     CONF['ibis']['endpoints']['app'])
 
 RESERVED_USERNAMES = ['admin', 'anonymous', 'dashboard']
+
+SETTLE_BALANCE_MIN = 10000
 
 SORT_ORGANIZATION_WINDOW_ENTRY = 4
 

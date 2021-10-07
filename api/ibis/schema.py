@@ -194,11 +194,9 @@ class GrantFilter(django_filters.FilterSet):
 
 
 class GrantDonationFilter(django_filters.FilterSet):
-    with_donation = django_filters.CharFilter(
-        method='filter_with_donation')
+    with_donation = django_filters.CharFilter(method='filter_with_donation')
 
-    with_grant = django_filters.CharFilter(
-        method='filter_with_grant')
+    with_grant = django_filters.CharFilter(method='filter_with_grant')
 
     class Meta:
         model = models.GrantDonation
@@ -315,14 +313,18 @@ class TransferFilter(EntryFilter):
 
 
 class DonationFilter(TransferFilter):
-    with_grant = django_filters.CharFilter(
-        method='filter_with_grant')
+    with_grant = django_filters.CharFilter(method='filter_with_grant')
 
     class Meta:
         model = models.Donation
         fields = []
 
     def filter_with_grant(self, qs, name, value):
+        grant = models.Grant.objects.get(id=int(from_global_id(value)[1]))
+        if not (self.request.user.is_superuser or
+                (grant.user and grant.user.id == self.request.user.id)):
+            raise GraphQLError('You do not have sufficient permission')
+
         return qs.filter(funded_by=from_global_id(value)[1])
 
 
@@ -586,6 +588,9 @@ class WithdrawalNode(DjangoObjectType):
 
 
 class GrantNode(DjangoObjectType):
+    num_donations = graphene.Int()
+    num_organizations = graphene.Int()
+    funded_amount = graphene.Int()
     grantdonation_set = DjangoFilterConnectionField(
         lambda: GrantDonationNode,
         filterset_class=GrantDonationFilter,
@@ -595,6 +600,15 @@ class GrantNode(DjangoObjectType):
         model = models.Grant
         filter_fields = []
         interfaces = (relay.Node, )
+
+    def resolve_num_donations(self, *args, **kwargs):
+        return self.grantdonation_set.count()
+
+    def resolve_num_organizations(self, *args, **kwargs):
+        return len(set(self.grantdonation_set.values_list('donation__target')))
+
+    def resolve_funded_amount(self, *args, **kwargs):
+        return sum(x.amount for x in self.grantdonation_set.all())
 
     def resolve_grantdonation_set(self, *args, **kwargs):
         return self.grantdonation_set.all()
