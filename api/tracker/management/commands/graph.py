@@ -7,6 +7,7 @@ import distribution
 import matplotlib.pyplot as plt
 
 from pathlib import Path
+from django.db.models import Sum
 from django.core.management.base import BaseCommand
 
 DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,6 +26,7 @@ class Command(BaseCommand):
         self.graph_organization_edges()
         self.graph_users_time()
         self.graph_organization_engagement()
+        self.graph_finances_time()
 
     def graph_control_response(self):
         data = [(
@@ -235,4 +237,54 @@ class Command(BaseCommand):
         ax.set_ylim(ymin=0)
         plt.ylabel('Average Weekly Revenue ($/Org)')
         plt.savefig(os.path.join(PATH, 'organization_engagement.pdf'))
+        plt.clf()
+
+    def graph_finances_time(self):
+        data = [(
+            x,
+            ibis.models.Grant.objects.filter(
+                start__lt=distribution.models.to_step_start(
+                    x, offset=1)).aggregate(Sum('amount'))['amount__sum'],
+            ibis.models.Donation.objects.filter(
+                created__lt=distribution.models.to_step_start(
+                    x, offset=1)).aggregate(Sum('amount'))['amount__sum'],
+            ibis.models.Withdrawal.objects.filter(
+                created__lt=distribution.models.to_step_start(
+                    x, offset=1)).aggregate(Sum('amount'))['amount__sum'],
+        ) for x in [
+            distribution.models.to_step_start(
+                ibis.models.Donation.objects.order_by(
+                    'created').first().created,
+                offset=i,
+            ) for i in range(
+                int((ibis.models.Donation.objects.order_by('created').last().
+                     created - ibis.models.Donation.objects.order_by(
+                         'created').first().created).days / 7))
+        ]]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+
+        plt.step(
+            [x[0] for x in data],
+            [int(x[1] or 0) / 100 for x in data],
+            label='Culmulative Grants',
+        )
+        plt.step(
+            [x[0] for x in data],
+            [int(x[2] or 0) / 100 for x in data],
+            label='Culmulative Donations',
+        )
+        plt.step(
+            [x[0] for x in data],
+            [int(x[3] or 0) / 100 for x in data],
+            label='Culmulative Withdrawals',
+        )
+
+        ax.set_ylim(ymin=0)
+        plt.xlabel('Date (weekly)')
+        plt.ylabel('Dollars ($)')
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.savefig(os.path.join(PATH, 'finance_time.pdf'), bbox_inches="tight",)
         plt.clf()
