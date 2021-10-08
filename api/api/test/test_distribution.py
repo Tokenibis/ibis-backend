@@ -128,7 +128,6 @@ class DistributionTestCase(BaseTestCase):
         assert person2.balance() != 1000
 
     def test_accounting(self):
-        return True
         distribution.models.refresh_accounting()
 
         # all donations should have at least one grant
