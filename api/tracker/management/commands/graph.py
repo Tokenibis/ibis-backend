@@ -175,8 +175,8 @@ class Command(BaseCommand):
                             x.created, offset=1))
                     if ibis.models.Donation.objects.filter(user=y).exists())),
         ) for x in distribution.models.Goal.objects.filter(
-            created__gte=ibis.models.Donation.objects.order_by(
-                'created').first().created).order_by('created')][:-1]
+                created__gte=ibis.models.Donation.objects.order_by(
+                    'created').first().created).order_by('created')][:-1]
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
