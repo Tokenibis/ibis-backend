@@ -628,12 +628,19 @@ class Grant(TimeStampedModel, Valuable):
     def info_str(self):
         amounts = sum(x.amount for x in self.funded.all())
 
-        return '\n'.join('{}: {}'.format(x, y) for x, y in [
-            ('Total Grant', '${:.2f}'.format(self.amount / 100)),
-            ('Donations Funded', self.funded.count()),
-            ('Spending Timeline', '{} weeks'.format(self.duration)),
-            ('Percent Spent',
+        return ' <br/> '.join('{}: {}'.format(x, y) for x, y in [
+            ('Grant Amount', '${:.2f}'.format(self.amount / 100)),
+            ('Distribution Progress',
              '{}%'.format(min(100, round(100 * amounts / self.amount)))),
+            ('Distribution Weeks', self.duration),
+            ('Donations Funded', self.funded.count()),
+            (
+                'Organizations Funded',
+                len(
+                    set(
+                        self.grantdonation_set.values_list(
+                            'donation__target'))),
+            ),
         ])
 
     def __str__(self):

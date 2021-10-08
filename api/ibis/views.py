@@ -306,7 +306,7 @@ class GrantView(ListView):
     template_name = 'grant_list.html'
     model = models.Grant
     paginate_by = 50
-    ordering = ['-start']
+    ordering = ['-created']
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
