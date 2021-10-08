@@ -168,7 +168,7 @@ class Notification(TimeStampedModel):
             self.clicked = True
         super().save(*args, **kwargs)
 
-    def create_email(self, subject, body):
+    def create_email(self, subject, body, force=False):
         if not STATE['LOADING_DATA']:
             Email.objects.create(
                 notification=self,
@@ -193,7 +193,9 @@ class Notification(TimeStampedModel):
                     unsubscribe_link=settings.API_ROOT_PATH +
                     self.notifier.create_unsubscribe_link(),
                 ),
-                schedule=localtime() + timedelta(minutes=settings.EMAIL_DELAY),
+                schedule=localtime() +
+                timedelta(minutes=0 if force else settings.EMAIL_DELAY),
+                force=force,
             )
 
 
@@ -254,11 +256,12 @@ class DepositNotification(Notification):
         if not adding:
             return
 
-        if not self.notifier.user.deposit_set.exists():
+        if not self.notifier.user.deposit_set.count() > 1:
             self.create_email(
                 email_templates['Welcome']['subject'],
                 random.choice(email_templates['Welcome']['body']).format(
-                    link=settings.APP_ROOT_PATH),
+                    link=settings.APP_LINK_RESOLVER()),
+                force=True,
             )
         elif self.notifier.email_deposit:
             body = random.choice(email_templates['Deposit']['body']).format(
