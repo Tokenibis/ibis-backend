@@ -266,9 +266,9 @@ class Goal(TimeStampedModel):
     def amount_static(created, offset=0):
         return sum(x.amount / x.duration
                    for x in ibis.models.Grant.objects.filter(
-                       created__lt=to_step_start(created, offset=offset + 1))
+                       created__lt=to_step_start(created, offset=offset))
                    if to_step_start(x.created, offset=x.duration) >=
-                   to_step_start(created))
+                   to_step_start(created, offset=offset))
 
     def amount(self):
         return Goal.amount_static(self.created)

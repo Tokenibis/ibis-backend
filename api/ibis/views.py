@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import ftfy
+import math
 import boto3
 import random
 import logging
@@ -343,11 +344,10 @@ class PaymentView(generics.GenericAPIView):
         grant = models.Grant.objects.create(
             name=str(user),
             amount=net,
-            start=time.date(),
-            end=(time + timedelta(days=7 * min(
+            duration=min(
                 settings.MAX_GRANT_TIME,
-                int(net / settings.MAX_GRANT_WEEKLY),
-            ))).date(),
+                math.ceil(net / settings.MAX_GRANT_WEEKLY),
+            ),
             description='On-app',
             user=user,
         )

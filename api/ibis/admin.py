@@ -169,7 +169,7 @@ class GrantDonationInline(admin.TabularInline):
 @admin.register(models.Grant)
 class GrantAdmin(admin.ModelAdmin):
     raw_id_fields = ('funded', 'user')
-    inlines = (GrantDonationInline, )
+    # inlines = (GrantDonationInline, )
 
 
 @admin.register(models.Withdrawal)
