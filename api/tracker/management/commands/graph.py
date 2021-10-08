@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.core.management.base import BaseCommand
 
 DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,12 +33,11 @@ class Command(BaseCommand):
         data = [(
             distribution.models.to_step_start(x.created),
             x.amount(),
-            sum(
-                y.amount for y in ibis.models.Donation.objects.filter(
-                    created__gte=distribution.models.to_step_start(x.created),
-                    created__lt=distribution.models.to_step_start(
-                        x.created, offset=1),
-                )),
+            ibis.models.Donation.objects.filter(
+                created__gte=distribution.models.to_step_start(x.created),
+                created__lt=distribution.models.to_step_start(
+                    x.created, offset=1),
+            ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
         ) for x in distribution.models.Goal.objects.order_by('created')][1:-1]
 
         fig = plt.figure()
@@ -58,25 +58,31 @@ class Command(BaseCommand):
         ax.set_ylim(ymin=0)
         plt.xlabel('Date (weekly)')
         plt.ylabel('Amount ($)')
+        plt.xticks(rotation=45)
         plt.legend()
-        plt.savefig(os.path.join(PATH, 'control_response.pdf'))
+        plt.savefig(
+            os.path.join(PATH, 'control_response.pdf'),
+            bbox_inches='tight',
+        )
         plt.clf()
 
     def graph_organization_distribution(self):
         x_axis = [
             distribution.models.to_step_start(x.created)
-            for x in distribution.models.Goal.objects.order_by('created')
+            for x in distribution.models.Goal.objects.filter(
+                created__gte=ibis.models.Donation.objects.order_by(
+                    'created').first().created).order_by('created')
         ][:-1]
         data = sorted(
             [(
                 org,
                 [
-                    sum(
-                        y.amount for y in ibis.models.Donation.objects.filter(
-                            target=org,
-                            created__lt=distribution.models.to_step_start(
-                                x, offset=1),
-                        )) / 100 for x in x_axis
+                    ibis.models.Donation.objects.filter(
+                        target=org,
+                        created__lt=distribution.models.to_step_start(
+                            x, offset=1),
+                    ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'] /
+                    100 for x in x_axis
                 ],
             ) for org in ibis.models.Organization.objects.filter(
                 is_active=True).order_by('date_joined')],
@@ -110,7 +116,11 @@ class Command(BaseCommand):
             loc='upper left',
             fontsize=8,
         )
-        plt.savefig(os.path.join(PATH, 'organization_distribution.pdf'))
+        plt.xticks(rotation=45)
+        plt.savefig(
+            os.path.join(PATH, 'organization_distribution.pdf'),
+            bbox_inches='tight',
+        )
         plt.clf()
 
     def graph_organization_edges(self):
@@ -120,11 +130,11 @@ class Command(BaseCommand):
         graph = [[0 for _ in range(len(orgs))] for _ in range(len(orgs))]
         for person in ibis.models.Person.objects.all():
             profile = [
-                sum(
-                    x.amount for x in ibis.models.Donation.objects.filter(
-                        user=person,
-                        target=org,
-                    )) for org in orgs
+                ibis.models.Donation.objects.filter(
+                    user=person,
+                    target=org,
+                ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount']
+                for org in orgs
             ]
 
             for i in range(len(orgs)):
@@ -164,7 +174,9 @@ class Command(BaseCommand):
                         date_joined__lt=distribution.models.to_step_start(
                             x.created, offset=1))
                     if ibis.models.Donation.objects.filter(user=y).exists())),
-        ) for x in distribution.models.Goal.objects.order_by('created')][:-1]
+        ) for x in distribution.models.Goal.objects.filter(
+            created__gte=ibis.models.Donation.objects.order_by(
+                'created').first().created).order_by('created')][:-1]
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -183,8 +195,12 @@ class Command(BaseCommand):
         ax.set_ylim(ymin=0)
         plt.xlabel('Date (weekly)')
         plt.ylabel('Number of Users')
+        plt.xticks(rotation=45)
         plt.legend()
-        plt.savefig(os.path.join(PATH, 'users_time.pdf'))
+        plt.savefig(
+            os.path.join(PATH, 'users_time.pdf'),
+            bbox_inches='tight',
+        )
         plt.clf()
 
     def graph_organization_engagement(self):
@@ -243,14 +259,14 @@ class Command(BaseCommand):
         data = [(
             x,
             ibis.models.Grant.objects.filter(
-                start__lt=distribution.models.to_step_start(
-                    x, offset=1)).aggregate(Sum('amount'))['amount__sum'],
+                created__lt=distribution.models.to_step_start(x, offset=1)
+            ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
             ibis.models.Donation.objects.filter(
-                created__lt=distribution.models.to_step_start(
-                    x, offset=1)).aggregate(Sum('amount'))['amount__sum'],
+                created__lt=distribution.models.to_step_start(x, offset=1)
+            ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
             ibis.models.Withdrawal.objects.filter(
-                created__lt=distribution.models.to_step_start(
-                    x, offset=1)).aggregate(Sum('amount'))['amount__sum'],
+                created__lt=distribution.models.to_step_start(x, offset=1)).
+            aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
         ) for x in [
             distribution.models.to_step_start(
                 ibis.models.Donation.objects.order_by(
@@ -286,5 +302,8 @@ class Command(BaseCommand):
         plt.ylabel('Dollars ($)')
         plt.xticks(rotation=45)
         plt.legend()
-        plt.savefig(os.path.join(PATH, 'finance_time.pdf'), bbox_inches="tight",)
+        plt.savefig(
+            os.path.join(PATH, 'finance_time.pdf'),
+            bbox_inches='tight',
+        )
         plt.clf()
