@@ -7,7 +7,6 @@ from hashlib import sha256
 from django.db import models
 from django.conf import settings
 from django.utils.timezone import datetime, localtime, timedelta, utc
-from datetime import date
 from model_utils.models import TimeStampedModel
 from annoying.fields import AutoOneToOneField
 
@@ -232,12 +231,14 @@ def to_step_start(time, offset=0):
     increments or decrements the provided number of weeks
     """
 
-    if isinstance(time, date):
+    if not isinstance(time, datetime):
         time = datetime.combine(
             time,
             datetime.min.time(),
             tzinfo=localtime().tzinfo,
         )
+
+    time = localtime(time)
 
     # will be 0, -1, or 1 hours off of midnight, depending on tz
     raw = localtime(
