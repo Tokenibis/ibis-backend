@@ -125,7 +125,8 @@ def get_distribution_shares(time, initial=[]):
 
     # calculate raw relative shares
     raw = {}
-    for x in ibis.models.Person.objects.exclude(distributor__eligible=False):
+    for x in ibis.models.Person.objects.exclude(is_active=False).exclude(
+            distributor__eligible=False):
         activity = x.donation_set.filter(
             created__lt=step).order_by('created').last()
         last = to_step_start(
@@ -145,7 +146,8 @@ def get_distribution_shares(time, initial=[]):
 
 def refresh_accounting():
     items = sorted(
-        list(ibis.models.Grant.objects.all()) + list(ibis.models.Donation.objects.all()),
+        list(ibis.models.Grant.objects.all()) + list(
+            ibis.models.Donation.objects.all()),
         key=lambda x: x.created)
 
     accounting = defaultdict(lambda: {})
@@ -281,7 +283,7 @@ class Distributor(models.Model):
             )
 
     def __str__(self):
-        return str(self.person)
+        return '@' + str(self.person.username)
 
     def distribute_initial_safe(self):
         """Distribute the initial UBP payment to a the new person. The amount
