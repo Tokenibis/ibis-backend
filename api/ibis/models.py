@@ -9,7 +9,7 @@ from django.core.files.base import ContentFile
 from django.db import models
 from django.utils.timezone import localtime, timedelta
 from django.core.exceptions import ValidationError
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MinValueValidator
 from django.conf import settings
 from model_utils.models import TimeStampedModel
 from graphql_relay.node.node import to_global_id
@@ -605,8 +605,10 @@ class MessageChannel(Message):
 
 class Grant(TimeStampedModel, Valuable):
     name = models.TextField()
-    start = models.DateField()
-    end = models.DateField()
+    duration = models.IntegerField(
+        validators=[MinValueValidator(1)],
+        default=1,
+    )
     description = models.TextField(blank=True, null=True)
     funded = models.ManyToManyField(
         Donation,
@@ -629,17 +631,16 @@ class Grant(TimeStampedModel, Valuable):
         return '\n'.join('{}: {}'.format(x, y) for x, y in [
             ('Total Grant', '${:.2f}'.format(self.amount / 100)),
             ('Donations Funded', self.funded.count()),
-            ('Spending Timeline', '{} to {}'.format(self.start, self.end)),
+            ('Spending Timeline', '{} weeks'.format(self.duration)),
             ('Percent Spent',
              '{}%'.format(min(100, round(100 * amounts / self.amount)))),
         ])
 
     def __str__(self):
-        return '{} ${:.2f} {} - {}'.format(
+        return '{} ${:.2f} {}'.format(
             self.name,
             self.amount / 100,
-            self.start,
-            self.end,
+            self.created,
         )
 
 

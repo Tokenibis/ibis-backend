@@ -153,8 +153,7 @@ class NotificationTestCase(BaseTestCase):
             user=self.me_person,
             amount=200,
             description='unique_test_notifications',
-            start=now(),
-            end=now() + timedelta(days=14),
+            duration=2,
         )
 
         self.person.following.add(self.me_organization)

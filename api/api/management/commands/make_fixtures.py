@@ -651,9 +651,7 @@ class Model:
                 'name': 'John Doe {}'.format(random.random()),
                 'amount': amount,
                 'created': created,
-                'start': created.date(),
-                'end':
-                (created + timedelta(days=random.randint(0, 52))).date(),
+                'duration': random.randint(0, 52),
             }
         })
 
@@ -712,8 +710,6 @@ class Model:
         serializable_grants = copy.deepcopy(self.grants)
         for x in serializable_grants:
             x['fields']['created'] = str(x['fields']['created'])
-            x['fields']['start'] = str(x['fields']['start'])
-            x['fields']['end'] = str(x['fields']['end'])
 
         serializable_messages_direct = copy.deepcopy(self.messages_direct)
         for x in serializable_messages_direct:

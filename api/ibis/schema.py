@@ -187,7 +187,7 @@ class WithdrawalFilter(django_filters.FilterSet):
 
 class GrantFilter(django_filters.FilterSet):
     user = django_filters.CharFilter(method='filter_user')
-    order_by = django_filters.OrderingFilter(fields=(('start', 'start'), ))
+    order_by = django_filters.OrderingFilter(fields=(('created', 'created'), ))
 
     def filter_user(self, qs, name, value):
         return qs.filter(Q(user_id=from_global_id(value)[1]))

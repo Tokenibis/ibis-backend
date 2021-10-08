@@ -144,86 +144,86 @@ def get_distribution_shares(time, initial=[]):
     return {x: raw[x] / total for x in raw if raw[x]} if total else {}
 
 
-def refresh_accounting():
-    def _diff(t1, t2):
-        return round((to_step_start(t1) - to_step_start(t2)).days / 7)
+# def refresh_accounting():
+#     def _diff(t1, t2):
+#         return round((to_step_start(t1) - to_step_start(t2)).days / 7)
 
-    result = defaultdict(lambda: defaultdict(lambda: 0))
+#     result = defaultdict(lambda: defaultdict(lambda: 0))
 
-    grants = list(ibis.models.Grant.objects.order_by('start'))
+#     grants = list(ibis.models.Grant.objects.order_by('start'))
 
-    # grid where rows are grants and columns are weeks
-    grid = [[
-        0 for x in range(
-            _diff(
-                ibis.models.Grant.objects.order_by('end').last().end,
-                grants[0].start,
-            ) + 1)
-    ] for _ in grants]
+#     # grid where rows are grants and columns are weeks
+#     grid = [[
+#         0 for x in range(
+#             _diff(
+#                 ibis.models.Grant.objects.order_by('end').last().end,
+#                 grants[0].start,
+#             ) + 1)
+#     ] for _ in grants]
 
-    # fill grid with money amounts from grants
-    for i, x in enumerate(grants):
-        chunk = int(x.amount / (_diff(x.end, x.start) + 1))
-        for j in range(
-                _diff(x.start, grants[0].start),
-                _diff(x.end, grants[0].start),
-        ):
-            grid[i][j] = chunk
-        grid[i][_diff(
-            x.end,
-            grants[0].start,
-        )] = x.amount - chunk * _diff(x.end, x.start)
+#     # fill grid with money amounts from grants
+#     for i, x in enumerate(grants):
+#         chunk = int(x.amount / (_diff(x.end, x.start) + 1))
+#         for j in range(
+#                 _diff(x.start, grants[0].start),
+#                 _diff(x.end, grants[0].start),
+#         ):
+#             grid[i][j] = chunk
+#         grid[i][_diff(
+#             x.end,
+#             grants[0].start,
+#         )] = x.amount - chunk * _diff(x.end, x.start)
 
-    # account grid with money from donations
-    i, j = 0, 0
-    try:
-        for x in ibis.models.Donation.objects.order_by('created'):
-            remainder, offset, anchor = x.amount, 0, i
+#     # account grid with money from donations
+#     i, j = 0, 0
+#     try:
+#         for x in ibis.models.Donation.objects.order_by('created'):
+#             remainder, offset, anchor = x.amount, 0, i
 
-            while remainder > 0:
-                if grid[i][j + offset]:
-                    if remainder > grid[i][j + offset]:
-                        remainder -= grid[i][j + offset]
-                        result[grants[i]][x] += grid[i][j + offset]
-                        grid[i][j + offset] = 0
-                    else:
-                        grid[i][j + offset] -= remainder
-                        result[grants[i]][x] += remainder
-                        remainder = 0
-                else:
-                    if j + offset + 1 < len(
-                            grid[0]) and grid[i][j + offset + 1] > 0:
-                        # still have space on the current grant
-                        offset += 1
-                    elif (i + 1) % len(grid) != anchor:
-                        # still have more grants in the current week
-                        offset, i = (0, (i + 1) % len(grid))
-                    elif j + 1 < len(grid[0]):
-                        # still have more weeks to increment to
-                        i, j, offset = anchor, j + 1, 0
-                    else:
-                        # uh-oh, we're probably broke
-                        raise ValueError('More donations than grants')
+#             while remainder > 0:
+#                 if grid[i][j + offset]:
+#                     if remainder > grid[i][j + offset]:
+#                         remainder -= grid[i][j + offset]
+#                         result[grants[i]][x] += grid[i][j + offset]
+#                         grid[i][j + offset] = 0
+#                     else:
+#                         grid[i][j + offset] -= remainder
+#                         result[grants[i]][x] += remainder
+#                         remainder = 0
+#                 else:
+#                     if j + offset + 1 < len(
+#                             grid[0]) and grid[i][j + offset + 1] > 0:
+#                         # still have space on the current grant
+#                         offset += 1
+#                     elif (i + 1) % len(grid) != anchor:
+#                         # still have more grants in the current week
+#                         offset, i = (0, (i + 1) % len(grid))
+#                     elif j + 1 < len(grid[0]):
+#                         # still have more weeks to increment to
+#                         i, j, offset = anchor, j + 1, 0
+#                     else:
+#                         # uh-oh, we're probably broke
+#                         raise ValueError('More donations than grants')
 
-            i = (i + 1) % len(grid)
-    except ValueError as e:
-        logger.warning(e)
+#             i = (i + 1) % len(grid)
+#     except ValueError as e:
+#         logger.warning(e)
 
-    for grant, donations in result.items():
-        if set((
-                donation,
-                amount,
-        ) for donation, amount in donations.items()) != set((
-                x.donation,
-                x.amount,
-        ) for x in grant.grantdonation_set.all()):
-            grant.grantdonation_set.all().delete()
-            for donation, amount in donations.items():
-                ibis.models.GrantDonation.objects.create(
-                    grant=grant,
-                    donation=donation,
-                    amount=amount,
-                )
+#     for grant, donations in result.items():
+#         if set((
+#                 donation,
+#                 amount,
+#         ) for donation, amount in donations.items()) != set((
+#                 x.donation,
+#                 x.amount,
+#         ) for x in grant.grantdonation_set.all()):
+#             grant.grantdonation_set.all().delete()
+#             for donation, amount in donations.items():
+#                 ibis.models.GrantDonation.objects.create(
+#                     grant=grant,
+#                     donation=donation,
+#                     amount=amount,
+#                 )
 
 
 def to_step_start(time, offset=0):
@@ -263,14 +263,11 @@ class Goal(TimeStampedModel):
 
     @staticmethod
     def amount_static(created, offset=0):
-        return sum(x.amount / round(((to_step_start(
-            x.end,
-            offset=1,
-        ) - to_step_start(x.start)).days / 7))
+        return sum(x.amount / x.duration
                    for x in ibis.models.Grant.objects.filter(
-                       end__gte=to_step_start(created, offset=offset),
-                       start__lt=to_step_start(created, offset=offset + 1),
-                   ))
+                       created__lt=to_step_start(created, offset=offset + 1))
+                   if to_step_start(x.created, offset=x.duration) >=
+                   to_step_start(created))
 
     def amount(self):
         return Goal.amount_static(self.created)

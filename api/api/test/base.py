@@ -235,9 +235,8 @@ class BaseTestCase(GraphQLTestCase):
             models.Grant.objects.create(
                 user=self.me_person,
                 name=str(self.me_person),
+                duration=2,
                 amount=1000,
-                start=localtime().date(),
-                end=(localtime() + timedelta(days=7)).date(),
                 description='unique_1',
             )
 
