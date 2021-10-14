@@ -372,6 +372,14 @@ def run():
         with open(os.path.join(DIR, 'data.json')) as fd:
             data = json.load(fd)
 
+        for x in data['grantdonations']:
+            assert models.GrantDonation.objects.filter(
+                id=from_global_id(x['id'])[1]).exists()
+
+        for x in data['grants']:
+            assert models.Grant.objects.filter(
+                id=from_global_id(x['id'])[1]).exists()
+
         if all([
                 len(data['grantdonations']) ==
                 models.GrantDonation.objects.count(),
@@ -381,7 +389,7 @@ def run():
             return
 
         data = calculate(data)
-    except FileNotFoundError:
+    except (FileNotFoundError, AssertionError):
         data = calculate()
 
     with open(os.path.join(DIR, 'data.json'), 'w') as fd:

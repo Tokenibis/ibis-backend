@@ -1,7 +1,6 @@
 import logging
 import random
 
-from collections import defaultdict
 from hashlib import sha256
 
 from django.db import models
@@ -150,7 +149,7 @@ def refresh_accounting():
             ibis.models.Donation.objects.all()),
         key=lambda x: x.created)
 
-    accounting = defaultdict(lambda: {})
+    accounting = set()
     grants = {}
     donations = {}
 
@@ -160,11 +159,8 @@ def refresh_accounting():
         else:
             donations[item] = {'left': item.amount, 'score': item.created}
 
-        if not (donations and grants):
-            continue
-
-        donation = min(donations, key=lambda x: donations[x]['score'])
-        while donation in donations and grants:
+        while donations and grants:
+            donation = min(donations, key=lambda x: donations[x]['score'])
             for grant in grants:
                 grants[grant]['score'] = (
                     -round((to_step_start(donation.created) - to_step_start(
@@ -176,32 +172,35 @@ def refresh_accounting():
             grant = min(grants, key=lambda x: grants[x]['score'])
             if grants[grant]['left'] > donations[donation]['left']:
                 grants[grant]['left'] -= donations[donation]['left']
-                accounting[grant][donation] = donations[donation]['left']
+                accounting.add((grant, donation, donations[donation]['left']))
                 del donations[donation]
             elif grants[grant]['left'] < donations[donation]['left']:
                 donations[donation]['left'] -= grants[grant]['left']
-                accounting[grant][donation] = grants[grant]['left']
+                accounting.add((grant, donation, grants[grant]['left']))
                 del grants[grant]
             else:
-                accounting[grant][donation] = grants[grant]['left']
+                accounting.add((grant, donation, grants[grant]['left']))
                 del donations[donation]
                 del grants[grant]
 
-    for grant, donations in accounting.items():
-        if set((
-                donation,
-                amount,
-        ) for donation, amount in donations.items()) != set((
-                x.donation,
-                x.amount,
-        ) for x in grant.grantdonation_set.all()):
-            grant.grantdonation_set.all().delete()
-            for donation, amount in donations.items():
-                ibis.models.GrantDonation.objects.create(
-                    grant=grant,
-                    donation=donation,
-                    amount=amount,
-                )
+    accounted = set((
+        x.grant,
+        x.donation,
+        x.amount,
+    ) for x in ibis.models.GrantDonation.objects.all())
+
+    for g, d, _ in accounted - accounting:
+        ibis.models.GrantDonation.objects.filter(
+            grant=g,
+            donation=d,
+        ).delete()
+
+    for g, d, a in accounting - accounted:
+        ibis.models.GrantDonation.objects.create(
+            grant=g,
+            donation=d,
+            amount=a,
+        )
 
 
 def to_step_start(time, offset=0):
