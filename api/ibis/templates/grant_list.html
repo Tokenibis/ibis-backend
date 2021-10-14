@@ -18,13 +18,12 @@
 	    <div
 	      id="grant_{{ grant.id }}"
 	      style="color:#84ab3f;font-weight:bold;cursor:pointer;"
-	      title="{{ grant.info_str }}"
+	      title=""
 	      data-toggle="tooltip"
 	      data-trigger="manual"
 	      data-placement="left"
 	      data-html="true"
-	      onclick="toggle('#grant_{{ grant.id }}')"
-	      return false;"
+	      onclick="toggle('#grant_{{ grant.id }}', '{{ grant.info_str }}')"
 	      >
 	      Info
 	    </div>
@@ -35,7 +34,7 @@
 	  <div class="pagination">
 	    <span class="step-links">
               {% if page_obj.has_previous %}
-              <a style="color:#84ab3f;font-weight:bold;" href="?page=1">&laquo; First</a>
+              <a style="color:#84ab3f;font-weight:bold;" href="?page=1">&laquo; first</a>
               <a style="color:#84ab3f;font-weight:bold;" href="?page={{ page_obj.previous_page_number }}">Previous</a>
               {% endif %}
 
@@ -59,10 +58,13 @@
     <script>
     </script>
     <script>
-      var toggle = (elm) => {
+      var toggle = (elm, text) => {
+      $('[data-toggle="tooltip"]').not(elm).attr('title', '')
 	$('[data-toggle="tooltip"]').not(elm).tooltip('hide')
+        $(elm).attr('title', text)
         $(elm).tooltip('toggle')
       }
+      var hey = () => {}
     </script>
 
   </body>
