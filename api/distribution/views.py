@@ -1,12 +1,26 @@
+import math
 import logging
 import ibis.models
 import distribution.models as models
 
 from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.utils.timezone import localtime
 from rest_framework import generics, response
 
 logger = logging.getLogger(__name__)
+
+
+def _month(x, offset=0):
+    return x.replace(
+        day=1,
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+        month=(x.month - 1 + offset) % 12 + 1,
+        year=x.year + math.floor((x.month - 1 + offset) / 12),
+    )
 
 
 class FinanceView(generics.GenericAPIView):
@@ -15,6 +29,21 @@ class FinanceView(generics.GenericAPIView):
         time = localtime()
 
         return response.Response({
+            'monthly_donations': ['{}-{}: ${:.2f} ({} donations)'.format(
+                time.year + math.floor((time.month - 1 + i) / 12),
+                (time.month - 1 + i) % 12 + 1,
+                ibis.models.Donation.objects.filter(
+                    created__gte=_month(time, i),
+                    created__lt=_month(time, i + 1),
+                ).aggregate(amount=Coalesce(
+                    Sum('amount'),
+                    0,
+                ))['amount'] / 100,
+                ibis.models.Donation.objects.filter(
+                    created__gte=_month(time, i),
+                    created__lt=_month(time, i + 1),
+                ).count(),
+            ) for i in range(0, -12, -1)],
             'total_grants':
             '${:.2f}'.format(
                 ibis.models.Grant.objects.aggregate(
