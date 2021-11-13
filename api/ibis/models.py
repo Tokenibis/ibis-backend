@@ -415,7 +415,7 @@ class Exchange(TimeStampedModel, Valuable):
     description = models.TextField()
 
     def __str__(self):
-        return '{}:{}:{:.2f}'.format(
+        return '{}:{}:{:,.2f}'.format(
             self.pk,
             self.user,
             self.amount / 100,
@@ -474,7 +474,7 @@ class Donation(Entry, Valuable, Hideable):
     )
 
     def __str__(self):
-        return '{}:{}->{}:{:.2f}'.format(
+        return '{}:{}->{}:{:,.2f}'.format(
             self.pk,
             self.user,
             self.target,
@@ -521,7 +521,7 @@ class Reward(Entry, Valuable, Hideable):
     )
 
     def __str__(self):
-        return '{}:{}->{}:{:.2f}'.format(
+        return '{}:{}->{}:{:,.2f}'.format(
             self.pk,
             self.user,
             self.target,
@@ -629,7 +629,7 @@ class Grant(TimeStampedModel, Valuable):
         amounts = sum(x.amount for x in self.funded.all())
 
         return ' <br/> '.join('{}: {}'.format(x, y) for x, y in [
-            ('Grant Amount', '${:.2f}'.format(self.amount / 100)),
+            ('Grant Amount', '${:,.2f}'.format(self.amount / 100)),
             ('Distribution Progress',
              '{}%'.format(min(100, round(100 * amounts / self.amount)))),
             ('Distribution Weeks', self.duration),
@@ -644,7 +644,7 @@ class Grant(TimeStampedModel, Valuable):
         ])
 
     def __str__(self):
-        return '{} ${:.2f} {}'.format(
+        return '{} ${:,.2f} {}'.format(
             self.name,
             self.amount / 100,
             self.created,

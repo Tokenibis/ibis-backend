@@ -21,7 +21,7 @@ class GiftAdmin(admin.ModelAdmin):
             return None
 
     def amount(self, obj):
-        return '${:.2f}'.format(
+        return '${:,.2f}'.format(
             obj.withdrawal.amount / 100) if obj.withdrawal else None
 
 

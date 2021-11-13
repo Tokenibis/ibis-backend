@@ -20,7 +20,7 @@ def handleDepositCreate(sender, instance, created, **kwargs):
     if ibis.models.ExchangeCategory.objects.filter(title='ubp').exists(
     ) and instance.category == ibis.models.ExchangeCategory.objects.get(
             title='ubp'):
-        description = 'You have a fresh ${:.2f} waiting for you'.format(
+        description = 'You have a fresh ${:,.2f} waiting for you'.format(
             instance.amount / 100)
 
         models.DepositNotification.objects.create(
@@ -40,7 +40,7 @@ def handleWithdrawalCreate(sender, instance, created, **kwargs):
     if not created:
         return
 
-    description = 'Token Ibis has processed a withdrawal of ${:.2f}'.format(
+    description = 'Token Ibis has processed a withdrawal of ${:,.2f}'.format(
         instance.amount / 100)
 
     models.WithdrawalNotification.objects.create(
@@ -61,7 +61,7 @@ def handleGrantCreate(sender, instance, created, **kwargs):
         return
 
     if instance.user:
-        description = 'Your grant of ${:.2f} has been received'.format(
+        description = 'Your grant of ${:,.2f} has been received'.format(
             instance.amount / 100)
 
         models.GrantNotification.objects.create(
@@ -89,7 +89,7 @@ def handleDonationCreate(sender, instance, created, **kwargs):
     models.DonationNotification.objects.create(
         notifier=instance.target.notifier,
         reference=reference,
-        description='{} donated ${:.2f}'.format(
+        description='{} donated ${:,.2f}'.format(
             str(instance.user),
             instance.amount / 100,
         ),
@@ -111,7 +111,7 @@ def handleRewardCreate(sender, instance, created, **kwargs):
     models.RewardNotification.objects.create(
         notifier=instance.target.notifier,
         reference=reference,
-        description='{} sent you ${:.2f}'.format(
+        description='{} sent you ${:,.2f}'.format(
             str(instance.user),
             instance.amount / 100,
         ),

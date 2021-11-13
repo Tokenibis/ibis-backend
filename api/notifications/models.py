@@ -265,7 +265,7 @@ class DepositNotification(Notification):
             )
         elif self.notifier.email_deposit:
             body = random.choice(email_templates['Deposit']['body']).format(
-                amount='${:.2f}'.format(self.subject.amount / 100),
+                amount='${:,.2f}'.format(self.subject.amount / 100),
                 link=settings.APP_LINK_RESOLVER(),
             )
 
@@ -352,7 +352,7 @@ class WithdrawalNotification(Notification):
         self.create_email(
             email_templates['Withdrawal']['subject'],
             random.choice(email_templates['Withdrawal']['body']).format(
-                amount='${:.2f}'.format(self.subject.amount / 100),
+                amount='${:,.2f}'.format(self.subject.amount / 100),
                 link=settings.APP_LINK_RESOLVER(self.reference),
             ),
         )
@@ -374,7 +374,7 @@ class GrantNotification(Notification):
             self.create_email(
                 email_templates['Grant']['subject'],
                 random.choice(email_templates['Grant']['body']).format(
-                    amount='${:.2f}'.format(self.subject.amount / 100),
+                    amount='${:,.2f}'.format(self.subject.amount / 100),
                     link=settings.APP_LINK_RESOLVER(self.reference),
                 ),
             )

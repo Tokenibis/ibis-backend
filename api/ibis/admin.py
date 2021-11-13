@@ -81,10 +81,10 @@ class OrganizationAdmin(UserAdmin):
         return str(obj)
 
     def balance_str(self, obj):
-        return '${:.2f}'.format(obj.balance() / 100)
+        return '${:,.2f}'.format(obj.balance() / 100)
 
     def fundraised_str(self, obj):
-        return '${:.2f}'.format(obj.fundraised() / 100)
+        return '${:,.2f}'.format(obj.fundraised() / 100)
 
 
 @admin.register(models.Person)
@@ -119,10 +119,10 @@ class PersonAdmin(UserAdmin):
         return str(obj)
 
     def balance_str(self, obj):
-        return '${:.2f}'.format(obj.balance() / 100)
+        return '${:,.2f}'.format(obj.balance() / 100)
 
     def donated_str(self, obj):
-        return '${:.2f}'.format(obj.donated() / 100)
+        return '${:,.2f}'.format(obj.donated() / 100)
 
 
 @admin.register(models.Bot)
@@ -154,10 +154,10 @@ class BotAdmin(UserAdmin):
         return str(obj)
 
     def balance_str(self, obj):
-        return '${:.2f}'.format(obj.balance() / 100)
+        return '${:,.2f}'.format(obj.balance() / 100)
 
     def rewarded_str(self, obj):
-        return '${:.2f}'.format(obj.rewarded() / 100)
+        return '${:,.2f}'.format(obj.rewarded() / 100)
 
 
 class GrantDonationInline(admin.TabularInline):
@@ -169,6 +169,7 @@ class GrantDonationInline(admin.TabularInline):
 @admin.register(models.Grant)
 class GrantAdmin(admin.ModelAdmin):
     raw_id_fields = ('funded', 'user')
+    ordering = ('-created', )
     # inlines = (GrantDonationInline, )
 
 
@@ -196,9 +197,9 @@ class WithdrawalAdmin(admin.ModelAdmin):
         time = localtime()
         request.session['settle_balance_time'] = str(time)
         balances = self.get_balances(time)
-        message = 'Outstanding Balances<br/><br/>{}{}Total: ${:.2f}'.format(
-            '<br/>'.join(
-                '{}: ${:.2f}'.format(org, bal / 100) for org, bal in balances),
+        message = 'Outstanding Balances<br/><br/>{}{}Total: ${:,.2f}'.format(
+            '<br/>'.join('{}: ${:,.2f}'.format(org, bal / 100)
+                         for org, bal in balances),
             '<br/><br/>' if balances else '',
             sum(bal for _, bal in balances) / 100,
         )
