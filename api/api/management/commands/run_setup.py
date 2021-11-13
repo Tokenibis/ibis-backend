@@ -16,21 +16,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        with open(os.path.join(DIR,
-                               'data/organization_categories.json')) as fd:
-            organization_categories = json.load(fd)
-
         with open(os.path.join(DIR, 'data/exchange_categories.json')) as fd:
             exchange_categories = json.load(fd)
 
         with open(os.path.join(DIR, 'data/donation_messages.json')) as fd:
             donation_messages = json.load(fd)
-
-        for cat in sorted(organization_categories.keys()):
-            models.OrganizationCategory.objects.create(
-                title=cat,
-                description=organization_categories[cat],
-            )
 
         for cat in exchange_categories:
             models.ExchangeCategory.objects.create(title=cat, )

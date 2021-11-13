@@ -90,7 +90,6 @@ class Markov(object):
 
 class Model:
     def __init__(self):
-        self.organization_categories = []
         self.exchange_categories = []
         self.donation_messages = []
         self.users = []
@@ -155,20 +154,6 @@ class Model:
     def _random_time(self):
         return self.now - timedelta(seconds=random.randint(0, WINDOW))
 
-    def add_organization_category(self, title, description):
-        pk = len(self.organization_categories) + 1
-
-        self.organization_categories.append({
-            'model': 'ibis.OrganizationCategory',
-            'pk': pk,
-            'fields': {
-                'title': title,
-                'description': description,
-            },
-        })
-
-        return pk
-
     def add_exchange_category(self, title):
         pk = len(self.exchange_categories) + 1
 
@@ -197,7 +182,6 @@ class Model:
             self,
             name,
             description,
-            category,
             score,
             date_joined=None,
             username=None,
@@ -240,7 +224,6 @@ class Model:
             'model': 'ibis.Organization',
             'pk': pk,
             'fields': {
-                'category': category,
                 'banner': BIRDS.format(hash(name + '_') % BIRDS_LEN),
                 'link': 'https://{}.org'.format(unique_name.replace(' ', '_')),
             }
@@ -734,7 +717,6 @@ class Model:
         return [
             serializable_users,
             partial_users,
-            self.organization_categories,
             self.exchange_categories,
             self.donation_messages,
             self.organizations,
@@ -844,10 +826,6 @@ class Command(BaseCommand):
         # load data
         markov = Markov(os.path.join(DIR, 'data/corpus'))
 
-        with open(os.path.join(DIR,
-                               'data/organization_categories.json')) as fd:
-            np_cat_raw = json.load(fd)
-
         with open(os.path.join(DIR, 'data/exchange_categories.json')) as fd:
             dp_cat_raw = json.load(fd)
 
@@ -889,12 +867,6 @@ class Command(BaseCommand):
         with open(os.path.join(DIR, 'data/gift_types.txt')) as fd:
             gift_types = fd.read().strip().split('\n')
 
-        # make organization categories from charity navigator categories
-        organization_categories = [
-            model.add_organization_category(x, np_cat_raw[x])
-            for x in np_cat_raw
-        ]
-
         # make deposit categories from charity navigator categories
         exchange_categories = [
             model.add_exchange_category(x) for x in dp_cat_raw
@@ -909,7 +881,6 @@ class Command(BaseCommand):
         model.add_organization(
             'Token Ibis',
             'First organization',
-            random.choice(organization_categories),
             random.randint(0, 100),
             username='tokenibis',
         )
@@ -919,7 +890,6 @@ class Command(BaseCommand):
             model.add_organization(
                 x['name'],
                 x['description'],
-                random.choice(organization_categories),
                 random.randint(0, 100),
             ) for x in np_raw[:num_organization - 1]
         ]

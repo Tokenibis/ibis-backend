@@ -215,17 +215,6 @@ class Rsvpable(models.Model):
         abstract = True
 
 
-class OrganizationCategory(models.Model):
-    class Meta:
-        verbose_name_plural = 'organization categories'
-
-    title = models.TextField(unique=True, validators=[MinLengthValidator(1)])
-    description = models.TextField(validators=[MinLengthValidator(1)])
-
-    def __str__(self):
-        return '{} ({})'.format(self.title, self.id)
-
-
 class Bot(User):
     class Meta:
         verbose_name = "Bot"
@@ -258,11 +247,6 @@ class Organization(User):
         verbose_name = "Organization"
         verbose_name_plural = "Organizations"
 
-    category = models.ForeignKey(
-        OrganizationCategory,
-        on_delete=models.CASCADE,
-        null=True,
-    )
     link = models.TextField(validators=[MinLengthValidator(1)])
     banner = models.TextField(validators=[MinLengthValidator(1)])
 

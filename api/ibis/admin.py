@@ -222,7 +222,6 @@ class WithdrawalAdmin(admin.ModelAdmin):
         return HttpResponseRedirect('../')
 
 
-admin.site.register(models.OrganizationCategory)
 admin.site.register(models.ExchangeCategory)
 admin.site.register(models.News)
 admin.site.register(models.Event)

@@ -520,22 +520,6 @@ class MessageChannelFilter(django_filters.FilterSet):
         return qs.filter(Q(target_id=from_global_id(value)[1]))
 
 
-# --- Organization Category ------------------------------------------------- #
-
-
-class OrganizationCategoryNode(DjangoObjectType):
-    class Meta:
-        model = models.OrganizationCategory
-        filter_fields = []
-        interfaces = (relay.Node, )
-
-    @classmethod
-    def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
-            raise GraphQLError('You are not logged in')
-        return queryset
-
-
 # --- Deposit Category ------------------------------------------------------ #
 
 
@@ -1372,7 +1356,6 @@ class OrganizationUpdate(Mutation):
             id,
             username='',
             email='',
-            category=None,
             description='',
             first_name=None,
             last_name=None,
@@ -1398,9 +1381,6 @@ class OrganizationUpdate(Mutation):
             organization.first_name = first_name
         if type(last_name) == str:
             organization.last_name = last_name
-        if category:
-            organization.category = models.OrganizationCategory.objects.get(
-                pk=from_global_id(category)[1])
         if description:
             organization.description = description
         if link:
@@ -2178,7 +2158,6 @@ class SubscriptionDelete(SubscriptionMutation):
 
 class Query(object):
 
-    organization_category = relay.Node.Field(OrganizationCategoryNode)
     exchange_category = relay.Node.Field(ExchangeCategoryNode)
     user = UserNodeInterface.Field(UserNode)
     organization = UserNodeInterface.Field(OrganizationNode)
@@ -2199,8 +2178,6 @@ class Query(object):
     message_direct = EntryNodeInterface.Field(MessageDirectNode)
     message_channel = EntryNodeInterface.Field(MessageChannelNode)
 
-    all_organization_categories = DjangoFilterConnectionField(
-        OrganizationCategoryNode)
     all_exchange_categories = DjangoFilterConnectionField(ExchangeCategoryNode)
     all_users = DjangoFilterConnectionField(
         UserNode,

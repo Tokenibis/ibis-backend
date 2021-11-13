@@ -207,7 +207,6 @@ class BaseTestCase(GraphQLTestCase):
                 first_name='Organization',
                 last_name='McOrganizationFace',
                 email='organization@example.com',
-                category=models.OrganizationCategory.objects.first(),
             )
 
             self.me_bot = models.Bot.objects.create(

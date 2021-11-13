@@ -339,8 +339,6 @@ class PaymentView(generics.GenericAPIView):
 
         user = models.User.objects.get(pk=request.user.id)
 
-        time = localtime()
-
         grant = models.Grant.objects.create(
             name=str(user),
             amount=net,
