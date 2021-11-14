@@ -64,7 +64,6 @@ class OrganizationAdmin(UserAdmin):
                 'link',
                 'password',
                 'is_active',
-                'category',
                 'score',
                 'avatar_upload',
                 'banner_upload',

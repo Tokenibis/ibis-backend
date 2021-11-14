@@ -37,7 +37,7 @@ def store_image(upload, directory, thumbnail_size=None):
             tmp.rsplit('/', 1)[0],
             int(time.time()),
         )
-        im.save(path)
+        im.convert('RGB').save(path)
 
         url = '{}{}{}'.format(
             settings.API_ROOT_PATH,
