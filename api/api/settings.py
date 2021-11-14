@@ -226,7 +226,7 @@ CORS_ALLOW_HEADERS = [
 
 CORS_ORIGIN_WHITELIST = (
     'https://{}'.format(CONF['ibis']['endpoints']['app']),
-    'https://{}'.format(CONF['ibis']['endpoints']['dash']),
+    'https://{}'.format(CONF['ibis']['endpoints']['info']),
     'http://localhost:3000',
 )
 
@@ -335,9 +335,6 @@ DISTRIBUTION_CONTROLLER_KP = 0.25
 DISTRIBUTION_CONTROLLER_TI = 1
 
 DISTRIBUTION_CONTROLLER_TD = 0.5
-
-if 'initial' in CONF['ibis']['distribution']:
-    DISTRIBUTION_INITIAL = CONF['ibis']['distribution']['initial']
 
 EMAIL_ACTIVE = CONF['email']['active']
 

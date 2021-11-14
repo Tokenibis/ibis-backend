@@ -33,8 +33,6 @@ class DistributionTestCase(BaseTestCase):
 
         self._max_transfer_old = settings.MAX_TRANSFER
         settings.MAX_TRANSFER = 1e20
-        if hasattr(settings, 'DISTRIBUTION_INITIAL'):
-            del settings.DISTRIBUTION_INITIAL
 
         super().setUp(*args, **kwargs)
 
@@ -105,27 +103,36 @@ class DistributionTestCase(BaseTestCase):
                 localtime(), offset=1) > localtime()
 
     def test_initial(self):
-        settings.DISTRIBUTION_INITIAL = 1000
+        time = localtime()
+        ibis.models.Grant.objects.create(
+            name='grant',
+            amount=100000,
+            duration=4,
+            created=distribution.models.to_step_start(time, offset=-2),
+        )
+        distribution.models.Goal.objects.create()
+        expected = distribution.models.get_distribution_initial(time)
         person1 = ibis.models.Person.objects.create(
             username=str(random.random())[:15],
             password='password',
             first_name='Person',
             last_name='McPersonFace_Initial_1',
+            date_joined=time,
         )
+        assert person1.deposit_set.count() == 1
+        assert person1.balance() == expected
 
-        del settings.DISTRIBUTION_INITIAL
-
+        expected = distribution.models.get_distribution_initial(time)
         person2 = ibis.models.Person.objects.create(
             username=str(random.random())[:15],
             password='password',
             first_name='Person',
             last_name='McPersonFace_Initial_2',
+            date_joined=time,
         )
-
-        assert person1.deposit_set.count() == 1
-        assert person1.balance() == 1000
         assert person2.deposit_set.count() == 1
-        assert person2.balance() != 1000
+        assert person2.balance() == expected
+        assert person2.balance() < person1.balance()
 
     def test_accounting(self):
         distribution.models.refresh_accounting()

@@ -182,7 +182,7 @@ def calculate(circles={}):
                 'circle':
                 _make_circle(
                     d.grant.amount,
-                    circles['grants'][-1]['id'],
+                    circles['grants'][0]['id'],
                 ),
                 'anchor':
                 circles['grants'][-1]['id'],
@@ -257,7 +257,7 @@ def render(circles, animate=False):
         gradient.addStop(0.1, '#ffffff')
         gradient.addStop(0.9, '#51780C')
 
-        title = '{}{} → {} (${:.2f}): {}'.format(
+        title = '{}{} → {} (${:,.2f}): {}'.format(
             '' if obj.donation.funded_by.count() == 1 else '[{}/{}] '.format(
                 obj.donation.funded_by.order_by('created').filter(
                     created__lte=obj.grant.created).count(),
@@ -306,9 +306,9 @@ def render(circles, animate=False):
             0 if animate else r,
         )
         gradient.addStop(0.1, '#ffffff')
-        gradient.addStop(0.9, '#bbbbbb')
+        gradient.addStop(0.9, '#3b3b3b')
 
-        title = '{} → : ${:.2f}'.format(
+        title = '{} → : ${:,.2f}'.format(
             obj.name,
             obj.amount / 100,
         )
@@ -332,6 +332,14 @@ def render(circles, animate=False):
                     'r',
                     _time(last_donation, first_donation, GD_TIME),
                     '0;{}'.format(r),
+                    begin=_time(first_donation),
+                    fill='freeze',
+                ))
+            circle.appendAnim(
+                draw.Animate(
+                    'opacity',
+                    _time(last_donation, first_donation, GD_TIME),
+                    '1.0;0.1',
                     begin=_time(first_donation),
                     fill='freeze',
                 ))

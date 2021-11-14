@@ -115,7 +115,7 @@ def get_control_history(time):
     ]
 
 
-def get_distribution_shares(time, initial=[]):
+def get_distribution_shares(time):
     """Calculate the relative UBP share for each active person based on the
     recency of their last activity (registration or donation).
     """
@@ -125,29 +125,45 @@ def get_distribution_shares(time, initial=[]):
     # calculate raw relative shares
     raw = {}
     for x in ibis.models.Person.objects.exclude(is_active=False).exclude(
-            distributor__eligible=False):
+            distributor__eligible=False).exclude(date_joined__gte=step):
         activity = x.donation_set.filter(
             created__lt=step).order_by('created').last()
         last = to_step_start(
-            localtime(activity.created) if activity else to_step_start(
-                x.date_joined, offset=-1))
+            localtime(activity.created)
+            if activity else to_step_start(x.date_joined, offset=-1))
         weeks = (step.date() - last.date()).days / len(DAYS)
         raw[x] = int(2**(settings.DISTRIBUTION_HORIZON - weeks))
-
-    for x in initial:
-        if x.distributor.eligible:
-            raw[x] = 2**(settings.DISTRIBUTION_HORIZON - 1)
 
     # prune and normalize
     total = sum(raw.values())
     return {x: raw[x] / total for x in raw if raw[x]} if total else {}
 
 
+def get_distribution_initial(time):
+    total = get_distribution_amount(time)
+    shares = get_distribution_shares(time)
+    new = [
+        x for x in ibis.models.Person.objects.filter(
+            date_joined__gte=to_step_start(time))
+        if x.person.deposit_set.filter(
+            category=ibis.models.ExchangeCategory.objects.get(
+                title=settings.IBIS_CATEGORY_UBP)).exists()
+    ]
+
+    return max(
+        1,
+        round((total * max(shares.values()) * (1 + len(shares)) /
+               (1 + len(shares) + len(new))) if shares else (total /
+                                                             (1 + len(new)))),
+    )
+
+
 def refresh_accounting():
     items = sorted(
-        list(ibis.models.Grant.objects.all()) + list(
-            ibis.models.Donation.objects.all()),
-        key=lambda x: x.created)
+        list(ibis.models.Grant.objects.all()) +
+        list(ibis.models.Donation.objects.all()),
+        key=lambda x: x.created,
+    )
 
     accounting = set()
     grants = {}
@@ -163,8 +179,9 @@ def refresh_accounting():
             donation = min(donations, key=lambda x: donations[x]['score'])
             for grant in grants:
                 grants[grant]['score'] = (
-                    -round((to_step_start(donation.created) - to_step_start(
-                        grant.created, offset=1)).days / 7) + grant.duration *
+                    -round((to_step_start(donation.created) -
+                            to_step_start(grant.created, offset=1)).days / 7) +
+                    grant.duration *
                     (grant.amount - grants[grant]['left']) / grant.amount,
                     grant.created,
                 )
@@ -221,10 +238,9 @@ def to_step_start(time, offset=0):
     # will be 0, -1, or 1 hours off of midnight, depending on tz
     raw = localtime(
         datetime.combine(
-            time.date() - timedelta(
-                days=(
-                    (time.weekday() - DAYS.index(settings.DISTRIBUTION_DAY)) %
-                    len(DAYS)) - offset * len(DAYS)),
+            time.date() - timedelta(days=(
+                (time.weekday() - DAYS.index(settings.DISTRIBUTION_DAY)) %
+                len(DAYS)) - offset * len(DAYS)),
             datetime.min.time(),
             tzinfo=time.tzinfo,
         ).astimezone(utc))
@@ -298,23 +314,7 @@ class Distributor(models.Model):
             return
 
         time = localtime()
-
-        if hasattr(settings, 'DISTRIBUTION_INITIAL'):
-            self.distribute_safe(
-                time,
-                amount=settings.DISTRIBUTION_INITIAL,
-            )
-        else:
-            total = get_distribution_amount(time)
-            shares = get_distribution_shares(time, initial=[self.person])
-            population_discount = len(shares) / (
-                ibis.models.Deposit.objects.filter(
-                    created__gte=to_step_start(time),
-                    category=ibis.models.ExchangeCategory.objects.get(
-                        title=settings.IBIS_CATEGORY_UBP),
-                ).count() + 1)
-
-            self.distribute_safe(
-                time,
-                amount=total * shares[self.person] * population_discount,
-            )
+        self.distribute_safe(
+            time,
+            amount=get_distribution_initial(time),
+        )
