@@ -546,7 +546,7 @@ class Email(models.Model):
 
     SCHEDULED = 'SC'
     STALE = 'ST'
-    ATTEMPTING = 'SC'
+    ATTEMPTING = 'AT'
     FAILED = 'FA'
     UNNEEDED = 'UN'
     SUCCEEDED = 'SU'
