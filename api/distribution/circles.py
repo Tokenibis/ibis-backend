@@ -204,7 +204,7 @@ def calculate(circles={}):
     return circles
 
 
-def render(circles, animate=False):
+def render(circles, animate=False, fancy=False):
     raw = (
         min(c['circle'][0] - c['circle'][2]
             for c in circles['grants'] + circles['grantdonations']),
@@ -234,9 +234,9 @@ def render(circles, animate=False):
 
     first = models.GrantDonation.objects.get(
         id=from_global_id(circles['grantdonations'][0]['id'])[1]).donation
-    speed = TIME / (models.GrantDonation.objects.get(
-        id=from_global_id(circles['grantdonations'][-1]['id'])
-        [1]).donation.created - first.created).total_seconds()
+    speed = TIME / (models.GrantDonation.objects.get(id=from_global_id(
+        circles['grantdonations'][-1]['id'])[1]).donation.created -
+                    first.created).total_seconds()
 
     def _time(x, base=first, extra=0):
         return '{}s'.format(0.01 + extra +
@@ -249,13 +249,14 @@ def render(circles, animate=False):
         y = circle['circle'][1] / scale
         r = circle['circle'][2] / scale * RADIUS_MODIFIER
 
-        gradient = draw.RadialGradient(
-            x + r * X_LIGHT,
-            y + r * Y_LIGHT,
-            r,
-        )
-        gradient.addStop(0.1, '#ffffff')
-        gradient.addStop(0.9, '#51780C')
+        if fancy:
+            gradient = draw.RadialGradient(
+                x + r * X_LIGHT,
+                y + r * Y_LIGHT,
+                r,
+            )
+            gradient.addStop(0.1, '#ffffff')
+            gradient.addStop(0.9, '#51780C')
 
         title = '{}{} → {} (${:,.2f}): {}'.format(
             '' if obj.donation.funded_by.count() == 1 else '[{}/{}] '.format(
@@ -272,7 +273,7 @@ def render(circles, animate=False):
             x,
             y,
             0 if animate else r,
-            fill=gradient,
+            fill=gradient if fancy else '#84ab3f',
             id=to_global_id(GrantDonationNode.__name__, obj.id),
             amount=obj.amount,
             user=to_global_id(UserNode.__name__, obj.donation.user.id),
@@ -300,13 +301,14 @@ def render(circles, animate=False):
         r = circle['circle'][2] * RADIUS_MODIFIER * sum(
             z.amount for z in obj.grantdonation_set.all()) / obj.amount / scale
 
-        gradient = draw.RadialGradient(
-            x if animate else x + r * X_LIGHT,
-            y if animate else y + r * Y_LIGHT,
-            0 if animate else r,
-        )
-        gradient.addStop(0.1, '#ffffff')
-        gradient.addStop(0.9, '#3b3b3b')
+        if fancy:
+            gradient = draw.RadialGradient(
+                x if animate else x + r * X_LIGHT,
+                y if animate else y + r * Y_LIGHT,
+                0 if animate else r,
+            )
+            gradient.addStop(0.1, '#ffffff')
+            gradient.addStop(0.9, '#3b3b3b')
 
         title = '{} → : ${:,.2f}'.format(
             obj.name,
@@ -317,7 +319,7 @@ def render(circles, animate=False):
             x,
             y,
             0 if animate else r,
-            fill=gradient,
+            fill=gradient if fancy else '#eeeeee',
             id=to_global_id(GrantNode.__name__, obj.id),
             description=html.escape(title),
             onclick='alert(\'{}\')'.format(
@@ -343,30 +345,31 @@ def render(circles, animate=False):
                     begin=_time(first_donation),
                     fill='freeze',
                 ))
-            gradient.appendAnim(
-                draw.Animate(
-                    'r',
-                    _time(last_donation, first_donation, GD_TIME),
-                    '0;{}'.format(r),
-                    begin=_time(first_donation),
-                    fill='freeze',
-                ))
-            gradient.appendAnim(
-                draw.Animate(
-                    'cx',
-                    _time(last_donation, first_donation, GD_TIME),
-                    '{};{}'.format(x, x + r * X_LIGHT),
-                    begin=_time(first_donation),
-                    fill='freeze',
-                ))
-            gradient.appendAnim(
-                draw.Animate(
-                    'cy',
-                    _time(last_donation, first_donation, GD_TIME),
-                    '{};{}'.format(-y, -y - r * Y_LIGHT),
-                    begin=_time(first_donation),
-                    fill='freeze',
-                ))
+            if fancy:
+                gradient.appendAnim(
+                    draw.Animate(
+                        'r',
+                        _time(last_donation, first_donation, GD_TIME),
+                        '0;{}'.format(r),
+                        begin=_time(first_donation),
+                        fill='freeze',
+                    ))
+                gradient.appendAnim(
+                    draw.Animate(
+                        'cx',
+                        _time(last_donation, first_donation, GD_TIME),
+                        '{};{}'.format(x, x + r * X_LIGHT),
+                        begin=_time(first_donation),
+                        fill='freeze',
+                    ))
+                gradient.appendAnim(
+                    draw.Animate(
+                        'cy',
+                        _time(last_donation, first_donation, GD_TIME),
+                        '{};{}'.format(-y, -y - r * Y_LIGHT),
+                        begin=_time(first_donation),
+                        fill='freeze',
+                    ))
 
         drawing.append(circle)
 
@@ -391,6 +394,7 @@ def run():
         if all([
                 len(data['grantdonations']) ==
                 models.GrantDonation.objects.count(),
+                os.path.exists(os.path.join(DIR, 'simple.svg')),
                 os.path.exists(os.path.join(DIR, 'static.svg')),
                 os.path.exists(os.path.join(DIR, 'dynamic.svg')),
         ]):
@@ -403,5 +407,20 @@ def run():
     with open(os.path.join(DIR, 'data.json'), 'w') as fd:
         json.dump(data, fd, indent=2)
 
-    render(data, animate=False).saveSvg(os.path.join(DIR, 'static.svg'))
-    render(data, animate=True).saveSvg(os.path.join(DIR, 'dynamic.svg'))
+    render(
+        data,
+        animate=False,
+        fancy=False,
+    ).saveSvg(os.path.join(DIR, 'simple.svg'))
+
+    render(
+        data,
+        animate=False,
+        fancy=True,
+    ).saveSvg(os.path.join(DIR, 'static.svg'))
+
+    render(
+        data,
+        animate=True,
+        fancy=True,
+    ).saveSvg(os.path.join(DIR, 'dynamic.svg'))

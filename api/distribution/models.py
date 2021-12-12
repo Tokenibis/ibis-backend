@@ -264,8 +264,21 @@ class Goal(TimeStampedModel):
                    if to_step_start(x.created, offset=x.duration) >=
                    to_step_start(created, offset=offset))
 
+    @staticmethod
+    def breakdown_static(created, offset=0):
+        return {
+            x: x.amount / x.duration
+            for x in ibis.models.Grant.objects.filter(
+                created__lt=to_step_start(created, offset=offset))
+            if to_step_start(x.created, offset=x.duration) >= to_step_start(
+                created, offset=offset)
+        }
+
     def amount(self):
         return Goal.amount_static(self.created)
+
+    def breakdown(self):
+        return Goal.breakdown_static(self.created)
 
 
 class Distributor(models.Model):

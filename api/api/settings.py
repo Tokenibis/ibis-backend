@@ -336,6 +336,8 @@ DISTRIBUTION_CONTROLLER_TI = 1
 
 DISTRIBUTION_CONTROLLER_TD = 0.5
 
+DONATE_LINK = CONF['ibis']['endpoints']['donate']
+
 EMAIL_ACTIVE = CONF['email']['active']
 
 EMAIL_HOST = CONF['email']['host']

@@ -628,8 +628,9 @@ class Grant(TimeStampedModel, Valuable):
         ])
 
     def __str__(self):
-        return '{} ${:,.2f} {}'.format(
+        return '{} {} ${:,.2f} {}'.format(
             self.name,
+            Grant.objects.filter(created__lte=self.created).count(),
             self.amount / 100,
             self.created,
         )
