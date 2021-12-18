@@ -125,11 +125,10 @@ class Notifier(models.Model):
         assert ':' not in page
         _, _, token = TimestampSigner().sign('notifications:{}'.format(
             self.user.id)).split(":", 2)
-        return reverse(
-            page, kwargs={
-                'pk': self.pk,
-                'token': token,
-            })
+        return reverse(page, kwargs={
+            'pk': self.pk,
+            'token': token,
+        })
 
     def create_settings_link(self):
         return self._create_link('settings')
@@ -139,9 +138,9 @@ class Notifier(models.Model):
 
     def check_link_token(self, token):
         try:
-            TimestampSigner().unsign(
-                'notifications:{}:{}'.format(self.user.id, token),
-                max_age=60 * 60 * 48)  # Valid for 2 days
+            TimestampSigner().unsign('notifications:{}:{}'.format(
+                self.user.id, token),
+                                     max_age=60 * 60 * 48)  # Valid for 2 days
         except (BadSignature, SignatureExpired):
             return False
         return True
@@ -283,8 +282,8 @@ class DepositNotification(Notification):
                             to_global_id('UserNode', x.pk),
                         )),
                     ))
-            for x in ibis.models.News.objects.filter(
-                    created__gte=time - timedelta(days=7)):
+            for x in ibis.models.News.objects.filter(created__gte=time -
+                                                     timedelta(days=7)):
                 feed.append('{} just published an article: [{}]({})'.format(
                     x.user,
                     x.title,
@@ -304,8 +303,8 @@ class DepositNotification(Notification):
                     )),
                     x.date.strftime('%B %d'),
                 ))
-            for x in ibis.models.Post.objects.filter(
-                    created__gte=time - timedelta(days=7)):
+            for x in ibis.models.Post.objects.filter(created__gte=time -
+                                                     timedelta(days=7)):
                 feed.append('{} just made a post: [{}]({})'.format(
                     x.user,
                     x.title,
@@ -315,8 +314,8 @@ class DepositNotification(Notification):
                     )),
                 ))
 
-            for x in ibis.models.Bot.objects.filter(
-                    date_joined__gte=time - timedelta(days=7)):
+            for x in ibis.models.Bot.objects.filter(date_joined__gte=time -
+                                                    timedelta(days=7)):
                 feed.append('Please welcome our newest bot: [{}]({}).'.format(
                     x,
                     settings.APP_LINK_RESOLVER('{}:{}'.format(
@@ -374,6 +373,28 @@ class GrantNotification(Notification):
             self.create_email(
                 email_templates['Grant']['subject'],
                 random.choice(email_templates['Grant']['body']).format(
+                    amount='${:,.2f}'.format(self.subject.amount / 100),
+                    link=settings.APP_LINK_RESOLVER(self.reference),
+                ),
+            )
+
+
+class GrantFinishNotification(Notification):
+    subject = models.ForeignKey(
+        ibis.models.Grant,
+        on_delete=models.CASCADE,
+    )
+
+    def save(self, *args, **kwargs):
+        adding = self._state.adding
+        super().save(*args, **kwargs)
+        if not adding:
+            return
+
+        if self.notifier.email_grant:
+            self.create_email(
+                email_templates['GrantFinish']['subject'],
+                random.choice(email_templates['GrantFinish']['body']).format(
                     amount='${:,.2f}'.format(self.subject.amount / 100),
                     link=settings.APP_LINK_RESOLVER(self.reference),
                 ),

@@ -2,12 +2,12 @@ import logging
 import ibis.models
 import notifications.models as models
 
-from django.conf import settings
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from graphql_relay.node.node import to_global_id
 from api.utils import get_submodel
-from api.management.commands.loaddata import STATE
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,37 @@ def handleGrantCreate(sender, instance, created, **kwargs):
             description=description,
             subject=instance,
             created=instance.created,
+        )
+
+
+@receiver(post_save, sender=ibis.models.GrantDonation)
+def handleGrantFinish(sender, instance, created, **kwargs):
+    if not created:
+        return
+
+    if not instance.grant.user:
+        return
+
+    if instance.grant.grantnotification_set.exists():
+        return
+
+    if instance.grant.user and instance.grant.grantdonation_set.aggregate(
+            amount=Coalesce(
+                Sum('amount'),
+                0,
+            ))['amount'] == instance.grant.amount:
+        description = 'Your grant of ${:,.2f} has completed'.format(
+            instance.grant.amount / 100)
+
+        models.GrantFinishNotification.objects.create(
+            notifier=instance.grant.user.notifier,
+            reference='{}:{}'.format(
+                ibis.models.Grant.__name__,
+                to_global_id('GrantNode', instance.grant.pk),
+            ),
+            description=description,
+            subject=instance.grant,
+            created=instance.grant.created,
         )
 
 

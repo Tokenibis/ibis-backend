@@ -122,6 +122,7 @@ My, what a responsible fellow you are. Thank you for your grant of {amount} for 
 
 Head over [here]({link}) to see who puts it to use.
 
+
 ---
 
 You’re a treasure! Thank you for your grant of {amount} for future philanthropic purposes.
@@ -140,3 +141,9 @@ Head over [here]({link}) to see who puts it to use.
 I think I’m in love with you... for making a grant {amount} for future philanthropic purposes!
 
 Head over [here]({link}) to see who puts it to use.
+
+***GrantFinish:New Notification***
+
+Good news! Our minions have finished distributing your grant of {amount}.
+
+Head over [here]({link}) to see its final impact.
