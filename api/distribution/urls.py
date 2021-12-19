@@ -5,4 +5,5 @@ urlpatterns = [
     path('finance/', views.FinanceView.as_view(), name='finance'),
     path('amount/', views.AmountView.as_view(), name='amount'),
     path('report/<slug:number>/', views.ReportView.as_view(), name='report'),
+    path('logos/', views.LogoView.as_view(), name='logos'),
 ]

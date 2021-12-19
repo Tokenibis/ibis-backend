@@ -390,3 +390,15 @@ class ReportView(TemplateView):
         context['link'] = settings.DONATE_LINK
 
         return context
+
+
+class LogoView(TemplateView):
+    template_name = 'logos.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['organizations'] = sorted(
+            [x for x in ibis.models.Organization.objects.filter(is_active=True)],
+            key=lambda x: x.date_joined,
+        )
+        return context
