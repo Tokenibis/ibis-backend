@@ -360,8 +360,7 @@ class ReportView(TemplateView):
             'donation':
             x.donation,
             'reply':
-            x.donation.parent_of.order_by('-created').filter(
-                user=x.donation.target).first(),
+            x.donation.parent_of.order_by('-created').first(),
         } for x in grant.grantdonation_set.order_by('donation__created')]
 
         context['amount_str'] = '${:,.0f}'.format(
@@ -398,7 +397,10 @@ class LogoView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['organizations'] = sorted(
-            [x for x in ibis.models.Organization.objects.filter(is_active=True)],
+            [
+                x for x in ibis.models.Organization.objects.filter(
+                    is_active=True)
+            ],
             key=lambda x: x.date_joined,
         )
         return context
