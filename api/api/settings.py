@@ -261,19 +261,19 @@ SOCIALACCOUNT_QUERY_EMAIL = True
 
 def APP_LINK_RESOLVER(reference=None):
     lookup = {
-        'Organization': '/Organization/Organization?id={}',
-        'News': '/News/News?id={}',
-        'Event': '/Event/Event?id={}',
-        'Person': '/Person/Person?id={}',
-        'Donation': '/Donation/Donation?id={}',
-        'Post': '/Post/Post?id={}',
-        'Bot': '/Bot/Bot?id={}',
-        'Reward': '/Reward/Reward?id={}',
-        'Activity': '/Activity/Activity?id={}',
-        'Grant': '/_/Grant?id={}',
-        'Withdrawal': '/_/Withdrawal?id={}',
-        'MessageDirect': '/_/MessageDirectList?id={}',
-        'MessageChannel': '/_/MessageChannelList?id={}',
+        'Organization': '/organization?id={}',
+        'News': '/news?id={}',
+        'Event': '/event?id={}',
+        'Person': '/person?id={}',
+        'Donation': '/donation?id={}',
+        'Post': '/post?id={}',
+        'Bot': '/bot?id={}',
+        'Reward': '/reward?id={}',
+        'Activity': '/activity?id={}',
+        'Grant': '/grant?id={}',
+        'Withdrawal': '/withdrawal?id={}',
+        'MessageDirect': '/message-direct-list?id={}',
+        'MessageChannel': '/message-channel-list?id={}',
     }
 
     if not reference:

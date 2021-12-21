@@ -1264,7 +1264,7 @@ class UserNode(GeneralUserNode):
         return self.scratch
 
     def resolve_user_type(self, *args, **kwargs):
-        return get_submodel(self).__name__
+        return get_submodel(self).__name__.lower()
 
     def resolve_messages(self, *args, **kwargs):
         return models.MessageDirect.objects.filter(

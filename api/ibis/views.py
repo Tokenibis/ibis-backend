@@ -101,7 +101,8 @@ class LoginView(generics.GenericAPIView):
             'user_id':
             to_global_id('UserNode', str(request.user.id)),
             'user_type':
-            get_submodel(models.User.objects.get(id=request.user.id)).__name__,
+            get_submodel(
+                models.User.objects.get(id=request.user.id)).__name__.lower(),
         })
 
 
@@ -186,7 +187,7 @@ class IdentifyView(generics.GenericAPIView):
         if models.User.objects.filter(id=request.user.id).exists():
             user_id = to_global_id('UserNode', str(request.user.id))
             user_type = get_submodel(
-                models.User.objects.get(id=request.user.id)).__name__
+                models.User.objects.get(id=request.user.id)).__name__.lower()
         else:
             user_id = ''
             user_type = ''
