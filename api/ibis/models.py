@@ -254,12 +254,11 @@ class Organization(User):
         return sum([x.amount for x in Donation.objects.filter(target=self)])
 
     def fundraised_recently(self):
-        return sum(
-            x.amount for x in Donation.objects.filter(
-                target=self,
-                created__gte=localtime() - timedelta(
-                    days=7 * settings.SORT_ORGANIZATION_WINDOW_FUNDRAISED),
-            ))
+        return sum(x.amount for x in Donation.objects.filter(
+            target=self,
+            created__gte=localtime() -
+            timedelta(days=7 * settings.SORT_ORGANIZATION_WINDOW_FUNDRAISED),
+        ))
 
     def has_recent_entry(self):
         return News.objects.filter(
@@ -609,23 +608,8 @@ class Grant(TimeStampedModel, Valuable):
     )
 
     @property
-    def info_str(self):
-        amounts = sum(x.amount for x in self.funded.all())
-
-        return ' <br/> '.join('{}: {}'.format(x, y) for x, y in [
-            ('Grant Amount', '${:,.2f}'.format(self.amount / 100)),
-            ('Distribution Progress',
-             '{}%'.format(min(100, round(100 * amounts / self.amount)))),
-            ('Distribution Weeks', self.duration),
-            ('Donations Funded', self.funded.count()),
-            (
-                'Organizations Funded',
-                len(
-                    set(
-                        self.grantdonation_set.values_list(
-                            'donation__target'))),
-            ),
-        ])
+    def gid(self):
+        return to_global_id('GrantNode', self.id)
 
     def __str__(self):
         return '{} {} ${:,.2f} {}'.format(

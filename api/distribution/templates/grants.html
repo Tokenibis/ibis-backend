@@ -2,12 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <title>Grants</title>
   </head>
   <body>
-    <div class="container" style="padding-top: 20px; padding-bottom: 40px;">
+    <div style="width: 95%; margin: 0px; padding-top: 20px; padding-bottom: 40px;">
       <div class="row justify-content-center">
         <div class="col-12">
 	  {% for grant in page_obj %}
@@ -15,17 +15,15 @@
 	    <div><strong> {{ grant.name }}</strong> &ndash;
 	      {{ grant.created.date }}</div>
 	    <div class="dot"></div>
-	    <div
-	      id="grant_{{ grant.id }}"
-	      style="color:#84ab3f;font-weight:bold;cursor:pointer;"
-	      title=""
-	      data-toggle="tooltip"
-	      data-trigger="manual"
-	      data-placement="left"
-	      data-html="true"
-	      onclick="toggle('#grant_{{ grant.id }}', '{{ grant.info_str }}')"
-	      >
-	      Info
+	    <div>
+	      <a
+		  style="color:#84ab3f;font-weight:bold;cursor:pointer;"
+		  title="View Personal Report"
+		  href="{{ report_link }}{{ grant.gid }}"
+		target="_blank"
+		>
+		Report
+	      </a>
 	    </div>
 	  </div>
 	  {% endfor %}

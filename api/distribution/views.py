@@ -6,6 +6,7 @@ import ibis.schema
 import matplotlib.pyplot as plt
 import distribution.models as models
 
+from django.views.generic.list import ListView
 from collections import defaultdict
 from lxml import etree
 from io import StringIO
@@ -15,7 +16,7 @@ from django.db.models.functions import Coalesce
 from django.utils.timezone import localtime
 from django.views.generic.base import TemplateView
 from rest_framework import generics, response
-from graphql_relay.node.node import to_global_id
+from graphql_relay.node.node import to_global_id, from_global_id
 from django.views.decorators.clickjacking import xframe_options_exempt
 from matplotlib.ticker import StrMethodFormatter
 
@@ -114,14 +115,35 @@ class FinanceView(generics.GenericAPIView):
         })
 
 
+class GrantView(ListView):
+    template_name = 'grants.html'
+    model = ibis.models.Grant
+    paginate_by = 50
+    ordering = ['-created']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['report_link'] = '{}/distribution/report?id='.format(
+            settings.API_ROOT_PATH)
+        return context
+
+    @xframe_options_exempt
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
+
 class ReportView(TemplateView):
     template_name = 'report.html'
 
     model = ibis.models.Grant
 
+    @xframe_options_exempt
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)
+
     def get_context_data(self, **kwargs):
-        grant = ibis.models.Grant.objects.order_by('created')[
-            int(self.kwargs['number']) - 1]
+        grant = ibis.models.Grant.objects.get(
+            id=from_global_id(self.request.GET['id'])[1])
         context = super().get_context_data(**kwargs)
         weekly = grant.amount / grant.duration / 100
 
@@ -354,6 +376,9 @@ class ReportView(TemplateView):
 
         # --- set final context ---
 
+        number = ibis.models.Grant.objects.filter(
+            created__lte=grant.created).count()
+
         context['grantdonation'] = [{
             'amount':
             '${:,.2f}'.format(x.amount / 100),
@@ -369,10 +394,9 @@ class ReportView(TemplateView):
         context['weekly_str'] = '${:,.0f}'.format(weekly) if weekly == int(
             weekly) else '${:,.2f}'.format(weekly)
         context['object'] = grant
-        context['number'] = self.kwargs['number']
-        context['number_suffix'] = 'st' if int(
-            self.kwargs['number']) % 10 == 1 else (
-                'nd' if int(self.kwargs['number']) % 10 == 2 else 'th')
+        context['number'] = number
+        context['number_suffix'] = 'st' if number % 10 == 1 else (
+            'nd' if number % 10 == 2 else 'th')
         context['num_donations'] = grant.grantdonation_set.count()
         context['num_organizations'] = len(
             set(grant.grantdonation_set.values_list('donation__target')))
