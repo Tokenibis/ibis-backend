@@ -21,7 +21,7 @@ from django.views.generic.list import ListView
 from rest_framework import generics, response, exceptions, serializers
 from users.models import GeneralUser
 from allauth.socialaccount.models import SocialAccount
-from graphql_relay.node.node import to_global_id
+from graphql_relay.node.node import to_global_id, from_global_id
 from django.utils.timezone import localtime, timedelta
 
 from api.utils import get_submodel
@@ -329,19 +329,25 @@ class PaymentView(generics.GenericAPIView):
         serializerform = self.get_serializer(data=request.data)
         if not serializerform.is_valid():
             raise exceptions.ParseError(detail="No valid values")
-        description, net, fee = self.paypal_client.get_order(
+        paypal_id, custom_id, net, fee = self.paypal_client.get_order(
             request.data['orderID'])
 
-        if not (description and net):
+        if not (paypal_id and net):
             logger.error('Error fetching order information')
             return response.Response({
                 'depositID': '',
             })
 
         user = models.User.objects.get(pk=request.user.id)
+        assert str(user.id) == str(from_global_id(custom_id.split(':')[0])[1])
+
+        recognition = custom_id.split(
+            ':',
+            1,
+        )[1] if ':' in custom_id else str(user)
 
         grant = models.Grant.objects.create(
-            name=str(user),
+            name=recognition,
             amount=net,
             duration=min(
                 settings.MAX_GRANT_TIME,
