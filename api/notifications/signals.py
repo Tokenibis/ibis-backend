@@ -84,7 +84,7 @@ def handleGrantFinish(sender, instance, created, **kwargs):
     if not instance.grant.user:
         return
 
-    if instance.grant.grantnotification_set.exists():
+    if instance.grant.grantfinishnotification_set.exists():
         return
 
     if instance.grant.user and instance.grant.grantdonation_set.aggregate(
