@@ -67,12 +67,15 @@ class PayPalClient:
 
             assert fee + net == gross, 'conversion error'
 
-            description = purchase.payments.captures[0].id
-            assert description, 'missing paypal TransactionID'
+            paypal_id = purchase.payments.captures[0].id
+            assert paypal_id, 'missing paypal TransactionID'
+
+            custom_id = purchase.payments.captures[0].custom_id
+            assert custom_id, 'missing custom id'
 
         except AssertionError as e:
             logger.error(
                 'AssertionError while fetching PayPal order: {}'.format(e))
             return '', 0
 
-        return description, net, fee
+        return paypal_id, custom_id, net, fee
