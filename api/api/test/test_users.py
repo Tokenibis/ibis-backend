@@ -343,8 +343,6 @@ class PermissionTestCase(BaseTestCase):
                 op_name='OrganizationUpdate',
                 variables={
                     'id': user.gid,
-                    'privacyDonation': False,
-                    'privacyReward': False,
                 },
             ).content)
         success['OrganizationUpdate'] = 'errors' not in result and result[
@@ -578,8 +576,6 @@ class PermissionTestCase(BaseTestCase):
                 op_name='PersonUpdate',
                 variables={
                     'id': user.gid,
-                    'privacyDonation': False,
-                    'privacyReward': False,
                 },
             ).content)
         success['PersonUpdate'] = 'errors' not in result and result['data'][

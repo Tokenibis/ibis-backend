@@ -101,13 +101,6 @@ class Scoreable(models.Model):
         abstract = True
 
 
-class Hideable(models.Model):
-    private = models.BooleanField(default=False)
-
-    class Meta:
-        abstract = True
-
-
 class User(GeneralUser, Scoreable):
     class Meta:
         verbose_name_plural = 'ibis user'
@@ -181,18 +174,6 @@ class User(GeneralUser, Scoreable):
             -sum([x.amount for x in Withdrawal.objects.filter(user=self.id)]),
         ])
 
-    def can_see(self, entry):
-        if hasattr(entry, 'comment'):
-            entry = entry.comment.get_root()
-
-        if hasattr(entry, 'donation') and entry.donation.private:
-            return self.id == entry.donation.user.id or self.id == entry.donation.target.id
-
-        if hasattr(entry, 'reward') and entry.reward.private:
-            return self.id == entry.reward.user.id or self.id == entry.reward.target.id
-
-        return True
-
     def clean(self):
         username_validator(self.username)
 
@@ -220,7 +201,6 @@ class Bot(User):
         verbose_name = "Bot"
         verbose_name_plural = "Bots"
 
-    privacy_reward = models.BooleanField(default=False)
     gas = models.IntegerField(default=settings.BOT_GAS_INITIAL)
     tank = models.PositiveIntegerField(default=settings.BOT_GAS_INITIAL)
 
@@ -233,7 +213,6 @@ class Person(User):
         verbose_name = "Person"
         verbose_name_plural = "People"
 
-    privacy_donation = models.BooleanField(default=False)
     verified = models.BooleanField(default=False)
     verified_original = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=15, blank=True)
@@ -317,11 +296,6 @@ class Entry(TimeStampedModel, Scoreable):
     scratch = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        if (hasattr(self, 'donation')
-                and self.donation.private) or (hasattr(self, 'reward')
-                                               and self.reward.private):
-            return super().save(*args, **kwargs)
-
         mention = set(
             User.objects.get(username=x[2:-1]) for x in re.findall(
                 r'\W@\w{{{},{}}}\W'.format(
@@ -447,7 +421,7 @@ class Event(Entry, Rsvpable):
         return '{} ({})'.format(self.title, self.id)
 
 
-class Donation(Entry, Valuable, Hideable):
+class Donation(Entry, Valuable):
     user = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
@@ -488,7 +462,7 @@ class Activity(Entry):
     reward_range = models.PositiveIntegerField(default=0)
 
 
-class Reward(Entry, Valuable, Hideable):
+class Reward(Entry, Valuable):
     user = models.ForeignKey(
         Bot,
         on_delete=models.CASCADE,

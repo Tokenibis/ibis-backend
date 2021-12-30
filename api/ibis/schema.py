@@ -451,10 +451,6 @@ class CommentFilter(django_filters.FilterSet):
         fields = []
 
     def filter_parent(self, qs, name, value):
-        if not (self.request.user.is_superuser
-                or models.User.objects.get(id=self.request.user.id).can_see(
-                    models.Entry.objects.get(id=from_global_id(value)[1]))):
-            raise GraphQLError('You do not have sufficient permission')
         return qs.filter(parent_id=from_global_id(value)[1])
 
     def filter_user(self, qs, name, value):
@@ -721,22 +717,10 @@ class EntryNode(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
-            raise GraphQLError('You are not logged in')
-
-        if info.context.user.is_superuser:
+        if info.context.user.is_authenticated or settings.PUBLIC_READ:
             return queryset
 
-        return queryset.filter(
-            (Q(donation__isnull=False) &
-             (Q(donation__private=False)
-              | Q(donation__user_id=info.context.user.id)
-              | Q(donation__target_id=info.context.user.id)))
-            | (Q(reward__isnull=False) &
-               (Q(reward__private=False)
-                | Q(reward__user_id=info.context.user.id)
-                | Q(reward__target_id=info.context.user.id)))
-            | (Q(donation__isnull=True) & Q(reward__isnull=True)))
+        return queryset.filter(Q(news__isnull=False) | Q(event__isnull=False))
 
 
 # --- Donation -------------------------------------------------------------- #
@@ -768,9 +752,7 @@ class DonationNode(EntryNode):
         if info.context.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            Q(private=False) | Q(user__id=info.context.user.id)
-            | Q(target_id=info.context.user.id)).distinct()
+        return queryset
 
 
 class DonationCreate(Mutation):
@@ -782,7 +764,6 @@ class DonationCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        private = graphene.Boolean()
         score = graphene.Int()
 
     donation = graphene.Field(DonationNode)
@@ -794,7 +775,6 @@ class DonationCreate(Mutation):
             description,
             target,
             amount,
-            private=False,
             score=0,
     ):
         if not (info.context.user.is_superuser
@@ -822,7 +802,6 @@ class DonationCreate(Mutation):
             description=description,
             target=target_obj,
             amount=amount,
-            private=private,
             score=score,
         )
 
@@ -851,9 +830,7 @@ class RewardNode(EntryNode):
         if info.context.user.is_superuser:
             return queryset
 
-        return queryset.filter(
-            Q(private=False) | Q(user__id=info.context.user.id)
-            | Q(target_id=info.context.user.id)).distinct()
+        return queryset
 
 
 class RewardCreate(Mutation):
@@ -865,7 +842,6 @@ class RewardCreate(Mutation):
         description = graphene.String(required=True)
         target = graphene.ID(required=True)
         amount = graphene.Int(required=True)
-        private = graphene.Boolean()
         related_activity = graphene.ID()
         score = graphene.Int()
         scratch = graphene.String()
@@ -879,7 +855,6 @@ class RewardCreate(Mutation):
             description,
             target,
             amount,
-            private=False,
             scratch=None,
             related_activity=None,
             score=0,
@@ -911,7 +886,6 @@ class RewardCreate(Mutation):
             description=description,
             target=target_obj,
             amount=amount,
-            private=private,
             related_activity=related_activity,
             scratch=scratch,
             score=score,
@@ -931,8 +905,6 @@ class NewsNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
-            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -1060,8 +1032,6 @@ class EventNode(EntryNode):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
-            raise GraphQLError('You are not logged in')
         return queryset
 
 
@@ -1272,11 +1242,11 @@ class UserNode(GeneralUserNode):
 
     @classmethod
     def get_queryset(cls, queryset, info, hide_inactive=True):
-        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
-            raise GraphQLError('You are not logged in')
         if hide_inactive:
-            return queryset.filter(is_active=True)
-        return queryset
+            queryset = queryset.filter(is_active=True)
+        if info.context.user.is_authenticated or settings.PUBLIC_READ:
+            return queryset
+        return queryset.filter(Q(organization__isnull=False))
 
     @classmethod
     def get_node(cls, info, id):
@@ -1330,6 +1300,12 @@ class OrganizationNode(UserNode):
     def resolve_recent_response_rate(self, info, *args, **kwargs):
         return self.recent_response_rate()
 
+    @classmethod
+    def get_queryset(cls, queryset, info, hide_inactive=True):
+        if hide_inactive:
+            return queryset.filter(is_active=True)
+        return queryset
+
 
 class OrganizationUpdate(Mutation):
     class Arguments:
@@ -1341,9 +1317,6 @@ class OrganizationUpdate(Mutation):
         first_name = graphene.String()
         last_name = graphene.String()
         link = graphene.String()
-        privacy_donation = graphene.Boolean()
-        privacy_reward = graphene.Boolean()
-        privacy_deposit = graphene.Boolean()
         avatar = Upload()
         banner = Upload()
         score = graphene.Int()
@@ -1360,9 +1333,6 @@ class OrganizationUpdate(Mutation):
             first_name=None,
             last_name=None,
             link='',
-            privacy_donation=None,
-            privacy_reward=None,
-            privacy_deposit=None,
             avatar=None,
             banner=None,
             score=0,
@@ -1385,12 +1355,6 @@ class OrganizationUpdate(Mutation):
             organization.description = description
         if link:
             organization.link = link
-        if type(privacy_donation) == bool:
-            organization.privacy_donation = privacy_donation
-        if type(privacy_reward) == bool:
-            organization.privacy_reward = privacy_reward
-        if type(privacy_deposit) == bool:
-            organization.privacy_deposit = privacy_deposit
         if avatar:
             organization.avatar = models.store_image(
                 avatar,
@@ -1442,6 +1406,14 @@ class PersonNode(UserNode):
             raise GraphQLError('You do not have sufficient permission')
         return self.phone_number
 
+    @classmethod
+    def get_queryset(cls, queryset, info, hide_inactive=True):
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
+        if hide_inactive:
+            return queryset.filter(is_active=True)
+        return queryset
+
 
 class PersonUpdate(Mutation):
     class Arguments:
@@ -1451,9 +1423,6 @@ class PersonUpdate(Mutation):
         description = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
-        privacy_donation = graphene.Boolean()
-        privacy_reward = graphene.Boolean()
-        privacy_deposit = graphene.Boolean()
         avatar = Upload()
         score = graphene.Int()
 
@@ -1468,9 +1437,6 @@ class PersonUpdate(Mutation):
             description='',
             first_name='',
             last_name='',
-            privacy_donation=None,
-            privacy_reward=None,
-            privacy_deposit=None,
             avatar=None,
             score=None,
     ):
@@ -1489,12 +1455,6 @@ class PersonUpdate(Mutation):
             person.first_name = first_name
         if last_name:
             person.first_name = last_name
-        if type(privacy_donation) == bool:
-            person.privacy_donation = privacy_donation
-        if type(privacy_reward) == bool:
-            person.privacy_reward = privacy_reward
-        if type(privacy_deposit) == bool:
-            person.privacy_deposit = privacy_deposit
         if avatar:
             person.avatar = models.store_image(
                 avatar,
@@ -1531,6 +1491,14 @@ class BotNode(UserNode):
     def resolve_activity_count(self, info, *args, **kwargs):
         return self.activity_set.count()
 
+    @classmethod
+    def get_queryset(cls, queryset, info, hide_inactive=True):
+        if not info.context.user.is_authenticated and not settings.PUBLIC_READ:
+            raise GraphQLError('You are not logged in')
+        if hide_inactive:
+            return queryset.filter(is_active=True)
+        return queryset
+
 
 class BotUpdate(Mutation):
     class Arguments:
@@ -1540,9 +1508,6 @@ class BotUpdate(Mutation):
         description = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
-        privacy_donation = graphene.Boolean()
-        privacy_reward = graphene.Boolean()
-        privacy_deposit = graphene.Boolean()
         avatar = Upload()
         tank = graphene.Int()
         scratch = graphene.String()
@@ -1559,9 +1524,6 @@ class BotUpdate(Mutation):
             description='',
             first_name='',
             last_name='',
-            privacy_donation=None,
-            privacy_reward=None,
-            privacy_deposit=None,
             avatar=None,
             tank=None,
             scratch=None,
@@ -1582,12 +1544,6 @@ class BotUpdate(Mutation):
             bot.first_name = first_name
         if last_name:
             bot.first_name = last_name
-        if type(privacy_donation) == bool:
-            bot.privacy_donation = privacy_donation
-        if type(privacy_reward) == bool:
-            bot.privacy_reward = privacy_reward
-        if type(privacy_deposit) == bool:
-            bot.privacy_deposit = privacy_deposit
         if avatar:
             bot.avatar = models.store_image(
                 avatar,
@@ -1795,9 +1751,6 @@ class CommentNode(EntryNode):
         queryset = cls.get_queryset(cls._meta.model.objects, info)
         try:
             comment = queryset.get(pk=id)
-            if not (info.context.user.is_superuser or models.User.objects.get(
-                    id=info.context.user.id).can_see(comment)):
-                raise GraphQLError('You do not have sufficient permission')
             return comment
         except cls._meta.model.DoesNotExist:
             return None
@@ -1824,8 +1777,7 @@ class CommentCreate(Mutation):
 
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
-                 and hasattr(info.context.user, 'user')
-                 and info.context.user.user.can_see(parent_obj))):
+                 and hasattr(info.context.user, 'user'))):
             raise GraphQLError('You do not have sufficient permission')
 
         comment = models.Comment.objects.create(
@@ -2028,8 +1980,7 @@ class LikeMutation(Mutation):
 
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
-                 and hasattr(info.context.user, 'user')
-                 and info.context.user.user.can_see(entry_obj))):
+                 and hasattr(info.context.user, 'user'))):
             raise GraphQLError('You do not have sufficient permission')
 
         getattr(entry_obj.like, operation)(user_obj)
@@ -2065,8 +2016,7 @@ class BookmarkMutation(Mutation):
 
         if not (info.context.user.is_superuser or
                 (info.context.user.id == int(from_global_id(user)[1])
-                 and hasattr(info.context.user, 'user')
-                 and info.context.user.user.can_see(entry_obj))):
+                 and hasattr(info.context.user, 'user'))):
             raise GraphQLError('You do not have sufficient permission')
 
         getattr(entry_obj.bookmark, operation)(user_obj)
