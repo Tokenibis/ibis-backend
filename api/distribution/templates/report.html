@@ -61,7 +61,11 @@
       <div class="row justify-content-center">
         <div class="col-12">
 	  <h1><span>{{ ibis_icon|safe }}</span>#{{ number }}: <span class="gr bd">{{ object.name }}</span></h1>
+	  {% if progress == 100 %}
 	  <p class="subtitle">Impact report for a grant of <span class="gr bd">{{ amount_str }}</span> on {{ object.created|date }}</p>
+	  {% else %}
+	  <p class="subtitle">This grant of <span class="gr bd">{{ amount_str }}</span> is currently being distributed (progress: <span class="gr bd">{{ progress }}%</span>)</p>
+	  {% endif %}
 	</div>
 	<div class="col-12"><hr/></div>
 	<div class="col-3 text-center">
@@ -168,7 +172,7 @@
 	    <ul style="list-style-type: none; margin: 0; padding: 0 25px;">
 	      {% for x in grantdonation %}
 	      <li>
-		<span class="bd">{{ x.donation.user }} → {{ x.donation.target }} &ndash; {{ x.amount }}:</span> {{ x.donation.description }} 
+		<span class="bd">{{ x.donation.user }} <span class="gr bd">→</span> {{ x.donation.target }} <span class="gr bd">&ndash;</span> {{ x.amount }}:</span> {{ x.donation.description }} 
 		{% if x.reply %}
 		<ul class="gr bd" style="list-style-type: '↳'">
 		  <li><span style="font-weight: normal; color: #9b9b9b">{{ x.reply.description }}</span></li>

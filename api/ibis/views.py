@@ -16,8 +16,6 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
-from django.views.decorators.clickjacking import xframe_options_exempt
-from django.views.generic.list import ListView
 from rest_framework import generics, response, exceptions, serializers
 from users.models import GeneralUser
 from allauth.socialaccount.models import SocialAccount
@@ -301,21 +299,6 @@ class PhoneConfirmView(generics.GenericAPIView):
         return response.Response({
             'success': True,
         })
-
-
-class GrantView(ListView):
-    template_name = 'grant_list.html'
-    model = models.Grant
-    paginate_by = 50
-    ordering = ['-created']
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
-
-    @xframe_options_exempt
-    def get(self, *args, **kwargs):
-        return super().get(*args, **kwargs)
 
 
 class PaymentView(generics.GenericAPIView):
