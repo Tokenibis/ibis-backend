@@ -146,4 +146,4 @@ Head over [here]({link}) to see who puts it to use.
 
 Good news! Our minions have finished distributing your grant of {amount}.
 
-Head over [here]({link}) to see its final impact.
+Head over [here]({link}) to see the funded donations and [here]({report}) to see the final impact report.

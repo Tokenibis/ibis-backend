@@ -397,6 +397,7 @@ class GrantFinishNotification(Notification):
                 random.choice(email_templates['GrantFinish']['body']).format(
                     amount='${:,.2f}'.format(self.subject.amount / 100),
                     link=settings.APP_LINK_RESOLVER(self.reference),
+                    report='https://{}'.format(settings.DONATE_LINK),
                 ),
             )
 
