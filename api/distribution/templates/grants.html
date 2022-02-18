@@ -13,7 +13,7 @@
 	  {% for grant in page_obj %}
 	  <div style="display:flex;padding-top:5px;justify-content:space-between;border-bottom: solid 1px #eeeeee">
 	    <div><strong> {{ grant.name }}</strong> &ndash;
-	      {{ grant.created.date }}</div>
+	      {{ grant.amount_str }}</div>
 	    <div class="dot"></div>
 	    <div>
 	      <a

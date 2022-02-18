@@ -184,6 +184,10 @@ class Valuable(models.Model):
     class Meta:
         abstract = True
 
+    @property
+    def amount_str(self):
+        return '${:,.2f}'.format(self.amount / 100)
+
 
 class Rsvpable(models.Model):
     rsvp = models.ManyToManyField(
