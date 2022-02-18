@@ -590,7 +590,7 @@ class GrantNode(DjangoObjectType):
                 or (self.user and info.context.user.id == self.user.id)):
             raise GraphQLError('You do not have sufficient permission')
 
-        return self.email
+        return self.user
 
     def resolve_num_donations(self, *args, **kwargs):
         return self.grantdonation_set.count()
