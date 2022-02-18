@@ -2,9 +2,9 @@ import os
 import csv
 import math
 import ibis
-import random
 import distribution
 import matplotlib.pyplot as plt
+from matplotlib.ticker import StrMethodFormatter
 
 from pathlib import Path
 from django.db.models import Sum
@@ -14,8 +14,6 @@ from django.core.management.base import BaseCommand
 DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH = os.path.join(DIR, '..', '..', 'graphs')
 
-plt.style.use('dark_background')
-
 
 class Command(BaseCommand):
     help = 'Output ibis model graphs'
@@ -24,10 +22,10 @@ class Command(BaseCommand):
         Path(PATH).mkdir(parents=True, exist_ok=True)
         self.graph_control_response()
         self.graph_organization_distribution()
-        self.graph_organization_edges()
+        # self.graph_organization_edges()
         self.graph_users_time()
-        self.graph_organization_engagement()
-        self.graph_finances_time()
+        # self.graph_organization_engagement()
+        # self.graph_finances_time()
 
     def graph_control_response(self):
         data = [(
@@ -35,8 +33,8 @@ class Command(BaseCommand):
             x.amount(),
             ibis.models.Donation.objects.filter(
                 created__gte=distribution.models.to_step_start(x.created),
-                created__lt=distribution.models.to_step_start(
-                    x.created, offset=1),
+                created__lt=distribution.models.to_step_start(x.created,
+                                                              offset=1),
             ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
         ) for x in distribution.models.Goal.objects.order_by('created')][1:-1]
 
@@ -46,16 +44,21 @@ class Command(BaseCommand):
         plt.step(
             [x[0] for x in data],
             [x[1] / 100 for x in data],
+            '#3b3b3b',
             label='Target Donations',
         )
 
         plt.plot(
             [x[0] for x in data],
             [x[2] / 100 for x in data],
+            '#84ab3f',
             label='Actual Donations',
         )
 
         ax.set_ylim(ymin=0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.yaxis.set_major_formatter(StrMethodFormatter('${x:0.0f}'))
         plt.xlabel('Date (weekly)')
         plt.ylabel('Amount ($)')
         plt.xticks(rotation=45)
@@ -67,56 +70,56 @@ class Command(BaseCommand):
         plt.clf()
 
     def graph_organization_distribution(self):
-        x_axis = [
-            distribution.models.to_step_start(x.created)
-            for x in distribution.models.Goal.objects.filter(
-                created__gte=ibis.models.Donation.objects.order_by(
-                    'created').first().created).order_by('created')
-        ][:-1]
-        data = sorted(
+        NUM_LABELS = 16
+
+        fundraised = sorted(
             [(
-                org,
-                [
-                    ibis.models.Donation.objects.filter(
-                        target=org,
-                        created__lt=distribution.models.to_step_start(
-                            x, offset=1),
-                    ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'] /
-                    100 for x in x_axis
-                ],
-            ) for org in ibis.models.Organization.objects.filter(
-                is_active=True).order_by('date_joined')],
-            key=lambda x: x[1][-1],
+                x,
+                x.fundraised(),
+            ) for x in ibis.models.Organization.objects.all()],
+            key=lambda x: x[1],
+            reverse=True,
         )
 
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        def _color(value, fraction):
+            return value + round((1 - fraction) * (255 - value))
 
-        random.seed(0)
-
-        plt.stackplot(
-            x_axis,
-            *[x[1] for x in data],
-            labels=[x[0] for x in data],
+        plt.subplots(figsize=(4.6, 4.6))
+        patches, texts = plt.pie(
+            [x[1] for x in fundraised],
+            radius=1,
             colors=[
                 '#%02X%02X%02X' % (
-                    random.randint(0, 255),
-                    random.randint(0, 255),
-                    random.randint(0, 255),
-                ) for _ in data
-            ])
-
-        plt.xlabel('Date (weekly)')
-        plt.ylabel('Amount ($)')
-
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(
-            handles[-1:-13:-1],
-            labels[-1:-13:-1],
-            loc='upper left',
-            fontsize=8,
+                    _color(132, a / fundraised[0][1]),
+                    _color(171, a / fundraised[0][1]),
+                    _color(63, a / fundraised[0][1]),
+                ) for _, a in fundraised
+            ],
+            startangle=90,
+            counterclock=False,
+            wedgeprops={
+                'edgecolor': 'w',
+                'linewidth': 1
+            },
         )
-        plt.xticks(rotation=45)
+        plt.axis('equal')
+
+        circle = plt.Circle((0, 0), 0.5, color='white')
+        plt.gcf().gca().add_artist(circle)
+
+        def _truncate(x):
+            LIMIT = 32
+            return (str(x)[:LIMIT - 3] +
+                    '...') if len(str(x)) > LIMIT else str(x)
+
+        plt.legend(
+            patches[:NUM_LABELS],
+            labels=[_truncate(x[0]) for x in fundraised[:NUM_LABELS - 1]] +
+            (['...'] if len(fundraised) > NUM_LABELS else
+             [_truncate(fundraised[min(NUM_LABELS, len(fundraised)) - 1][0])]),
+            bbox_to_anchor=(1.0, 1.0),
+            frameon=False,
+        )
         plt.savefig(
             os.path.join(PATH, 'organization_distribution.pdf'),
             bbox_inches='tight',
@@ -146,11 +149,12 @@ class Command(BaseCommand):
             for j, val in enumerate(line):
                 line[j] = val / total if total else 0
 
-        with open(
-                os.path.join(
-                    PATH,
-                    'organization_edges.csv',
-                ), 'w', newline='') as fd:
+        with open(os.path.join(
+                PATH,
+                'organization_edges.csv',
+        ),
+                  'w',
+                  newline='') as fd:
             writer = csv.writer(fd)
             writer.writerow([''] + [str(x) for x in orgs])
             for i, line in enumerate(graph):
@@ -160,23 +164,20 @@ class Command(BaseCommand):
         data = [(
             distribution.models.to_step_start(x.created),
             len(
-                set(
-                    y.user for y in ibis.models.Donation.objects.filter(
-                        created__gte=distribution.models.to_step_start(
-                            x.created),
-                        created__lt=distribution.models.to_step_start(
-                            x.created, offset=1),
-                    ))),
+                set(y.user for y in ibis.models.Donation.objects.filter(
+                    created__gte=distribution.models.to_step_start(x.created),
+                    created__lt=distribution.models.to_step_start(x.created,
+                                                                  offset=1),
+                ))),
             len(
-                set(
-                    y for y in ibis.models.Person.objects.filter(
-                        is_active=True,
-                        date_joined__lt=distribution.models.to_step_start(
-                            x.created, offset=1))
+                set(y for y in ibis.models.Person.objects.filter(
+                    is_active=True,
+                    date_joined__lt=distribution.models.to_step_start(
+                        x.created, offset=1))
                     if ibis.models.Donation.objects.filter(user=y).exists())),
         ) for x in distribution.models.Goal.objects.filter(
-                created__gte=ibis.models.Donation.objects.order_by(
-                    'created').first().created).order_by('created')][:-1]
+            created__gte=ibis.models.Donation.objects.order_by(
+                'created').first().created).order_by('created')][:-1]
 
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
@@ -184,15 +185,19 @@ class Command(BaseCommand):
         plt.plot(
             [x[0] for x in data],
             [x[1] for x in data],
+            '#3b3b3b',
             label='Active Users (Weekly)',
         )
         plt.plot(
             [x[0] for x in data],
             [x[2] for x in data],
+            '#84ab3f',
             label='Total Users (Culmulative)',
         )
 
         ax.set_ylim(ymin=0)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
         plt.xlabel('Date (weekly)')
         plt.ylabel('Number of Users')
         plt.xticks(rotation=45)
@@ -220,11 +225,10 @@ class Command(BaseCommand):
                     is_active=True,
                     date_joined__lt=a,
             ):
-                amount = sum(
-                    x.amount for x in org.donation_set.filter(
-                        created__gte=b,
-                        created__lt=c,
-                    ))
+                amount = sum(x.amount for x in org.donation_set.filter(
+                    created__gte=b,
+                    created__lt=c,
+                ))
                 if org.news_set.filter(
                         created__gte=a,
                         created__lt=b,
@@ -233,8 +237,8 @@ class Command(BaseCommand):
                         created__lt=b,
                 ).exists():
                     data['outreach'].append(amount)
-                elif org.comment_set.filter(
-                        created__gte=a, created__lt=b).exists():
+                elif org.comment_set.filter(created__gte=a,
+                                            created__lt=b).exists():
                     data['comment'].append(amount)
                 else:
                     data['none'].append(amount)
@@ -262,8 +266,8 @@ class Command(BaseCommand):
                 created__lt=distribution.models.to_step_start(x, offset=1)
             ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
             ibis.models.Donation.objects.filter(
-                created__lt=distribution.models.to_step_start(x, offset=1)
-            ).aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
+                created__lt=distribution.models.to_step_start(x, offset=1)).
+            aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
             ibis.models.Withdrawal.objects.filter(
                 created__lt=distribution.models.to_step_start(x, offset=1)).
             aggregate(amount=Coalesce(Sum('amount'), 0))['amount'],
