@@ -146,6 +146,46 @@ class ReportView(TemplateView):
             id=from_global_id(self.request.GET['id'])[1])
         context = super().get_context_data(**kwargs)
         weekly = grant.amount / grant.duration / 100
+        number = ibis.models.Grant.objects.filter(
+            created__lte=grant.created).count()
+
+        context['grantdonation'] = [{
+            'amount':
+            '${:,.2f}'.format(x.amount / 100),
+            'donation':
+            x.donation,
+            'reply':
+            x.donation.parent_of.order_by('-created').first(),
+        } for x in grant.grantdonation_set.order_by('donation__created')]
+        context['number'] = number
+        context['number_suffix'] = 'st' if number % 10 == 1 else (
+            'nd' if number % 10 == 2 else 'th')
+        context['amount_str'] = '${:,.0f}'.format(
+            grant.amount / 100) if grant.amount / 100 == int(
+                grant.amount / 100) else '${:,.2f}'.format(grant.amount / 100)
+        context['weekly_str'] = '${:,.0f}'.format(weekly) if weekly == int(
+            weekly) else '${:,.2f}'.format(weekly)
+        context['object'] = grant
+        context['num_donations'] = grant.grantdonation_set.count()
+        context['num_organizations'] = len(
+            set(grant.grantdonation_set.values_list('donation__target')))
+        context['num_people'] = len(
+            set(grant.grantdonation_set.values_list('donation__user')))
+        context['progress'] = round(
+            sum(x.amount
+                for x in grant.grantdonation_set.all()) / grant.amount * 100)
+        context['link'] = settings.DONATE_LINK
+
+        if not grant.grantdonation_set.exists():
+            return context
+
+        last = grant.grantdonation_set.order_by('donation__created').last()
+
+        context['culmulative_str'] = '${:,.2f}'.format(
+            ibis.models.Donation.objects.filter(
+                created__lte=last.donation.created).aggregate(
+                    Sum('amount'))['amount__sum'] / 100)
+        context['end'] = last.donation.created
 
         # --- create icons ---
 
@@ -181,8 +221,6 @@ class ReportView(TemplateView):
         grant_id = to_global_id(ibis.schema.GrantNode.__name__, grant.id)
 
         # Remove circles that took place after the focus grant ended
-
-        last = grant.grantdonation_set.order_by('donation__created').last()
 
         delete_set = set([
             to_global_id(ibis.schema.GrantNode.__name__, x[0])
@@ -373,44 +411,6 @@ class ReportView(TemplateView):
         plt.savefig(graph, format='svg', bbox_inches='tight')
         plt.clf()
         context['organizations'] = graph.getvalue()
-
-        # --- set final context ---
-
-        number = ibis.models.Grant.objects.filter(
-            created__lte=grant.created).count()
-
-        context['grantdonation'] = [{
-            'amount':
-            '${:,.2f}'.format(x.amount / 100),
-            'donation':
-            x.donation,
-            'reply':
-            x.donation.parent_of.order_by('-created').first(),
-        } for x in grant.grantdonation_set.order_by('donation__created')]
-
-        context['amount_str'] = '${:,.0f}'.format(
-            grant.amount / 100) if grant.amount / 100 == int(
-                grant.amount / 100) else '${:,.2f}'.format(grant.amount / 100)
-        context['weekly_str'] = '${:,.0f}'.format(weekly) if weekly == int(
-            weekly) else '${:,.2f}'.format(weekly)
-        context['object'] = grant
-        context['number'] = number
-        context['number_suffix'] = 'st' if number % 10 == 1 else (
-            'nd' if number % 10 == 2 else 'th')
-        context['num_donations'] = grant.grantdonation_set.count()
-        context['num_organizations'] = len(
-            set(grant.grantdonation_set.values_list('donation__target')))
-        context['num_people'] = len(
-            set(grant.grantdonation_set.values_list('donation__user')))
-        context['progress'] = round(
-            sum(x.amount
-                for x in grant.grantdonation_set.all()) / grant.amount * 100)
-        context['culmulative_str'] = '${:,.2f}'.format(
-            ibis.models.Donation.objects.filter(
-                created__lte=last.donation.created).aggregate(
-                    Sum('amount'))['amount__sum'] / 100)
-        context['end'] = last.donation.created
-        context['link'] = settings.DONATE_LINK
 
         return context
 
