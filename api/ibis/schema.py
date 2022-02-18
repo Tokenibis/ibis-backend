@@ -195,8 +195,11 @@ class GrantFilter(django_filters.FilterSet):
 
 class GrantDonationFilter(django_filters.FilterSet):
     with_donation = django_filters.CharFilter(method='filter_with_donation')
-
     with_grant = django_filters.CharFilter(method='filter_with_grant')
+    order_by = django_filters.OrderingFilter(
+        fields=(
+            ('amount', 'amount'),
+        ))
 
     class Meta:
         model = models.GrantDonation
@@ -568,6 +571,7 @@ class WithdrawalNode(DjangoObjectType):
 
 
 class GrantNode(DjangoObjectType):
+    user = graphene.Field(lambda: UserNode)
     num_donations = graphene.Int()
     num_organizations = graphene.Int()
     funded_amount = graphene.Int()
@@ -581,6 +585,13 @@ class GrantNode(DjangoObjectType):
         filter_fields = []
         interfaces = (relay.Node, )
 
+    def resolve_user(self, info, *args, **kwargs):
+        if not (info.context.user.is_superuser
+                or (self.user and info.context.user.id == self.user.id)):
+            raise GraphQLError('You do not have sufficient permission')
+
+        return self.email
+
     def resolve_num_donations(self, *args, **kwargs):
         return self.grantdonation_set.count()
 
@@ -593,24 +604,12 @@ class GrantNode(DjangoObjectType):
     def resolve_grantdonation_set(self, *args, **kwargs):
         return self.grantdonation_set.all()
 
-    @classmethod
-    def get_queryset(cls, queryset, info):
-        if info.context.user.is_superuser:
-            return queryset
-        return queryset.filter(user=info.context.user)
-
 
 class GrantDonationNode(DjangoObjectType):
     class Meta:
         model = models.GrantDonation
         filter_fields = []
         interfaces = (relay.Node, )
-
-    @classmethod
-    def get_queryset(cls, queryset, info):
-        if info.context.user.is_superuser:
-            return queryset
-        return queryset.filter(grant__user=info.context.user)
 
 
 # --- Entry ----------------------------------------------------------------- #
