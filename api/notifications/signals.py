@@ -2,14 +2,24 @@ import logging
 import ibis.models
 import notifications.models as models
 
+from django.conf import settings
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
+from django.utils.timezone import localtime, timedelta
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from graphql_relay.node.node import to_global_id
 from api.utils import get_submodel
 
 logger = logging.getLogger(__name__)
+
+
+def _public_notify_set(instance):
+    return (instance.user.follower.all() | ibis.models.User.objects.filter(
+        id__in=ibis.models.Donation.objects.filter(
+            created__gte=localtime() -
+            timedelta(days=settings.NOTIFICATION_WINDOW)).values_list(
+                'user', flat=True))).distinct()
 
 
 @receiver(post_save, sender=ibis.models.Deposit)
@@ -161,7 +171,7 @@ def handleNewsCreate(sender, instance, created, **kwargs):
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in instance.user.follower.all():
+    for target in _public_notify_set(instance):
         models.NewsNotification.objects.create(
             notifier=target.user.notifier,
             reference=reference,
@@ -181,7 +191,7 @@ def handleEventCreate(sender, instance, created, **kwargs):
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in instance.user.follower.all():
+    for target in _public_notify_set(instance):
         models.EventNotification.objects.create(
             notifier=target.user.notifier,
             reference=reference,
@@ -201,7 +211,7 @@ def handlePostCreate(sender, instance, created, **kwargs):
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in instance.user.follower.all():
+    for target in _public_notify_set(instance):
         notifier = target.user.notifier
         models.PostNotification.objects.create(
             notifier=notifier,
@@ -222,7 +232,7 @@ def handleActivityCreate(sender, instance, created, **kwargs):
         to_global_id('EntryNode', instance.pk),
     )
 
-    for target in instance.user.follower.all():
+    for target in _public_notify_set(instance):
         notifier = target.user.notifier
         models.ActivityNotification.objects.create(
             notifier=notifier,
