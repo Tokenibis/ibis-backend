@@ -41,7 +41,10 @@ def distribute_all_safe():
             created__gte=to_step_start(time),
             processed=False,
     ).exists():
-        goal = Goal.objects.get(created__gte=time, processed=False)
+        goal = Goal.objects.get(
+            created__gte=to_step_start(time),
+            processed=False,
+        )
     else:
         goal = Goal.objects.create(created=time)
 
