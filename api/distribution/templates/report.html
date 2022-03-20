@@ -1,8 +1,10 @@
+{% load humanize %}
+
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=1024">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
     <style>
      @media print {
@@ -32,8 +34,8 @@
        font-size: 16px;
      }
      svg {
-       height: 90%;
-       width: 90%;
+       height: 85%;
+       width: 85%;
      }
      svg.icon {
        height: 50px;
@@ -54,135 +56,119 @@
        font-weight: bold;
      }
     </style>
-    <title>G{{ number }}: {{ object.name }}</title>
+    <title>G{{ number }}: {{ title }}</title>
   </head>
   <body>
     <div class="container">
       <div class="row justify-content-center">
-        <div class="col-12">
-	  <h1><span>{{ ibis_icon|safe }}</span>#{{ number }}: <span class="gr bd">{{ object.name }}</span></h1>
+        <div class="col-12" style="margin-top: -20px">
+	  {% if object %}
+	  <h1><span>{{ icons.ibis|safe }}</span>#{{ number }}: <span class="gr bd">{{ title }}</span></h1>
 	  {% if progress == 100 %}
 	  <p class="subtitle">Impact report for a grant of <span class="gr bd">{{ amount_str }}</span> on {{ object.created|date }}</p>
 	  {% else %}
 	  <p class="subtitle">This grant of <span class="gr bd">{{ amount_str }}</span> is currently being distributed (progress: <span class="gr bd">{{ progress }}%</span>)</p>
 	  {% endif %}
+	  {% else %}
+	  <h1><span>{{ icons.ibis|safe }}</span>&nbsp;<span class="gr bd">{{ title }}</span></h1>
+	  <p class="subtitle">Culmulative impact report for <span class="gr bd">{{ amount_str }}</span> worth of funding as of {{ now }}</p>
+	  {% endif %}
 	</div>
 	<div class="col-12"><hr/></div>
-	<div class="col-3 text-center">
-	    <div>{{ grant_icon|safe }}</div>
-	    <p class="gr bd">1 Grant</p>
+	<div class="col-2 text-center">
+	    <div>{{ icons.grant|safe }}</div>
+	    {% if num_grants > 1 %}
+	    <p class="gr bd">{{ num_grants|intcomma }} Grants</p>
+	    {% else %}
+	    <p class="gr bd">{{ num_grants }} Grant</p>
+	    {% endif %}
 	</div>
-	<div class="col-3 text-center">
-	    <div>{{ person_icon|safe }}</div>
-	    <p class="gr bd">{{ num_people }} People</p>
+	<div class="col-1 text-center">
+	    <div>{{ icons.arrow|safe }}</div>
 	</div>
-	<div class="col-3 text-center">
-	    <div>{{ donation_icon|safe }}</div>
-	    <p class="gr bd">{{ num_donations }} Donations</p>
+	<div class="col-2 text-center">
+	    <div>{{ icons.person|safe }}</div>
+	    {% if num_people > 1 %}
+	    <p class="gr bd">{{ num_people|intcomma }} People</p>
+	    {% else %}
+	    <p class="gr bd">{{ num_peoples }} Person</p>
+	    {% endif %}
 	</div>
-	<div class="col-3 text-center">
-	    <div>{{ organization_icon|safe }}</div>
-	    <p class="gr bd">{{ num_organizations }} Organizations</p>
+	<div class="col-1 text-center">
+	    <div>{{ icons.arrow|safe }}</div>
+	</div>
+	<div class="col-2 text-center">
+	    <div>{{ icons.donation|safe }}</div>
+	    {% if num_donations > 1 %}
+	    <p class="gr bd">{{ num_donations|intcomma }} Donations</p>
+	    {% else %}
+	    <p class="gr bd">{{ num_donations }} Donation</p>
+	    {% endif %}
+	</div>
+	<div class="col-1 text-center">
+	    <div>{{ icons.arrow|safe }}</div>
+	</div>
+	<div class="col-2 text-center">
+	    <div>{{ icons.organization|safe }}</div>
+	    {% if num_organizations > 1 %}
+	    <p class="gr bd">{{ num_organizations|intcomma }} Organizations</p>
+	    {% else %}
+	    <p class="gr bd">{{ num_organizations }} Organization</p>
+	    {% endif %}
 	</div>
 	<div class="col-12"><hr/></div>
 	<div class="col-5">
-	  <p style="padding-top: 25px">
-	    On <span class="bd">{{ object.created|date }}</span>, {{ object.name }} made a grant of <span class="bd">{{ amount_str}}</span> to build a better Albuquerque.
-	  </p>
-	  <p>
-	    {{ object.name }} trusted our team of volunteers to make sure that every penny of the grant would help local nonprofits right here in this city:
-	    {% if num_organizations > 1 %}
-	    <span class="bd">{{ num_organizations }} different organizations</span> in total.
-	    {% else %}
-	    in this case, one organization in particular.
-	    {% endif %}
-	    The pie chart on the right shows the full breakdown.
+	  <p style="padding-top: 20px">
+	    {{ section_1|safe }}
 	  </p>
 	</div>
 	<div class="col-7">
-	  {{ organizations|safe }}
-	</div>
-	<div class="col-12"><hr/></div>
-	<div class="col-6 text-center">
 	  {{ distribution|safe }}
 	</div>
+	<div class="col-12"><hr/></div>
+	<div class="col-6 text-center">
+	  {{ payout|safe }}
+	</div>
 	<div class="col-6">
-	  <p style="padding-top: 25px">
-	    {% if object.duration > 1 %}
-	    Over <span class="bd">{{ object.duration}} weeks,</span> an algorithm divided it into <span class="bd">{{ weekly_str }}</span> weekly portions
-	    {% else %}
-	    In one week, an algorithm took the full grant
-	    {% endif %}
-	     and placed the money in the hands of socially-minded members of the community.
-	    The bar chart on the right shows the added financial impact in dark green.
-	  </p>
-	  <p>
-	    By the end, {{ object.name}}'s grant funded
-	    {% if num_donations > 1 %}
-	    <span class="bd">{{ num_donations }} different donations</span>, each one
-	    {% else %}
-	    another individual's donation:
-	    {% endif %}
-	    a personal act of decency that would never have happened otherwise.
-	    It empowered
-	    {% if num_people > 1 %}
-	    <span class="bd">{{ num_people }} different individuals</span> to make their voices
-	    {% else %}
-	    another person to make their voice
-	    {% endif %}
-	    heard in their community.
+	  <p style="padding-top: 20px">
+	    {{ section_2|safe }}
 	  </p>
 	</div>
 	<div class="col-12"><hr/></div>
 	<div class="col-6">
-	  <p style="padding-top: 25px">
-	    {{ object.name }}'s grant is the <span class="bd">{{ number }}{{ number_suffix }} grant</span> of its kind in history.
-	    By the end, it grew the total impact of the Token Ibis community to <span class="bd">{{ culmulative_str }}</span>.
-	  </p>
-	  <p>
-	    The picture on the right is a snapshot of our platform's total impact at the time that the community finished spending this grant.
-	    The gray circles are grants and the green circles clustered around them are the donations that they funded.
-	    {{ object.name }}'s grant is highlighted.
-	    The picture will continue to grow, but as of <span class="bd">{{ end }}</span>, this chapter is forever locked into the story Universal Basic Philanthropy.
+	  <p style="padding-top: 20px">
+	    {{ section_3|safe }}
 	  </p>
 	</div>
 	<div class="col-6 text-center">
-	  <div style="width: 90%; padding: 25px; margin: 0 auto;">{{ circles|safe }}</div>
+	  <div style="width: 85%; padding: 20px; margin: 0 auto;">{{ circles|safe }}</div>
 	</div>
+	{% if section_4 %}
 	<div class="col-12">
 	  <div style='break-after:always'></div>
 	  <hr/>
-	</div>
-	<div class="col-12">
-	  <div style="padding: 25px 0; width: 60%; margin: 0 auto">
-	    <p>
-	      Numbers and pictures on express a small part of the impact of {{ object.name }}'s grant.
-	      This final section below shows every donation&ndash;along with the verbal exchanges that they sparked&ndash;that was made possible by this grant.
-	    </p>
-	    <p>
-	      The mission of Token Ibis is to making social impact accessible to everyone through Universal Basic Philanthropy.
-	      We hope you can continue to support this movement at {{ link|urlize }}.
-	      Thank you so much for joining us in building a better Albuquerque and pioneering a better social profit system.
-	    </p>
+	  <div style="padding: 20px 0; width: 60%; margin: 0 auto">
+	    {{ section_4|safe }}
+	  </div>
+	  <hr/>
+	  <div style="padding: 20px 0" >
+	    <div style="column-count: 2; overflow: hidden">
+	      <ul style="list-style-type: none; margin: 0; padding: 0 20px;">
+		{% for x in grantdonation %}
+		<li>
+		  <span class="bd">{{ x.donation.user }} <span class="gr bd">→</span> {{ x.donation.target }} <span class="gr bd">&ndash;</span> {{ x.amount }}:</span> {{ x.donation.description }} 
+		  {% if x.reply %}
+		  <ul class="gr bd" style="list-style-type: '↳'">
+		    <li><span style="font-weight: normal; color: #9b9b9b">{{ x.reply.description }}</span></li>
+		  </ul>
+		  {% endif %}
+		</li>
+		{% endfor %}
+	      </ul>
+	    </div>
 	  </div>
 	</div>
-	<div class="col-12"><hr/></div>
-	<div style="padding: 25px 0" >
-	  <div style="column-count: 2; overflow: hidden">
-	    <ul style="list-style-type: none; margin: 0; padding: 0 25px;">
-	      {% for x in grantdonation %}
-	      <li>
-		<span class="bd">{{ x.donation.user }} <span class="gr bd">→</span> {{ x.donation.target }} <span class="gr bd">&ndash;</span> {{ x.amount }}:</span> {{ x.donation.description }} 
-		{% if x.reply %}
-		<ul class="gr bd" style="list-style-type: '↳'">
-		  <li><span style="font-weight: normal; color: #9b9b9b">{{ x.reply.description }}</span></li>
-		</ul>
-		{% endif %}
-	      </li>
-	      {% endfor %}
-	    </ul>
-	  </div>
-	</div>
+	{% endif %}
       </div>
     </div>
   </body>

@@ -1,5 +1,6 @@
 import distribution.models as models
 import distribution.circles as circles
+import distribution.graph as graph
 
 from django.core.management.base import BaseCommand
 
@@ -10,3 +11,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         models.refresh_accounting()
         circles.run()
+        graph.run()

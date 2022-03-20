@@ -4,9 +4,12 @@ import json
 import math
 import drawSvg as draw
 import ibis.models as models
+import ibis.schema
 
 from tqdm import tqdm
+from lxml import etree
 from django.conf import settings
+from django.db.models import Sum
 from graphql_relay.node.node import from_global_id, to_global_id
 from ibis.schema import UserNode, GrantNode, GrantDonationNode
 
@@ -424,3 +427,101 @@ def run():
         animate=True,
         fancy=True,
     ).saveSvg(os.path.join(DIR, 'dynamic.svg'))
+
+
+def load_circles(grant=None):
+    SCALE = 0.02
+
+    with open(os.path.join(
+            settings.MEDIA_ROOT,
+            'circles',
+            'simple.svg',
+    )) as fd:
+        circles = etree.fromstring(fd.read().encode('utf-8'))
+
+    if grant:
+        grant_id = to_global_id(ibis.schema.GrantNode.__name__, grant.id)
+        last = grant.grantdonation_set.order_by('donation__created').last()
+
+        # Remove circles that took place after the focus grant ended
+
+        delete_set = set([
+            to_global_id(ibis.schema.GrantNode.__name__, x[0])
+            for x in ibis.models.Grant.objects.filter(
+                created__gt=grant.created).values_list('id')
+        ] + [
+            to_global_id(ibis.schema.GrantDonationNode.__name__, x[0])
+            for x in ibis.models.GrantDonation.objects.filter(
+                donation__created__gte=last.donation.created).exclude(
+                    id=last.id).values_list('id')
+        ])
+
+        delete_list = [
+            c for c in circles.getchildren()[1:]
+            if c.attrib['id'] in delete_set
+        ]
+        for c in delete_list:
+            circles.remove(c)
+
+        # Highlight focus circles
+
+        highlighted = []
+
+        for c in circles.getchildren()[1:]:
+            if c.attrib.get('grant') == grant_id:
+                highlighted.append(c)
+            elif c.attrib['id'] == grant_id:
+                grant_circle = c
+                c.attrib['fill'] = '#3b3b3b'
+            elif c.attrib.get('grant'):
+                c.attrib['opacity'] = '0.25'
+            else:
+                c.attrib['opacity'] = '0.25'
+                c.attrib['fill'] = '#9b9b9b'
+
+        scale = max(
+            1,
+            math.sqrt(SCALE) / (math.sqrt(grant.amount) / math.sqrt(
+                ibis.models.Grant.objects.filter(created__lte=grant.created).
+                aggregate(Sum('amount'))['amount__sum'])),
+        )
+
+        def _translate(c):
+            c.attrib['r'] = str(float(c.attrib['r']) * scale)
+            c.attrib['opacity'] = str(0.5 / scale + 0.5)
+            for a in ['cy', 'cx']:
+                c.attrib[a] = str((float(c.attrib[a]) -
+                                   float(grant_circle.attrib[a])) * scale +
+                                  float(grant_circle.attrib[a]))
+
+        for c in [grant_circle] + highlighted:
+            _translate(c)
+
+    # set final display parameters
+
+    border = {
+        'top': -float('inf'),
+        'bottom': float('inf'),
+        'left': float('inf'),
+        'right': -float('inf'),
+    }
+
+    for c in circles.getchildren()[1:]:
+        if float(c.attrib['cy']) + float(c.attrib['r']) > border['top']:
+            border['top'] = float(c.attrib['cy']) + float(c.attrib['r'])
+        if float(c.attrib['cy']) - float(c.attrib['r']) < border['bottom']:
+            border['bottom'] = float(c.attrib['cy']) - float(c.attrib['r'])
+        if float(c.attrib['cx']) - float(c.attrib['r']) < border['left']:
+            border['left'] = float(c.attrib['cx']) - float(c.attrib['r'])
+        if float(c.attrib['cx']) + float(c.attrib['r']) > border['right']:
+            border['right'] = float(c.attrib['cx']) + float(c.attrib['r'])
+
+    circles.attrib['viewBox'] = '{} {} {} {}'.format(
+        border['left'],
+        border['bottom'],
+        border['right'] - border['left'],
+        border['top'] - border['bottom'],
+    )
+
+    circles.attrib['id'] = 'circles'
+    return etree.tostring(circles).decode()

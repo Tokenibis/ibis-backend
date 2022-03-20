@@ -19,7 +19,6 @@ bin
 include
 api/static
 api/media
-api/graphs
 config.json
 
 *.log

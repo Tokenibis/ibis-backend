@@ -10,9 +10,24 @@
     <div style="width: 95%; margin: 0px; padding-top: 20px; padding-bottom: 40px;">
       <div class="row justify-content-center">
         <div class="col-12">
+	  <div style="display:flex;padding-top:5px;justify-content:space-between;padding:2px 8px;background-color:#ffcfcf;">
+	    <div><strong>All</strong> &ndash;
+	      {{ amount_str }}</div>
+	    <div class="dot"></div>
+	    <div>
+	      <a
+		  style="color:#84ab3f;font-weight:bold;cursor:pointer;"
+		  title="View Aggregate Report"
+		  href="{{ report_generic }}"
+		  target="_blank"
+	      >
+		Summary
+	      </a>
+	    </div>
+	  </div>
 	  {% for grant in page_obj %}
-	  <div style="display:flex;padding-top:5px;justify-content:space-between;border-bottom: solid 1px #eeeeee">
-	    <div><strong> {{ grant.name }}</strong> &ndash;
+	  <div style="display:flex;padding-top:5px;justify-content:space-between;border-bottom: solid 1px #eeeeee;padding:2px 8px;">
+	    <div><strong>{{ grant.name }}</strong> &ndash;
 	      {{ grant.amount_str }}</div>
 	    <div class="dot"></div>
 	    <div>

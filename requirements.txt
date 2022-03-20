@@ -24,3 +24,4 @@ boto3==1.16.25
 matplotlib==3.3.4
 drawSvg==1.8.2
 tqdm==4.62.3
+markdown>=3.3.1
