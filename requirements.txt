@@ -25,3 +25,5 @@ matplotlib==3.3.4
 drawSvg==1.8.2
 tqdm==4.62.3
 markdown>=3.3.1
+networkx>=2.5.1
+fa2>=0.3.5
