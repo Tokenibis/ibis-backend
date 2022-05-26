@@ -1,4 +1,5 @@
 import os
+import sys
 import html
 import json
 import math
@@ -13,7 +14,7 @@ from django.db.models import Sum
 from graphql_relay.node.node import from_global_id, to_global_id
 from ibis.schema import UserNode, GrantNode, GrantDonationNode
 
-HORIZON = 4092  # number of historical transactions to remember
+HORIZON = sys.maxsize  # number of historical transactions to remember
 EPSILON = 1e-4  # small error used for geometric float calculations
 INITIAL = 16  # initial threshold to set scope optimizer
 
