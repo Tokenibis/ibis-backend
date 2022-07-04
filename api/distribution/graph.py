@@ -14,14 +14,17 @@ from pathlib import Path
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.core.management.base import BaseCommand
+from django.utils.timezone import localtime
 
 DIR = os.path.join(settings.MEDIA_ROOT, 'graphs')
 
 
 def run():
     Path(DIR).mkdir(parents=True, exist_ok=True)
+
     graph_control_response()
     graph_organization_distribution()
+    graph_organization_time()
     graph_users_time()
 
 
@@ -116,6 +119,59 @@ def graph_organization_distribution():
     )
     plt.savefig(
         fname=os.path.join(DIR, 'distribution.svg'),
+        bbox_inches='tight',
+    )
+    plt.clf()
+
+
+def graph_organization_time():
+    now = localtime()
+
+    length = 1 + round((models.to_step_start(now) - models.to_step_start(
+        ibis.models.Donation.objects.order_by('created').first().created)).days
+                       / 7)
+
+    def _index(created):
+        return length - round(
+            (models.to_step_start(now) - models.to_step_start(created)).days /
+            7) - 1
+
+    data = {
+        x: [0] * length
+        for x in ibis.models.Organization.objects.filter(is_active=True)
+    }
+
+    x_axis = [
+        models.to_step_start(now, offset=i) for i in range(-length + 1, 1)
+    ]
+
+    for x in ibis.models.Donation.objects.filter(created__lte=now):
+        if x.target in data:
+            data[x.target][_index(x.created)] += x.amount
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+
+    for org, y in sorted(data.items(), key=lambda x: sum(x[1])):
+        plt.plot(
+            x_axis[2:-2],
+            [(a + b + c + d + e) / 5 / 100 for a, b, c, d, e in zip(
+                y[:-4],
+                y[1:-3],
+                y[2:-2],
+                y[3:-1],
+                y[4:],
+            )],
+            label=str(org),
+        )
+
+    ax.set_ylim(ymin=0)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.yaxis.set_major_formatter(StrMethodFormatter('${x:0.0f}'))
+    plt.xticks(rotation=45)
+    plt.savefig(
+        fname=os.path.join(DIR, 'time.svg'),
         bbox_inches='tight',
     )
     plt.clf()
