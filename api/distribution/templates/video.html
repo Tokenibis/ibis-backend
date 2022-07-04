@@ -1,0 +1,376 @@
+<!doctype html> <html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, shrink-to-fit=no">
+    <title>Grants</title>
+    <style>
+     body {
+       width: fit-content;
+     }
+     #contentWrapper {
+       padding: 40px;
+       width: fit-content;
+     }
+     #dataWrapper {
+       width: 840px;
+       display: flex;
+       justify-content: space-between;
+     }
+     #circles {
+       width: 400px;
+       height: 400px;
+     }
+     #feedWrapper {
+       width: 400px;
+       height: 400px;
+     }
+     #feedWrapper > p {
+       font-family: Arial, Helvetica, sans-serif;
+       color: #84ab3f;
+       font-size: 16px;
+       height: 16px;
+       overflow: hidden;
+       white-space: nowrap;
+       text-overflow: ellipsis;
+       padding-left: 20px;
+     }
+     #captions {
+       font-family: Arial, Helvetica, sans-serif;
+       color: #3b3b3b;
+       font-size: 24px;
+       height: 24px;
+       padding-left: 20px;
+       padding-right: 20px;
+     }
+     #audio {
+       width: 100%;
+       --play-pointer: auto;
+       --play-opacity: 1.0;
+     }
+     #audio::-webkit-media-controls-play-button {
+       pointer-events: var(--play-pointer);
+       opacity: var(--play-opacity);
+     }
+     #audio::-webkit-media-controls-timeline {
+       visibility: hidden;
+     }
+     #link {
+       font-family: Arial, Helvetica, sans-serif;
+       text-decoration: none;
+       font-weight: bold;
+       font-size: 24px;
+       color: #ffffff;
+     }
+
+    </style>
+  </head>
+  <body>
+    <div id="contentWrapper">
+      <div id="dataWrapper">
+	<div id="feedWrapper">
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	  <p></p>
+	</div>
+	<object id="circles" data="{{ circles }}" type="image/svg+xml"></object>
+      </div>
+      <p id="captions"><p>
+	<audio controls id="audio" onplay="render()">
+	  <source src="{{ music }}" type="audio/mpeg">
+	  Your browser does not support the audio tag.
+	</audio>
+    </div>
+
+    {{ info|json_script:"info" }}
+
+    <script>
+
+     const audio = document.getElementById('audio');
+     const info = JSON.parse(document.getElementById('info').textContent);
+     const flat = info.reduce((x, y) => x.concat(y.grantdonations), []);
+     const feed = document.getElementById('feedWrapper');
+
+     function postFeed(message) {
+	 message = message.slice(0, 100);
+         
+         Array.from(feed.children).forEach((child, i, a) => {
+	     if (i === a.length - 1) {
+		 child.innerHTML = message;
+	     } else {
+		 child.innerHTML = feed.children[i + 1].innerHTML;
+	     }
+         })
+     }
+
+     Array.from(feed.children).forEach((x, i, a) => {
+	 x.style.opacity = (i / a.length).toString();
+     });
+
+     flat.reverse().slice(0, Array.from(feed.children).length).forEach(x => {
+	 postFeed(`${x.user} &rarr; ${x.target}`);
+     });
+
+     const speed = {
+	 character: 25,
+	 pause: 725,
+	 line: 1440,
+	 section: 2000,
+     }
+     let clock;
+     let started = false;
+
+     async function sleep(ms, key) {
+	 let sleepTime = clock + ms - Date.now()
+	 clock += ms;
+	 return new Promise(resolve => setTimeout(resolve, sleepTime));
+     }
+
+     function duration(text) {
+	 let newlines = (text.match(/\n/g)||[]).length
+	 let pauses = (text.match(/\|/g)||[]).length
+	 let brackets = (text.match(/[\[\]]/g)||[]).length
+	 return newlines * speed.line + pauses * speed.pause + (text.length - newlines - pauses - brackets) * speed.character;
+     }
+
+     function adjustFunder(funder, amount) {
+	 funder.setAttribute(
+	     'progress',
+	     Number(funder.getAttribute('progress')) + amount,
+	 );
+
+	 let r = Number(funder.getAttribute('r'));
+	 let cx = Number(funder.getAttribute('cx'));
+	 let cy = Number(funder.getAttribute('cy'));
+	 let ratio = Math.sqrt(Math.max(0, Number(funder.getAttribute('progress')) / Number(funder.getAttribute('progress_max'))));
+
+	 funder.setAttribute(
+	     'r',
+	     funder.getAttribute('r_max') * ratio,
+	 );
+
+	 let shade = 59 + (255 - 59) * ratio;
+	 funder.setAttribute('fill', `rgb(${shade}, ${shade}, ${shade})`);
+     }
+
+     async function typeWrite(text, element, modifier, noSection) {
+	 let pos = 0;
+	 let backpoint = 0;
+
+	 if (!element) {
+	     element = 'captions';
+	 }
+	 if (!modifier) {
+	     modifier = 1.0;
+	 }
+	 document.getElementById(element).innerHTML = ' ';
+
+	 for (i = 0; i < text.length; i++) {
+	     if (i < text.length) {
+  		 if (text.charAt(i) == '\n') {
+		     await sleep(speed.line * modifier);
+		     document.getElementById(element).innerHTML = ' ';
+		     pos = 0;
+		 } else if (text.charAt(i) === '|') {
+		     await sleep(speed.pause * modifier);
+		 } else if (text.charAt(i) === '[') {
+		     backpoint = pos;
+		 } else if (text.charAt(i) === ']') {
+		     document.getElementById(element).innerHTML = document.getElementById(element).innerHTML.slice(0, backpoint) + ' ';
+		     pos = document.getElementById(element).innerHTML.length - 1;
+		 } else {
+		     await sleep(speed.character * modifier);
+		     document.getElementById(element).innerHTML = document.getElementById(element).innerHTML.slice(0, -1) + text.charAt(i) + ' ';
+		     pos++;
+		 }
+	     }
+	 }
+	 if (!noSection) {
+	     await sleep(speed.section * modifier);
+	 }
+     }
+
+     async function render() {
+         if (started) {
+	     return;
+	 } else {
+	     started = true;
+	 }
+
+         audio.style.setProperty('--play-pointer', 'none');
+         audio.style.setProperty('--play-opacity', '0.1');
+
+	 let text, circle;
+	 let svg = document.getElementById('circles');
+	 let content = document.getElementById('contentWrapper');
+	 let circles = document.getElementById('circles').contentDocument;
+
+	 let x = svg.offsetLeft + svg.offsetWidth / 2;
+	 let y = svg.offsetTop + svg.offsetHeight / 2;
+
+	 clock = Date.now();
+
+	 info.forEach(grant => {
+	     circle = circles.getElementById(grant.id)
+	     circle.setAttribute('progress_0', 0);
+	     circle.setAttribute('progress_max', grant.amount);
+	     circle.setAttribute('r_max', circle.getAttribute('r'));
+	     circle.setAttribute('r', 0);
+	     circle.removeAttribute('onclick');
+	     grant.grantdonations.forEach(x => {
+		 circles.getElementById(x.id).style.display = "none";
+		 circles.getElementById(x.id).removeAttribute('onclick');
+	     })
+	 })
+	 svg.style.visibility = 'visible';
+	 feed.style.opacity = 0;
+
+	 // --- Introduction --------------------------------------------------//
+
+	 text = `If you had money to make a better world,| what would you do?
+Money talks.| Every dollar tells a story.
+This is the story of Token Ibis.`;
+
+	 await typeWrite(text);
+
+         // --- Initial Donation ----------------------------------------------//
+
+	 text = `It started with $3,000.
+We wanted to donate it to a good cause...| but didn't know which.
+So we let random strangers decide.
+We designed a special app to give away our money.| For free.
+All we asked was for people to pay it forward.
+They did.
+People chose to make an impact in [poverty.|][the environment.|]education.
+One $3,000 check told ${info[0].grantdonations.length} different stories.`;
+
+	 info[0].grantdonations.forEach((x, i, a) => {
+	     setTimeout(function () {
+		 feed.style.opacity = ((i + 1) / a.length).toString();
+		 circles.getElementById(x.id).style.display = "block";
+		 adjustFunder(circles.getElementById(info[0].id), x.amount);
+		 postFeed(`${x.user} &rarr; ${x.target}`);
+	     }, (i / a.length) * duration(text))
+	 })
+
+	 await typeWrite(text);
+	 
+	 // --- Intermission 1 ------------------------------------------------//
+	 text = `But that was only the beginning.`;
+
+	 await typeWrite(text);
+
+	 // --- Remaining Donations -------------------------------------------//
+	 text = `We set out to raise more money...
+And we put it right back into the app.| 100% of it.
+We opened it up for anyone to join.
+It was a new kind of social media.| A more positive kind.
+More money turned into more [donations.|][stories.|]voices.
+Age...| income...| politics...| how much does it matter?
+We are all part of this community.| We are all part the solution.
+The status quo stands in the way.
+Modern institutions promote divisiveness and inequality.
+They value numbers over experiences,| dollars over people.
+We saw a broken system.| So we built a new one.`;
+		    
+	 let countOuter = 0, countInner = 0;
+	 let iterations = info.slice(1).reduce((a, b) => a + b.grantdonations.length, 0);
+	 let maxFeed = 1000;
+
+	 info.slice(1).forEach(grant => {
+	     grant.grantdonations.forEach((x, i, a) => {
+		 setTimeout(function () {
+		     circles.getElementById(x.id).style.display = "block";
+		     adjustFunder(circles.getElementById(grant.id), x.amount);
+		     if ((iterations + countInner) % (Math.ceil(iterations / maxFeed)) === 0) {
+			 postFeed(`${x.user} &rarr; ${x.target}`);
+		     }
+		     countInner++;
+		 }, (countOuter / iterations) * duration(text));
+		 countOuter++;
+	     })
+	 })
+
+	 await typeWrite(text);
+
+	 // --- Intermission 2 ------------------------------------------------//
+	 let given = flat.reduce((x, y) => x + y.amount, 0);
+	 let given_str = Math.round(given/100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+	 text = `This video was made using real data.| Today is ${(new Date()).toLocaleDateString('us', { dateStyle: 'long' })}.
+Already, {{ num_donors }} people have made {{ num_donations }} donations.| $${given_str} total.
+In the hands of one person...| $${given_str} can make one difference.
+But in the hands of the community?`;
+
+	     await typeWrite(text);
+
+	 // --- Impact --------------------------------------------------------//
+	 text = `It's the start of a movement.
+Every person has a voice.| Every dollar tells a story.
+How many [stories can you see in this picture?|][meals?|][nights of shelter?|][hours of learning?][new relationships?][acts of kindness?][moments of inspiration?]voices can you hear in this story?`;
+
+	 info.forEach(grant => {
+	     circles.getElementById(grant.id).style.display = "none";
+	 });
+
+	 flat.forEach((x, i, a) => {
+	     setTimeout(function () {
+		 circles.getElementById(x.id).style.display = "none";
+		 postFeed(x.description);
+
+		 if (i + 1 < a.length) {
+                     circle = circles.getElementById(a[i + 1].id);
+		     circle.setAttribute('r', circle.getAttribute('r') * 3);
+		     circle.setAttribute('fill', '#ffcfcf');
+		 }
+
+		 let r = 255 - (255 - 132) * (i / a.length)
+		 let g = 255 - (255 - 172) * (i / a.length)
+		 let b = 255 - (255 - 63) * (i / a.length)
+		 content.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+
+		 if (i == a.length - 1) {
+		     feed.style.visibility = 'hidden';
+		 }
+	     }, (i / a.length) * duration(text))
+	 })
+
+	 await typeWrite(text);
+
+	 //--- Climax ---------------------------------------------------------//
+	 text = `It's time to talk about Universal Basic Philanthropy.
+The next chapter starts now.`;
+
+	     await typeWrite(text);
+
+	 //--- Call to Action -------------------------------------------------//
+	 text = `It starts with you.`;
+
+	 let dot = circles.getElementById(info[0].id);
+	 dot.setAttribute('r', (circles.children[0].getAttribute('width') * 0.01).toString());
+	 dot.setAttribute('fill', '#ffffff');
+	 dot.style.display = 'block';
+
+	 await typeWrite(text);
+
+	 let link = document.createElement('a');
+	 content.appendChild(link)
+	 link.setAttribute('id', 'link');
+	 link.setAttribute('href', 'https://tokenibis.org');
+	 link.style.position = 'fixed';
+	 link.style.left = (x - 'tokenibis.org'.length * 18 * 0.30).toString() + 'px';
+	 link.style.top = (y + 18).toString() + 'px';
+	 await typeWrite('tokenibis.org', 'link', 2, true);
+	 link.innerHTML = link.innerHTML.slice(0, -1);
+     }
+    </script>
+
+  </body>
+</html>

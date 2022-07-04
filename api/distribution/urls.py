@@ -7,4 +7,5 @@ urlpatterns = [
     path('report/', views.ReportView.as_view(), name='report'),
     path('grants/', views.GrantView.as_view(), name='grant'),
     path('logos/', views.LogoView.as_view(), name='logos'),
+    path('video/', views.VideoView.as_view(), name='video'),
 ]

@@ -1,5 +1,6 @@
 import os
 import math
+import json
 import logging
 import markdown
 import ibis.models
@@ -9,13 +10,13 @@ import distribution.circles as circles
 import distribution.graph as graph
 
 from django.views.generic.list import ListView
+from django.views.generic.base import TemplateView
 from django.db.models import Sum
 from django.conf import settings
 from django.db.models.functions import Coalesce
 from django.utils.timezone import localtime
-from django.views.generic.base import TemplateView
 from rest_framework import generics, response
-from graphql_relay.node.node import from_global_id
+from graphql_relay.node.node import from_global_id, to_global_id
 from django.views.decorators.clickjacking import xframe_options_exempt
 
 logger = logging.getLogger(__name__)
@@ -377,3 +378,32 @@ class LogoView(TemplateView):
             key=lambda x: x.date_joined,
         )
         return context
+
+
+class VideoView(TemplateView):
+    template_name = 'video.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['circles'] = '{}/circles/simple.svg'.format(settings.MEDIA_URL)
+        context['music'] = '{}/circles/music.mp3'.format(settings.MEDIA_URL)
+
+        context['num_donors'] = '{:,}'.format(
+            ibis.models.Donation.objects.all().values_list(
+                'user', flat=True).distinct().count())
+        context['num_donations'] = '{:,}'.format(
+            ibis.models.Donation.objects.count())
+
+        with open(os.path.join(
+                settings.MEDIA_ROOT,
+                'circles',
+                'info.json',
+        )) as fd:
+            context['info'] = json.load(fd)
+
+        return context
+
+    @xframe_options_exempt
+    def get(self, *args, **kwargs):
+        return super().get(*args, **kwargs)

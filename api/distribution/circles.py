@@ -386,6 +386,8 @@ def run():
     try:
         with open(os.path.join(DIR, 'data.json')) as fd:
             data = json.load(fd)
+        with open(os.path.join(DIR, 'info.json'), 'w') as fd:
+            json.dump(info(data), fd, indent=2)
 
         for x in data['grantdonations']:
             assert models.GrantDonation.objects.filter(
@@ -428,6 +430,9 @@ def run():
         animate=True,
         fancy=True,
     ).saveSvg(os.path.join(DIR, 'dynamic.svg'))
+
+    with open(os.path.join(DIR, 'info.json'), 'w') as fd:
+        json.dump(info(data), fd, indent=2)
 
 
 def load_circles(grant=None):
@@ -526,3 +531,36 @@ def load_circles(grant=None):
 
     circles.attrib['id'] = 'circles'
     return etree.tostring(circles).decode()
+
+
+def info(data):
+    info = []
+    lookup = {}
+
+    for i, x in enumerate(data['grants']):
+        grant = ibis.models.Grant.objects.get(id=from_global_id(x['id'])[1])
+        info.append({
+            'id': x['id'],
+            'amount': grant.amount,
+            'name': grant.name,
+            'grantdonations': [],
+        })
+        lookup[x['id']] = i
+
+    for x in data['grantdonations']:
+        grantdonation = ibis.models.GrantDonation.objects.get(
+            id=from_global_id(x['id'])[1])
+        info[lookup[x['anchor']]]['grantdonations'].append({
+            'id':
+            x['id'],
+            'amount':
+            grantdonation.amount,
+            'user':
+            str(grantdonation.donation.user),
+            'target':
+            str(grantdonation.donation.target),
+            'description':
+            str(grantdonation.donation.description),
+        })
+
+    return info
