@@ -107,6 +107,8 @@ class PersonAdmin(UserAdmin):
                 'donated_str',
                 'referral',
                 'verified',
+                'verified_original',
+                'phone_number',
             )
         },
     ), )

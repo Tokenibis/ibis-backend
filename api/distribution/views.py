@@ -196,15 +196,6 @@ class ReportView(TemplateView):
 
         context['circles'] = circles.load_circles()
 
-        context['grantdonation'] = [{
-            'amount':
-            '${:,.2f}'.format(x.amount / 100),
-            'donation':
-            x,
-            'reply':
-            x.parent_of.order_by('-created').first(),
-        } for x in ibis.models.Donation.objects.order_by('-created')[:100]]
-
         context['section_1'] = markdown.markdown('''
 On __{date}__, Token Ibis launched the world's first-ever pilot project for Universal Basic Philanthropy&ndash;right here in the city of Albuquerque.
 
@@ -333,15 +324,6 @@ The picture will continue to grow, but as of __{last}__, this chapter is forever
             last=last.donation.created.strftime('%B %-d, %Y, %-I:%M %p'),
         ))
 
-        context['grantdonation'] = [{
-            'amount':
-            '${:,.2f}'.format(x.amount / 100),
-            'donation':
-            x.donation,
-            'reply':
-            x.donation.parent_of.order_by('-created').first(),
-        } for x in grant.grantdonation_set.order_by('-donation__created')]
-
         context['section_4'] = markdown.markdown('''
 Numbers and pictures on express a small part of the impact of {name}'s grant.
 This final section below shows every donation&ndash;along with the verbal exchanges that they sparked&ndash;that was made possible by this grant.
@@ -359,7 +341,8 @@ You can continue to support the movement at [{link}](https://{link}).
             'donation':
             x.donation,
             'reply':
-            x.donation.parent_of.order_by('-created').first(),
+            x.donation.parent_of.filter(
+                user__bot__isnull=True).order_by('-created').first(),
         } for x in grant.grantdonation_set.order_by('-donation__created')]
 
         return context
