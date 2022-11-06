@@ -1,5 +1,6 @@
 import os
 import sys
+import csv
 import json
 import ftfy
 import math
@@ -16,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import login, logout, authenticate
 from django.conf import settings
+from django.http import HttpResponse
 from rest_framework import generics, response, exceptions, serializers
 from users.models import GeneralUser
 from allauth.socialaccount.models import SocialAccount
@@ -344,3 +346,23 @@ class PaymentView(generics.GenericAPIView):
             'grantID':
             to_global_id('GrantNode', grant.id),
         })
+
+
+class StatementView(generics.GenericAPIView):
+    def get(self, request, *args, **kwargs):
+        organization = models.Organization.objects.get(id=request.user.id)
+        response = HttpResponse(content_type='text/csv', )
+        response[
+            'Content-Disposition'] = 'attachment; filename="statement.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Username', 'Amount', 'Time'])
+        for x in models.Withdrawal.objects.filter(
+                user=organization).order_by('-created'):
+            writer.writerow([
+                '@{}'.format(organization.username),
+                '${:.2f}'.format(x.amount / 100),
+                x.created,
+            ])
+
+        return response
