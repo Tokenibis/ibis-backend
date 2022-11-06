@@ -11,9 +11,8 @@ from collections import defaultdict
 from django.conf import settings
 from matplotlib.ticker import StrMethodFormatter
 from pathlib import Path
-from django.db.models import Sum
+from django.db.models import Sum, Max
 from django.db.models.functions import Coalesce
-from django.core.management.base import BaseCommand
 from django.utils.timezone import localtime
 
 DIR = os.path.join(settings.MEDIA_ROOT, 'graphs')
@@ -26,6 +25,7 @@ def run():
     graph_organization_distribution()
     graph_organization_time()
     graph_users_time()
+    graph_deposits_payout()
 
 
 def graph_control_response():
@@ -353,7 +353,7 @@ def graph_finances_time():
 
     ax.set_ylim(ymin=0)
     plt.xlabel('Date (weekly)')
-    plt.ylabel('Dollars ($)')
+    plt.ylabel('Amount ($)')
     plt.xticks(rotation=45)
     plt.legend(frameon=False)
     plt.savefig(
@@ -468,3 +468,39 @@ def graph_grant_distribution(grant):
     plt.savefig(graph, format='svg', bbox_inches='tight')
     plt.clf()
     return graph.getvalue()
+
+
+def graph_deposits_payout():
+    data = [(
+        distribution.models.to_step_start(x.created),
+        ibis.models.Deposit.objects.filter(
+            created__gte=distribution.models.to_step_start(x.created),
+            created__lt=distribution.models.to_step_start(x.created,
+                                                          offset=1),
+            category=ibis.models.ExchangeCategory.objects.get(
+                title=settings.IBIS_CATEGORY_UBP),
+        ).aggregate(Max('amount'))['amount__max'],
+    ) for x in distribution.models.Goal.objects.filter(
+        created__gte=ibis.models.Donation.objects.order_by(
+            'created').first().created).order_by('created')][1:-1]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+
+    plt.plot(
+        [x[0] for x in data],
+        [(x[1] if x[1] else 0) / 100 for x in data],
+        '#84ab3f',
+        label='UBP Payout',
+    )
+
+    ax.set_ylim(ymin=0)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.yaxis.set_major_formatter(StrMethodFormatter('${x:0.0f}'))
+    plt.xticks(rotation=45)
+    plt.savefig(
+        fname=os.path.join(DIR, 'deposit.svg'),
+        bbox_inches='tight',
+    )
+    plt.clf()
